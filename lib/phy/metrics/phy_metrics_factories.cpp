@@ -9,6 +9,8 @@
 #include "phy_metrics_demodulation_mapper_decorator.h"
 #include "phy_metrics_downlink_processor_decorator.h"
 #include "phy_metrics_evm_calculator_decorator.h"
+#include "phy_metrics_hwacc_pdsch_enc_decorator.h"
+#include "phy_metrics_hwacc_pusch_dec_decorator.h"
 #include "phy_metrics_ldpc_decoder_decorator.h"
 #include "phy_metrics_ldpc_encoder_decorator.h"
 #include "phy_metrics_ldpc_rate_dematcher_decorator.h"
@@ -416,4 +418,26 @@ std::shared_ptr<downlink_processor_factory> ocudu::create_downlink_processor_gen
     downlink_processor_metric_notifier&         notifier)
 {
   return std::make_shared<metric_decorator_downlink_processor_factory>(std::move(base_factory), notifier);
+}
+
+std::shared_ptr<hal::hw_accelerator_pdsch_enc_factory> ocudu::create_hwacc_pdsch_enc_metric_decorator_factory(
+    std::shared_ptr<hal::hw_accelerator_pdsch_enc_factory> base_factory,
+    ldpc_encoder_metric_notifier&                          notifier)
+{
+  return std::make_shared<metric_decorator_factory<hal::hw_accelerator_pdsch_enc,
+                                                   hal::hw_accelerator_pdsch_enc_factory,
+                                                   ldpc_encoder_metric_notifier,
+                                                   phy_metrics_hwacc_pdsch_enc_decorator>>(std::move(base_factory),
+                                                                                           notifier);
+}
+
+std::shared_ptr<hal::hw_accelerator_pusch_dec_factory> ocudu::create_hwacc_pusch_dec_metric_decorator_factory(
+    std::shared_ptr<hal::hw_accelerator_pusch_dec_factory> base_factory,
+    ldpc_decoder_metric_notifier&                          notifier)
+{
+  return std::make_shared<metric_decorator_factory<hal::hw_accelerator_pusch_dec,
+                                                   hal::hw_accelerator_pusch_dec_factory,
+                                                   ldpc_decoder_metric_notifier,
+                                                   phy_metrics_hwacc_pusch_dec_decorator>>(std::move(base_factory),
+                                                                                           notifier);
 }

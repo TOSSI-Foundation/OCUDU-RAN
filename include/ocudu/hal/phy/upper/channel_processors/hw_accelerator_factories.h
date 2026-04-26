@@ -17,6 +17,8 @@ struct bbdev_hwacc_pdsch_enc_factory_configuration {
   std::string acc_type;
   /// Interfacing to a bbdev-based hardware-accelerator.
   std::shared_ptr<ocudu::dpdk::bbdev_acc> bbdev_accelerator;
+  /// Optional additional bbdev accelerators for multi-VF scaling.
+  std::vector<std::shared_ptr<ocudu::dpdk::bbdev_acc>> additional_bbdev_accelerators;
   /// Defines if the PDSCH encoder operates in CB mode (true) or TB mode (false).
   bool cb_mode = false;
   /// Defines the maximum supported TB size in bytes (CB mode will be forced for larger TBs).

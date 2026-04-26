@@ -51,30 +51,23 @@ public:
   /// Get the entry for the provided absolute codeblock identifier.
   ext_harq_buffer_context_entry* get(unsigned absolute_codeblock_id, bool new_data)
   {
-    ocudu_assert(absolute_codeblock_id < nof_codeblocks,
-                 "Absolute CB index {} out of bounds - HARQ buffer context has capacity for {} CBs.",
-                 absolute_codeblock_id,
-                 nof_codeblocks);
+    const unsigned slot = absolute_codeblock_id % nof_codeblocks;
     // Initialize the entry if not already created (or in first transmissions).
-    if (repo[absolute_codeblock_id].empty || new_data) {
-      repo[absolute_codeblock_id].soft_data_len = 0;
-      repo[absolute_codeblock_id].empty         = false;
+    if (repo[slot].empty || new_data) {
+      repo[slot].soft_data_len = 0;
+      repo[slot].empty         = false;
     }
 
-    return &repo[absolute_codeblock_id];
+    return &repo[slot];
   }
 
   /// Free the entry reserved for the provided absolute codeblock identifier.
   void free(unsigned absolute_codeblock_id)
   {
-    ocudu_assert(absolute_codeblock_id < nof_codeblocks,
-                 "Absolute CB index {} out of bounds - HARQ buffer context has capacity for {} CBs.",
-                 absolute_codeblock_id,
-                 nof_codeblocks);
-    // Free the entry.
-    // Note that in debug mode, the entry won't be freed to enable HARQ unitesting.
+    const unsigned slot = absolute_codeblock_id % nof_codeblocks;
+    // Note that in debug mode, the entry won't be freed to enable HARQ unittesting.
     if (!debug_mode) {
-      repo[absolute_codeblock_id].empty = true;
+      repo[slot].empty = true;
     }
   }
 

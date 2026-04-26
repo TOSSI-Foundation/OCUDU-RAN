@@ -22,6 +22,7 @@
 #include "ocudu/hal/dpdk/dpdk_eal_factory.h"
 #include "ocudu/hal/phy/upper/channel_processors/hw_accelerator_factories.h"
 #include "ocudu/hal/phy/upper/channel_processors/hw_accelerator_pdsch_enc_factory.h"
+#include <rte_bbdev.h>
 #endif // HWACC_PDSCH_ENABLED
 #include <condition_variable>
 #include <getopt.h>
@@ -523,6 +524,10 @@ static std::shared_ptr<hal::hw_accelerator_pdsch_enc_factory> create_hw_accelera
   // Intefacing to the bbdev-based hardware-accelerator.
   ocudulog::basic_logger& logger = ocudulog::fetch_basic_logger("HWACC", false);
   logger.set_level(hal_log_level);
+
+  const unsigned nof_bbdev_devs = ::rte_bbdev_count();
+  TESTASSERT(nof_bbdev_devs > 0, "No bbdev devices available for PDSCH encoder HWACC.");
+
   unsigned nof_ldpc_enc_cores = nof_threads;
   if (nof_pdsch_processor_concurrent_threads > 0) {
     nof_ldpc_enc_cores *= nof_pdsch_processor_concurrent_threads;
@@ -531,19 +536,32 @@ static std::shared_ptr<hal::hw_accelerator_pdsch_enc_factory> create_hw_accelera
              "Requested {} accelerated LDPC encoder functions, but only {} are supported.",
              nof_ldpc_enc_cores,
              dpdk::MAX_NOF_BBDEV_VF_INSTANCES);
-  dpdk::bbdev_acc_configuration bbdev_config;
-  bbdev_config.id                                    = 0;
-  bbdev_config.nof_ldpc_enc_lcores                   = nof_ldpc_enc_cores;
-  bbdev_config.nof_ldpc_dec_lcores                   = 0;
-  bbdev_config.nof_fft_lcores                        = 0;
-  bbdev_config.nof_mbuf                              = static_cast<unsigned>(pow2(log2_ceil(MAX_NOF_SEGMENTS)));
-  std::shared_ptr<dpdk::bbdev_acc> bbdev_accelerator = create_bbdev_acc(bbdev_config, logger);
-  TESTASSERT(bbdev_accelerator);
+
+  const unsigned queues_per_device = (nof_ldpc_enc_cores + nof_bbdev_devs - 1) / nof_bbdev_devs;
+
+  std::vector<std::shared_ptr<dpdk::bbdev_acc>> accelerators;
+  accelerators.reserve(nof_bbdev_devs);
+  for (unsigned id = 0; id < nof_bbdev_devs; ++id) {
+    dpdk::bbdev_acc_configuration bbdev_config;
+    bbdev_config.id                  = id;
+    bbdev_config.nof_ldpc_enc_lcores = queues_per_device;
+    bbdev_config.nof_ldpc_dec_lcores = 0;
+    bbdev_config.nof_fft_lcores      = 0;
+    bbdev_config.nof_mbuf            = static_cast<unsigned>(pow2(log2_ceil(MAX_NOF_SEGMENTS)));
+    auto acc                         = create_bbdev_acc(bbdev_config, logger);
+    TESTASSERT(acc, "Failed to open bbdev device {} for PDSCH encoder HWACC.", id);
+    accelerators.push_back(std::move(acc));
+  }
+  fmt::print("[pdsch_bench] bbdev devices available: {} (total queues requested: {}, per-device: {})\n",
+             nof_bbdev_devs,
+             nof_ldpc_enc_cores,
+             queues_per_device);
 
   // Set the PDSCH encoder hardware-accelerator factory configuration for the ACC100.
   hal::bbdev_hwacc_pdsch_enc_factory_configuration hw_encoder_config;
   hw_encoder_config.acc_type          = "acc100";
-  hw_encoder_config.bbdev_accelerator = bbdev_accelerator;
+  hw_encoder_config.bbdev_accelerator = accelerators.front();
+  hw_encoder_config.additional_bbdev_accelerators.assign(accelerators.begin() + 1, accelerators.end());
   hw_encoder_config.cb_mode           = cb_mode;
   hw_encoder_config.max_tb_size       = RTE_BBDEV_LDPC_E_MAX_MBUF;
   hw_encoder_config.dedicated_queue   = dedicated_queue;

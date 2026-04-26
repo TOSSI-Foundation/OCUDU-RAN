@@ -26,6 +26,7 @@
 #include "ocudu/hal/phy/upper/channel_processors/pusch/ext_harq_buffer_context_repository_factory.h"
 #include "ocudu/hal/phy/upper/channel_processors/pusch/hw_accelerator_factories.h"
 #include "ocudu/hal/phy/upper/channel_processors/pusch/hw_accelerator_pusch_dec_factory.h"
+#include <rte_bbdev.h>
 #endif // HWACC_PUSCH_ENABLED
 #include <getopt.h>
 #include <random>
@@ -450,18 +451,35 @@ static std::shared_ptr<hal::hw_accelerator_pusch_dec_factory> create_hw_accelera
   // Intefacing to the bbdev-based hardware-accelerator.
   ocudulog::basic_logger& logger = ocudulog::fetch_basic_logger("HWACC", false);
   logger.set_level(hal_log_level);
-  dpdk::bbdev_acc_configuration bbdev_config;
-  bbdev_config.id                                    = 0;
-  bbdev_config.nof_ldpc_enc_lcores                   = 0;
-  bbdev_config.nof_ldpc_dec_lcores                   = nof_threads + nof_pusch_decoder_threads + 1;
-  bbdev_config.nof_fft_lcores                        = 0;
-  bbdev_config.nof_mbuf                              = static_cast<unsigned>(pow2(log2_ceil(MAX_NOF_SEGMENTS)));
-  std::shared_ptr<dpdk::bbdev_acc> bbdev_accelerator = create_bbdev_acc(bbdev_config, logger);
-  TESTASSERT(bbdev_accelerator);
+
+  const unsigned nof_bbdev_devs = ::rte_bbdev_count();
+  TESTASSERT(nof_bbdev_devs > 0, "No bbdev devices available for PUSCH decoder HWACC.");
+
+  const unsigned total_queues     = nof_threads + nof_pusch_decoder_threads + 1;
+  const unsigned queues_per_device = (total_queues + nof_bbdev_devs - 1) / nof_bbdev_devs;
+
+  std::vector<std::shared_ptr<dpdk::bbdev_acc>> accelerators;
+  accelerators.reserve(nof_bbdev_devs);
+  for (unsigned id = 0; id < nof_bbdev_devs; ++id) {
+    dpdk::bbdev_acc_configuration bbdev_config;
+    bbdev_config.id                  = id;
+    bbdev_config.nof_ldpc_enc_lcores = 0;
+    bbdev_config.nof_ldpc_dec_lcores = queues_per_device;
+    bbdev_config.nof_fft_lcores      = 0;
+    bbdev_config.nof_mbuf            = static_cast<unsigned>(pow2(log2_ceil(MAX_NOF_SEGMENTS)));
+    auto acc                         = create_bbdev_acc(bbdev_config, logger);
+    TESTASSERT(acc, "Failed to open bbdev device {} for PUSCH decoder HWACC.", id);
+    accelerators.push_back(std::move(acc));
+  }
+  if (nof_bbdev_devs > 1) {
+    logger.info("[pusch_bench] multi-VF mode: {} bbdev devices × {} dec queues each",
+                nof_bbdev_devs,
+                queues_per_device);
+  }
 
   // Interfacing to a shared external HARQ buffer context repository.
-  unsigned nof_cbs                   = MAX_NOF_SEGMENTS;
-  uint64_t acc100_ext_harq_buff_size = bbdev_accelerator->get_harq_buff_size_bytes();
+  unsigned                                                 nof_cbs                   = MAX_NOF_SEGMENTS;
+  uint64_t                                                 acc100_ext_harq_buff_size = accelerators.front()->get_harq_buff_size_bytes();
   std::shared_ptr<hal::ext_harq_buffer_context_repository> harq_buffer_context =
       hal::create_ext_harq_buffer_context_repository(nof_cbs, acc100_ext_harq_buff_size, false);
   TESTASSERT(harq_buffer_context);
@@ -469,7 +487,8 @@ static std::shared_ptr<hal::hw_accelerator_pusch_dec_factory> create_hw_accelera
   // Set the PUSCH decoder hardware-accelerator factory configuration for the ACC100.
   hal::bbdev_hwacc_pusch_dec_factory_configuration hw_decoder_config;
   hw_decoder_config.acc_type            = "acc100";
-  hw_decoder_config.bbdev_accelerator   = bbdev_accelerator;
+  hw_decoder_config.bbdev_accelerator   = accelerators.front();
+  hw_decoder_config.additional_bbdev_accelerators.assign(accelerators.begin() + 1, accelerators.end());
   hw_decoder_config.force_local_harq    = force_local_harq;
   hw_decoder_config.harq_buffer_context = harq_buffer_context;
   hw_decoder_config.dedicated_queue     = dedicated_queue;

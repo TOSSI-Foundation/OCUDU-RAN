@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "ocudu/hal/phy/upper/channel_processors/hw_accelerator_pdsch_enc_factory.h"
+#include "ocudu/hal/phy/upper/channel_processors/pusch/hw_accelerator_pusch_dec_factory.h"
 #include "ocudu/phy/metrics/phy_metrics_notifiers.h"
 #include "ocudu/phy/upper/channel_coding/channel_coding_factories.h"
 #include "ocudu/phy/upper/channel_processors/pdsch/factories.h"
@@ -114,5 +116,15 @@ create_dmrs_pdsch_generator_metric_decorator_factory(std::shared_ptr<dmrs_pdsch_
 std::shared_ptr<downlink_processor_factory>
 create_downlink_processor_generator_metric_decorator_factory(std::shared_ptr<downlink_processor_factory> base_factory,
                                                              downlink_processor_metric_notifier&         notifier);
+
+/// Creates a hardware-accelerated PDSCH encoder metric decorator factory.
+std::shared_ptr<hal::hw_accelerator_pdsch_enc_factory>
+create_hwacc_pdsch_enc_metric_decorator_factory(std::shared_ptr<hal::hw_accelerator_pdsch_enc_factory> base_factory,
+                                                ldpc_encoder_metric_notifier&                          notifier);
+
+/// Creates a hardware-accelerated PUSCH decoder metric decorator factory.
+std::shared_ptr<hal::hw_accelerator_pusch_dec_factory>
+create_hwacc_pusch_dec_metric_decorator_factory(std::shared_ptr<hal::hw_accelerator_pusch_dec_factory> base_factory,
+                                                ldpc_decoder_metric_notifier&                          notifier);
 
 } // namespace ocudu

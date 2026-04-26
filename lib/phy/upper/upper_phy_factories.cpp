@@ -768,7 +768,14 @@ create_ul_processor_factory(const upper_phy_factory_configuration& config,
     decoder_config.nof_pusch_decoder_threads = dependencies.executors.pusch_decoder_executor.max_concurrency;
     decoder_config.hw_decoder_factory        = *dependencies.hw_decoder_factory;
     decoder_config.executor                  = dependencies.executors.pusch_decoder_executor.executor;
-    pusch_config.decoder_factory             = create_pusch_decoder_factory_hw(decoder_config);
+
+    if (metric_notifier) {
+      decoder_config.hw_decoder_factory = create_hwacc_pusch_dec_metric_decorator_factory(
+          decoder_config.hw_decoder_factory, metric_notifier->get_ldpc_decoder_notifier());
+      report_fatal_error_if_not(decoder_config.hw_decoder_factory,
+                                "Failed to create HWACC PUSCH decoder metric decorator.");
+    }
+    pusch_config.decoder_factory = create_pusch_decoder_factory_hw(decoder_config);
   }
 
   std::shared_ptr<short_block_detector_factory> short_block_det_factory = create_short_block_detector_factory_sw();
@@ -1101,6 +1108,17 @@ ocudu::create_downlink_processor_factory_sw(const downlink_processor_factory_sw_
       create_pdcch_encoder_factory_sw(crc_calc_factory, polar_factory);
   report_fatal_error_if_not(pdcch_enc_factory, "Invalid PDCCH encoder factory.");
 
+  std::optional<std::shared_ptr<hal::hw_accelerator_pdsch_enc_factory>> hw_pdsch_enc_factory_decorated;
+  if (config.hw_encoder_factory) {
+    auto wrapped = *config.hw_encoder_factory;
+    if (dependencies.metric_notifier) {
+      wrapped = create_hwacc_pdsch_enc_metric_decorator_factory(
+          wrapped, dependencies.metric_notifier->get_ldpc_encoder_notifier());
+      report_fatal_error_if_not(wrapped, "Failed to create HWACC PDSCH encoder metric decorator.");
+    }
+    hw_pdsch_enc_factory_decorated = std::move(wrapped);
+  }
+
   // Create channel processors encoder factories - PDSCH. Check if hardware acceleration is requested.
   std::shared_ptr<pdsch_encoder_factory> pdsch_enc_factory = nullptr;
   if (!config.hw_encoder_factory) {
@@ -1115,7 +1133,7 @@ ocudu::create_downlink_processor_factory_sw(const downlink_processor_factory_sw_
     pdsch_encoder_factory_hw_configuration encoder_config;
     encoder_config.crc_factory        = pdsch_crc_calc_factory;
     encoder_config.segmenter_factory  = ldpc_seg_tx_factory;
-    encoder_config.hw_encoder_factory = *config.hw_encoder_factory;
+    encoder_config.hw_encoder_factory = *hw_pdsch_enc_factory_decorated;
     pdsch_enc_factory                 = create_pdsch_encoder_factory_hw(encoder_config);
   }
   report_fatal_error_if_not(pdsch_enc_factory, "Invalid PDSCH encoder factory.");
@@ -1181,7 +1199,7 @@ ocudu::create_downlink_processor_factory_sw(const downlink_processor_factory_sw_
       report_fatal_error_if_not(block_processor_factory, "Invalid SW PDSCH block processor factory.");
     } else {
       block_processor_factory = create_pdsch_block_processor_factory_hw(
-          *config.hw_encoder_factory, pdsch_scrambling_factory, pdsch_mod_mapper_factory);
+          *hw_pdsch_enc_factory_decorated, pdsch_scrambling_factory, pdsch_mod_mapper_factory);
       report_fatal_error_if_not(block_processor_factory, "Invalid HW PDSCH block processor factory.");
     }
   }

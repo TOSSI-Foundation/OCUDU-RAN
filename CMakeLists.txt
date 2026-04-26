@@ -129,14 +129,10 @@ if (ENABLE_ASAN AND ENABLE_TSAN)
     message(FATAL_ERROR "ASAN and TSAN cannot be enabled at the same time.")
 endif ()
 
-# Hardware acceleration for both PUSCH and PDSCH is enabled by default when using DPDK.
-if (ENABLE_DPDK)
-  SET(ENABLE_PDSCH_HWACC ON CACHE BOOL "Enable PDSCH hardware-acceleration")
-  SET(ENABLE_PUSCH_HWACC ON CACHE BOOL "Enable PUSCH hardware-acceleration")
-else (ENABLE_DPDK)
-  unset(ENABLE_PDSCH_HWACC CACHE)
-  unset(ENABLE_PUSCH_HWACC CACHE)
-endif (ENABLE_DPDK)
+# Hardware acceleration for PUSCH and PDSCH requires DPDK but is independent of ENABLE_DPDK.
+# ENABLE_DPDK is also used for OFH (7.2 split) without requiring hardware acceleration.
+option(ENABLE_PDSCH_HWACC "Enable PDSCH hardware-acceleration (requires DPDK)" OFF)
+option(ENABLE_PUSCH_HWACC "Enable PUSCH hardware-acceleration (requires DPDK)" OFF)
 
 ########################################################################
 # ENABLE_EXPORT
@@ -539,6 +535,16 @@ if (ENABLE_DPDK)
 else (ENABLE_DPDK)
     unset(DPDK_FOUND CACHE)
 endif (ENABLE_DPDK)
+
+# Disable hardware acceleration if DPDK was not found.
+if (ENABLE_PDSCH_HWACC AND NOT DPDK_FOUND)
+  message(WARNING "ENABLE_PDSCH_HWACC requires DPDK but DPDK was not found. Disabling PDSCH hardware-acceleration.")
+  set(ENABLE_PDSCH_HWACC OFF CACHE BOOL "" FORCE)
+endif ()
+if (ENABLE_PUSCH_HWACC AND NOT DPDK_FOUND)
+  message(WARNING "ENABLE_PUSCH_HWACC requires DPDK but DPDK was not found. Disabling PUSCH hardware-acceleration.")
+  set(ENABLE_PUSCH_HWACC OFF CACHE BOOL "" FORCE)
+endif ()
 
 if(SCTP_FOUND)
     sbom_add(

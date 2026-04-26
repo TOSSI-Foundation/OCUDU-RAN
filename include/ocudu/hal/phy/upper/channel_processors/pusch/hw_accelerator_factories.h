@@ -18,6 +18,8 @@ struct bbdev_hwacc_pusch_dec_factory_configuration {
   std::string acc_type;
   /// Interfacing to a bbdev-based hardware-accelerator.
   std::shared_ptr<ocudu::dpdk::bbdev_acc> bbdev_accelerator;
+  /// Optional additional bbdev accelerators for multi-VF scaling.
+  std::vector<std::shared_ptr<ocudu::dpdk::bbdev_acc>> additional_bbdev_accelerators;
   /// Interfacing to an external HARQ buffer context repository.
   std::shared_ptr<ext_harq_buffer_context_repository> harq_buffer_context;
   /// Forces using the host memory to implement the soft-buffer.
