@@ -33,6 +33,7 @@ This repository is a **fork of [OCUDU](https://gitlab.com/ocudu/ocudu)** that se
 | Branch | Status | Contents |
 |---|---|---|
 | **[`hwacc_acc100`](../../tree/hwacc_acc100)** | Active | **Intel ACC100 LDPC hardware offload** via DPDK BBDEV. Adds hardware-accelerated PDSCH encode and PUSCH decode (the two heaviest channel-coding stages), a unified PHY metrics layer that lets operators A/B compare software vs. HW paths in one log format, and a full operator deployment guide. See the branch's [`README.md`](../../blob/hwacc_acc100/README.md) and [`docs/DEPLOYMENT.md`](../../blob/hwacc_acc100/docs/DEPLOYMENT.md) for details and measured results. |
+| **[`hwacc_gpu`](../../tree/hwacc_gpu)** | Active | **NVIDIA GPU PRACH detection offload** via cuFFTDx fused kernel + CUDA graph capture. Replaces the AVX-512 FFTW PRACH inner loop (correlation, IDFT, power accumulation, peak detection) with a device-resident pipeline launched as a single `cudaGraphLaunch`. Selectable at runtime via the `OCUDU_PRACH_DFT_BACKEND=gpu_full` environment variable; reuses the same unified PHY metrics layer for direct A/B comparison. See the branch's [`README.md`](../../blob/hwacc_gpu/README.md) and [`docs/DEPLOYMENT.md`](../../blob/hwacc_gpu/docs/DEPLOYMENT.md) for details and measured results. |
 
 Additional branches for further accelerator work, deployment tooling, and downstream integrations will be added here as they land.
 
