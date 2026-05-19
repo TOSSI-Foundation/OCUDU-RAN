@@ -38,7 +38,6 @@ This repository is a **fork of [OCUDU](https://gitlab.com/ocudu/ocudu)** that se
 
 Additional branches for further accelerator work, deployment tooling, and downstream integrations will be added here as they land.
 
-Additional branches for further accelerator work, deployment tooling, and downstream integrations will be added here as they land.
 
 ## License
 
