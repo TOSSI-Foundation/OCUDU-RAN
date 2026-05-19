@@ -1,0 +1,117 @@
+# FAPI Split — O-DU High (L2) — XFAPI BRIDGE topology.
+# Use with: ./odu_high -c configs/odu_high_xfapi.yaml
+#
+# Topology:
+#   odu_low                = DPDK PRIMARY + xSM SLAVE on pair 0 of "xsm_bridge"
+#   XFAPI                  = DPDK SECONDARY + xSM MASTER on pair 0 + SLAVE on pair 1
+#   odu_high (this binary) = DPDK SECONDARY + xSM MASTER on pair 1 of "xsm_bridge"
+#
+# Startup order:
+#   1. odu_low   (creates the memzone)
+#   2. XFAPI     (attaches, opens both pairs via XSM_OpenDual)
+#   3. odu_high  (attaches as master on pair 1)
+#
+#
+# Radio-facing config (hal/expert_phy/ru_ofh) lives in configs/odu_low_xfapi.yaml.
+
+f1ap:
+  cu_cp_addr: 127.0.10.1
+  bind_addr: 127.0.1.2
+
+f1u:
+  socket:
+    - bind_addr: 127.0.1.2
+
+cell_cfg:
+  dl_arfcn: 630048
+  band: 78
+  channel_bandwidth_MHz: 100
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+  nof_antennas_dl: 4
+  nof_antennas_ul: 4
+  ssb:
+    ssb_block_power_dbm: 0
+    offset_to_point_a: 252
+    k_ssb: 12
+  pdcch:
+    common:
+      coreset0_index: 11
+  prach:
+    prach_config_index: 159
+    prach_root_sequence_index: 1
+    zero_correlation_zone: 14
+    prach_frequency_start: 22
+    preamble_rx_target_pw: -200
+    preamble_trans_max: 200
+    ra_resp_window: 10
+  tdd_ul_dl_cfg:
+    dl_ul_tx_period: 5
+    nof_dl_slots: 3
+    nof_dl_symbols: 6
+    nof_ul_slots: 1
+    nof_ul_symbols: 4
+
+  pusch:
+    p0_nominal_with_grant: -96
+    msg3_delta_preamble: 2
+
+
+log:
+  filename: odu_high.log
+
+  all_level: warning
+
+metrics:
+
+  enable_log: false
+  enable_json: false
+  enable_verbose: false
+  autostart_stdout_metrics: true
+
+pcap:
+  mac_enable: false
+  f1ap_enable: false
+  f1u_enable: false
+
+
+fapi_stats:
+  enabled: false
+  output_path: ./logs/odu_fapi_stats.json
+  add_timestamp: true
+
+
+expert_execution:
+  affinities:
+
+    main_pool_cpus: "12"
+    main_pool_pinning: "mask"
+  threads:
+    main_pool:
+      nof_threads: 1
+
+fapi_split_l2:
+
+  # thread's affinity.
+  rx_cpu: 14
+  rx_priority: 85
+  # xSM memzone name. In split mode each host has its own "xsm_bridge"
+  # memzone with a single pair (pair 0). In the legacy single-host
+  # bridge, the same name carries two pairs (pair 0 = L1 side, pair 1 =
+  # L2 side).
+  xsm_device_name: xsm_bridge
+  # xSM pair index.
+  #   - Single-host bridge (XFAPI is PRIMARY/SLAVE on pair 0+1):
+  #       set to 1 so odu_high attaches as MASTER on pair 1.
+  #   - Two-host XFAPI split (XFAPI-L2 is PRIMARY/SLAVE on a single pair):
+  #       set to 0; the host-local memzone only has one pair.
+  xsm_pair_index: 0
+  # DPDK EAL file-prefix and proc-type. Defaults below match the single-host
+  # XFAPI bridge (XFAPI is PRIMARY on file-prefix=gnb0, this binary attaches
+  # as SECONDARY). For the two-host XFAPI split mode on the L2 server, set:
+  #   xsm_file_prefix: gnb0_l2   # match XFAPI-L2's --file-prefix
+  #   dpdk_proc_type:  secondary # XFAPI-L2 is PRIMARY there
+  xsm_file_prefix: gnb0_l2
+  dpdk_proc_type: secondary

@@ -124,9 +124,17 @@ split6_o_du_low_plugin_dummy::create_fapi_p7_sector_adaptor_factory(task_executo
   return std::make_unique<mac_fapi_p7_sector_adaptor_factory_dummy>();
 }
 
+#ifdef ENABLE_XSM_FAPI_SPLIT
+#include "split6_o_du_low_plugin_xsm.h"
+#endif
+
 #ifndef OCUDU_HAS_SPLIT6_ENTERPRISE
 std::unique_ptr<split6_o_du_low_plugin> ocudu::create_split6_o_du_low_plugin(std::string_view app_name)
 {
+#ifdef ENABLE_XSM_FAPI_SPLIT
+  return std::make_unique<split6_o_du_low_plugin_xsm>(app_name);
+#else
   return std::make_unique<split6_o_du_low_plugin_dummy>();
+#endif
 }
 #endif

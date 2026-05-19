@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "flexible_o_du_factory.h"
+#include "apps/du/fapi_stats_decorators.h"
 #include "apps/helpers/e2/e2_metric_connector_manager.h"
 #include "apps/services/worker_manager/worker_manager.h"
 #include "apps/units/flexible_o_du/flexible_o_du_commands.h"
@@ -267,21 +268,33 @@ o_du_unit flexible_o_du_factory::create_flexible_o_du(const o_du_unit_dependenci
                                                           dependencies.remote_metrics_gateway,
                                                           {}};
 
-  // Adjust the dependencies.
+  static fapi_stats::recorders_storage stats_recorders;
+
   for (unsigned i = 0, e = du_cells.size(); i != e; ++i) {
+    auto& real_p5_gw   = odu_lo_unit.o_du_lo->get_phy_fapi_fastpath_adaptor()
+                           .get_sector_adaptor(i)
+                           .get_p5_sector_adaptor()
+                           .get_p5_requests_gateway();
+    auto& real_p7_gw   = odu_lo_unit.o_du_lo->get_phy_fapi_fastpath_adaptor()
+                           .get_sector_adaptor(i)
+                           .get_p7_sector_adaptor()
+                           .get_p7_requests_gateway();
+    auto& real_p7_last = odu_lo_unit.o_du_lo->get_phy_fapi_fastpath_adaptor()
+                             .get_sector_adaptor(i)
+                             .get_p7_sector_adaptor()
+                             .get_p7_last_request_notifier();
+
+    stats_recorders.p5_gw.push_back(
+        std::make_unique<fapi_stats::p5_requests_gateway_recorder>(real_p5_gw, "TX_L2_L1"));
+    stats_recorders.p7_gw.push_back(
+        std::make_unique<fapi_stats::p7_requests_gateway_recorder>(real_p7_gw, "TX_L2_L1"));
+    stats_recorders.p7_last_req.push_back(
+        std::make_unique<fapi_stats::p7_last_request_notifier_recorder>(real_p7_last, "TX_L2_L1"));
+
     odu::o_du_high_sector_dependencies sector_dependencies = {
-        .p5_gateway = odu_lo_unit.o_du_lo->get_phy_fapi_fastpath_adaptor()
-                          .get_sector_adaptor(i)
-                          .get_p5_sector_adaptor()
-                          .get_p5_requests_gateway(),
-        .p7_gateway = odu_lo_unit.o_du_lo->get_phy_fapi_fastpath_adaptor()
-                          .get_sector_adaptor(i)
-                          .get_p7_sector_adaptor()
-                          .get_p7_requests_gateway(),
-        .p7_last_req_notifier = odu_lo_unit.o_du_lo->get_phy_fapi_fastpath_adaptor()
-                                    .get_sector_adaptor(i)
-                                    .get_p7_sector_adaptor()
-                                    .get_p7_last_request_notifier(),
+        .p5_gateway           = *stats_recorders.p5_gw.back(),
+        .p7_gateway           = *stats_recorders.p7_gw.back(),
+        .p7_last_req_notifier = *stats_recorders.p7_last_req.back(),
         .timer_mng          = dependencies.timer_ctrl->get_timer_manager(),
         .fapi_ctrl_executor = dependencies.workers->get_cmd_line_executor(),
         .mac_ctrl_executor  = dependencies.workers->get_du_high_executor_mapper().du_control_executor(),

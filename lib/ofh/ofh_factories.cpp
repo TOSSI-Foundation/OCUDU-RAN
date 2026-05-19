@@ -52,6 +52,7 @@ static receiver_config generate_receiver_config(const sector_configuration& conf
   rx_config.are_metrics_enabled                = config.are_metrics_enabled;
   rx_config.log_unreceived_ru_frames           = config.log_unreceived_ru_frames;
   rx_config.enable_log_warnings_for_lates      = config.enable_log_warnings_for_lates;
+  rx_config.is_promiscuous_mode_enabled        = config.is_promiscuous_mode_enabled;
 
   // For the rx eAxCs, configure only those that will be used, so the other eAxCs can be discarded as soon as possible.
   rx_config.prach_eaxc.assign(config.prach_eaxc.begin(), config.prach_eaxc.begin() + config.nof_antennas_ul);

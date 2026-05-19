@@ -22,6 +22,7 @@ static message_receiver_config get_message_receiver_configuration(const receiver
   config.warn_unreceived_frames        = rx_config.log_unreceived_ru_frames;
   config.are_metrics_enabled           = rx_config.are_metrics_enabled;
   config.enable_log_warnings_for_lates = rx_config.enable_log_warnings_for_lates;
+  config.is_promiscuous_mode_enabled   = rx_config.is_promiscuous_mode_enabled;
 
   config.prach_eaxc = rx_config.prach_eaxc;
   config.ul_eaxc    = rx_config.ul_eaxc;

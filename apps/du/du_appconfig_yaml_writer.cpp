@@ -67,6 +67,23 @@ static void fill_du_appconfig_f1ap_section(YAML::Node node, const odu::f1ap_appc
   node["bind_addrs"] = config.bind_addresses;
 }
 
+static void fill_du_appconfig_fapi_stats_section(YAML::Node node, const odu::fapi_stats_appconfig& config)
+{
+  node["enabled"]       = config.enabled;
+  node["output_path"]   = config.output_path;
+  node["add_timestamp"] = config.add_timestamp;
+}
+
+static void fill_du_appconfig_fapi_split_l2_section(YAML::Node node, const odu::fapi_split_l2_appconfig& config)
+{
+  node["rx_cpu"]          = config.rx_cpu;
+  node["rx_priority"]     = config.rx_priority;
+  node["xsm_device_name"] = config.xsm_device_name;
+  node["xsm_pair_index"]  = config.xsm_pair_index;
+  node["xsm_file_prefix"] = config.xsm_file_prefix;
+  node["dpdk_proc_type"]  = config.dpdk_proc_type;
+}
+
 void ocudu::fill_du_appconfig_in_yaml_schema(YAML::Node& node, const du_appconfig& config)
 {
   app_services::fill_app_resource_usage_config_in_yaml_schema(node, config.metrics_cfg.rusage_config);
@@ -81,4 +98,6 @@ void ocudu::fill_du_appconfig_in_yaml_schema(YAML::Node& node, const du_appconfi
   fill_du_appconfig_remote_control_section(node["remote_control"], config.remote_control_config);
   fill_du_appconfig_f1u_section(node["f1u"], config.f1u_cfg);
   fill_du_appconfig_f1ap_section(node["f1ap"], config.f1ap_cfg);
+  fill_du_appconfig_fapi_stats_section(node["fapi_stats"], config.fapi_stats_cfg);
+  fill_du_appconfig_fapi_split_l2_section(node["fapi_split_l2"], config.fapi_split_l2_cfg);
 }

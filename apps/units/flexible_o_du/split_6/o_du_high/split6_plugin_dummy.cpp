@@ -111,9 +111,17 @@ split6_plugin_dummy::create_fapi_adaptor(const odu::du_high_configuration& du_hi
   return std::make_unique<fapi_adaptor_dummy>();
 }
 
+#ifdef ENABLE_XSM_FAPI_SPLIT
+#include "split6_plugin_xsm.h"
+#endif
+
 #ifndef OCUDU_HAS_ENTERPRISE
 std::unique_ptr<split6_plugin> ocudu::create_split6_plugin(std::string_view app_name)
 {
+#ifdef ENABLE_XSM_FAPI_SPLIT
+  return std::make_unique<split6_plugin_xsm>(app_name);
+#else
   return std::make_unique<split6_plugin_dummy>();
+#endif
 }
 #endif

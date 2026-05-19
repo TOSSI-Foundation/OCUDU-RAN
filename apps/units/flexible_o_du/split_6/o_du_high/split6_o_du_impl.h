@@ -4,13 +4,12 @@
 
 #pragma once
 
-#include "slot_point_extender_adaptor.h"
 #include "ocudu/du/du.h"
 #include "ocudu/du/du_high/o_du_high.h"
 #include "ocudu/du/du_operation_controller.h"
 #include "ocudu/fapi_adaptor/phy/phy_fapi_adaptor.h"
+#include <chrono>
 #include <memory>
-#include <vector>
 
 namespace ocudu {
 
@@ -36,7 +35,6 @@ public:
 
 private:
   const unsigned                                  nof_cells;
-  std::vector<slot_point_extender_adaptor>        slot_adaptors;
   std::unique_ptr<odu::o_du_high>                 odu_hi;
   std::unique_ptr<fapi_adaptor::phy_fapi_adaptor> adaptor;
 };

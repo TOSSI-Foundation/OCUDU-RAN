@@ -30,7 +30,8 @@ message_receiver_impl::message_receiver_impl(const message_receiver_config&  con
   metrics_collector(config.are_metrics_enabled,
                     data_flow_uplink->get_metrics_collector(),
                     data_flow_prach->get_metrics_collector()),
-  enable_log_warnings_for_lates(config.enable_log_warnings_for_lates)
+  enable_log_warnings_for_lates(config.enable_log_warnings_for_lates),
+  is_promiscuous_mode_enabled(config.is_promiscuous_mode_enabled)
 {
   ocudu_assert(vlan_decoder, "Invalid VLAN decoder");
   ocudu_assert(ecpri_decoder, "Invalid eCPRI decoder");
@@ -151,7 +152,9 @@ bool message_receiver_impl::should_ecpri_packet_be_filtered(const ecpri::packet_
 
 bool message_receiver_impl::should_ethernet_frame_be_filtered(const ether::vlan_frame_params& eth_params) const
 {
-  if (OCUDU_UNLIKELY(eth_params.mac_src_address != vlan_params.mac_src_address)) {
+  // Promiscuous mode: skip src-MAC check (some RUs TX U-Plane from a different MAC than ru_mac_addr).
+  if (!is_promiscuous_mode_enabled &&
+      OCUDU_UNLIKELY(eth_params.mac_src_address != vlan_params.mac_src_address)) {
     logger.debug("Sector#{}: dropped received Ethernet frame as source MAC addresses do not match (detected={:02X}, "
                  "expected={:02X})",
                  sector_id,

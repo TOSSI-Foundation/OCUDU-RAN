@@ -19,6 +19,9 @@ public:
   /// Constructs from values.
   explicit pusch_context(rnti_t rnti_, harq_id_t h_id_) : rnti(rnti_), h_id(h_id_) {}
 
+  rnti_t get_rnti() const { return rnti; }
+  harq_id_t get_h_id() const { return h_id; }
+
 private:
   friend struct fmt::formatter<pusch_context>;
   rnti_t    rnti = rnti_t::INVALID_RNTI;

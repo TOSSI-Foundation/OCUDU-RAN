@@ -7,3 +7,4 @@
 # one user's workflow (e.g., build folders). See also https://git-scm.com/docs/gitignore).
 
 /utils/gdb/python/ocudu/__pycache__
+/build/

@@ -93,6 +93,58 @@ void ocudu::configure_cli11_with_du_appconfig_schema(CLI::App& app, du_appconfig
 
   // Remote control section.
   configure_cli11_with_remote_control_appconfig_schema(app, du_cfg.remote_control_config);
+
+  // ->configurable() required so CLI11 parses the YAML block (not just the flag).
+  {
+    CLI::App* sub = app.add_subcommand("fapi_stats",
+                                       "FAPI message-stats recorder (XFAPI-dashboard compatible)")
+                        ->configurable();
+    sub->add_option("--enabled", du_cfg.fapi_stats_cfg.enabled,
+                    "Record every P5/P7 FAPI message to RAM and dump to JSON on shutdown "
+                    "(~832 MiB RAM cost)")
+        ->capture_default_str();
+    sub->add_option("--output_path", du_cfg.fapi_stats_cfg.output_path,
+                    "Output JSON path; parent dir auto-created")
+        ->capture_default_str();
+    sub->add_option("--add_timestamp", du_cfg.fapi_stats_cfg.add_timestamp,
+                    "Insert _YYYYMMDD_HHMMSS before the .json extension")
+        ->capture_default_str();
+  }
+
+  {
+    CLI::App* sub = app.add_subcommand("fapi_split_l2",
+                                       "FAPI-split L2 (odu_high) transport scheduling")
+                        ->configurable();
+    sub->add_option("--rx_cpu", du_cfg.fapi_split_l2_cfg.rx_cpu,
+                    "CPU to pin the xSM RX thread to (>=0); -1 = no pinning")
+        ->capture_default_str();
+    sub->add_option("--rx_priority", du_cfg.fapi_split_l2_cfg.rx_priority,
+                    "SCHED_FIFO priority for the xSM RX thread (default 80)")
+        ->capture_default_str();
+    sub->add_option("--xsm_device_name", du_cfg.fapi_split_l2_cfg.xsm_device_name,
+                    "xSM memzone name. Default \"xsm_0\" for standalone deployment; "
+                    "set to e.g. \"xsm_bridge\" when running with the XFAPI bridge")
+        ->capture_default_str();
+    sub->add_option("--xsm_pair_index", du_cfg.fapi_split_l2_cfg.xsm_pair_index,
+                    "xSM slot-pair index inside the shared memzone. 0 for "
+                    "standalone, 1 for the XFAPI bridge (XFAPI owns pair 0 / "
+                    "odu_low side, pair 1 / odu_high side)")
+        ->capture_default_str()
+        ->check(CLI::Range(0u, 1u));
+    sub->add_option("--xsm_file_prefix", du_cfg.fapi_split_l2_cfg.xsm_file_prefix,
+                    "DPDK --file-prefix for L2's EAL init. Default \"gnb0\". "
+                    "Set to e.g. \"gnb0_l2\" when running the two-host XFAPI "
+                    "split mode (so this L2 host's DPDK runtime is namespaced "
+                    "separately from any other gnb0 process).")
+        ->capture_default_str();
+    sub->add_option("--dpdk_proc_type", du_cfg.fapi_split_l2_cfg.dpdk_proc_type,
+                    "DPDK --proc-type for L2's EAL init. Default \"secondary\" "
+                    "(attaches to a PRIMARY already running on the same "
+                    "file-prefix). Set to \"primary\" only for diagnostic "
+                    "standalone runs without any peer PRIMARY.")
+        ->capture_default_str()
+        ->check(CLI::IsMember({"primary", "secondary", "auto"}));
+  }
 }
 
 #ifdef DPDK_FOUND

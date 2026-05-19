@@ -18,7 +18,7 @@ public:
   void on_parsing_configuration_registration(CLI::App& app) override {}
 
   // See interface for documentation.
-  bool on_configuration_validation() const override { return false; }
+  bool on_configuration_validation() const override { return true; }
 
   // See interface for documentation.
   void on_loggers_registration() override {}

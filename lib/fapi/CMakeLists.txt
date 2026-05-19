@@ -5,6 +5,7 @@
 add_subdirectory(decorator_helpers)
 add_subdirectory(message_buffering)
 add_subdirectory(loggers)
+add_subdirectory(serialization)
 
 add_library(ocudu_fapi_decorators STATIC decorator_factory.cpp)
 target_link_libraries(ocudu_fapi_decorators PRIVATE ocudu_fapi_message_buffering ocudu_fapi_loggers)

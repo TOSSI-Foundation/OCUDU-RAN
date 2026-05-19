@@ -19,6 +19,8 @@
 #include "ocudu/ru/ru_timing_notifier.h"
 #include "ocudu/ru/ru_uplink_plane.h"
 
+#include "ocudu/support/fapi_split_trace.h"
+
 namespace ocudu {
 
 /// Upper PHY - Radio Unit downlink adapter.
@@ -29,6 +31,19 @@ public:
   void send(const resource_grid_context& context, shared_resource_grid grid) override
   {
     ocudu_assert(dl_handler, "Adapter is not connected.");
+
+    if (fapi_split_trace::is_enabled()) {
+      const unsigned sl_idx = context.slot.slot_index();
+      const char*    tag    = (sl_idx == 0) ? "SSB-slot" : (sl_idx == 1) ? "SIB1-candidate-slot" : "DL-slot";
+      fapi_split_trace::event("OFH_DL",
+                              "DL grid -> ru_downlink_plane_handler::handle_dl_data "
+                              "sector=%u sfn=%u slot=%u kind=%s",
+                              context.sector,
+                              context.slot.sfn(),
+                              sl_idx,
+                              tag);
+    }
+
     dl_handler->handle_dl_data(context, grid);
   }
 
@@ -47,6 +62,13 @@ public:
   void on_prach_capture_request(const prach_buffer_context& context, shared_prach_buffer buffer) override
   {
     ocudu_assert(ul_handler, "Adapter is not connected");
+    if (fapi_split_trace::is_enabled()) {
+      fapi_split_trace::event("OFH_PRACH",
+                              "PRACH capture -> ru_uplink_plane_handler sector=%u sfn=%u slot=%u",
+                              context.sector,
+                              context.slot.sfn(),
+                              context.slot.slot_index());
+    }
     ul_handler->handle_prach_occasion(context, std::move(buffer));
   }
 
@@ -54,6 +76,13 @@ public:
   void on_uplink_slot_request(const resource_grid_context& context, const shared_resource_grid& grid) override
   {
     ocudu_assert(ul_handler, "Adapter is not connected");
+    if (fapi_split_trace::is_enabled()) {
+      fapi_split_trace::event("OFH_UL",
+                              "UL slot request -> ru_uplink_plane_handler sector=%u sfn=%u slot=%u",
+                              context.sector,
+                              context.slot.sfn(),
+                              context.slot.slot_index());
+    }
     ul_handler->handle_new_uplink_slot(context, grid);
   }
 
@@ -83,6 +112,13 @@ public:
   void on_new_prach_window_data(const prach_buffer_context& context, shared_prach_buffer buffer) override
   {
     ocudu_assert(context.sector < handlers.size(), "Unsupported sector {}", context.sector);
+    if (fapi_split_trace::is_enabled()) {
+      fapi_split_trace::event("OFH_PRACH_WIN",
+                              "RU -> L1 PRACH window data sector=%u sfn=%u slot=%u",
+                              context.sector,
+                              context.slot.sfn(),
+                              context.slot.slot_index());
+    }
     handlers[context.sector]->handle_rx_prach_window(context, std::move(buffer));
   }
 
@@ -158,6 +194,19 @@ public:
     ocudu_assert(context.sector < handlers.size(), "Invalid sector '{}'", context.sector);
     ocudu_assert(handlers[context.sector], "Adapter for sector '{}' is not connected", context.sector);
 
+    if (fapi_split_trace::is_enabled()) {
+      const unsigned sl_idx = context.slot.slot_index();
+      const char*    tag    = (sl_idx == 0)   ? "SSB-slot/CRITICAL"
+                              : (sl_idx == 1) ? "SIB1-candidate-slot/CRITICAL"
+                                              : "DL-slot";
+      fapi_split_trace::event("OFH_ERROR",
+                              "LATE DL message sector=%u sfn=%u slot=%u kind=%s",
+                              context.sector,
+                              context.slot.sfn(),
+                              sl_idx,
+                              tag);
+    }
+
     handlers[context.sector]->handle_late_downlink_message(context.slot);
     general_critical_tracer << instant_trace_event{
         "handle_dl_data_late", instant_trace_event::cpu_scope::thread, instant_trace_event::event_criticality::severe};
@@ -168,6 +217,12 @@ public:
   {
     ocudu_assert(context.sector < handlers.size(), "Invalid sector '{}'", context.sector);
     ocudu_assert(handlers[context.sector], "Adapter for sector '{}' is not connected", context.sector);
+
+    if (fapi_split_trace::is_enabled()) {
+      fapi_split_trace::event("OFH_ERROR",
+                              "LATE UL message sector=%u sfn=%u slot=%u",
+                              context.sector, context.slot.sfn(), context.slot.slot_index());
+    }
 
     handlers[context.sector]->handle_late_uplink_message(context.slot);
     general_critical_tracer << instant_trace_event{"handle_ul_request_late",
@@ -180,6 +235,12 @@ public:
   {
     ocudu_assert(context.sector < handlers.size(), "Invalid sector '{}'", context.sector);
     ocudu_assert(handlers[context.sector], "Adapter for sector '{}' is not connected", context.sector);
+
+    if (fapi_split_trace::is_enabled()) {
+      fapi_split_trace::event("OFH_ERROR",
+                              "LATE PRACH message sector=%u sfn=%u slot=%u",
+                              context.sector, context.slot.sfn(), context.slot.slot_index());
+    }
 
     handlers[context.sector]->handle_late_prach_message(context.slot);
     general_critical_tracer << instant_trace_event{"handle_late_prach_message",

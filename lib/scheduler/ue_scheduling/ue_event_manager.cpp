@@ -12,6 +12,7 @@
 #include "../ue_scheduling/ue_cell_grid_allocator.h"
 #include "ocudu/scheduler/scheduler_feedback_handler.h"
 #include "ocudu/support/memory_pool/bounded_object_pool.h"
+#include <cstring>
 #include <memory>
 
 using namespace ocudu;
@@ -223,9 +224,12 @@ void ue_cell_event_manager::stop()
 {
   active.store(false, std::memory_order_release);
 
-  // Clear pending events.
+  // Drain pending events; execute ue_rem callbacks so schedulers release per-UE state before cell restart.
   event_t cell_ev;
   while (pending_events.try_pop(cell_ev)) {
+    if (cell_ev.ev_name != nullptr && std::strcmp(cell_ev.ev_name, "ue_rem") == 0) {
+      cell_ev.callback();
+    }
   }
 }
 

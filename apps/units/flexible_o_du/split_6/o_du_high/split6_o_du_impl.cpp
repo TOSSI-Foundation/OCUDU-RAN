@@ -5,7 +5,10 @@
 #include "split6_o_du_impl.h"
 #include "ocudu/fapi_adaptor/mac/mac_fapi_fastpath_adaptor.h"
 #include "ocudu/fapi_adaptor/mac/mac_fapi_sector_fastpath_adaptor.h"
+#include "ocudu/fapi_adaptor/mac/operation_controller.h"
+#include "ocudu/fapi_adaptor/mac/p5/mac_fapi_p5_sector_fastpath_adaptor.h"
 #include "ocudu/fapi_adaptor/mac/p7/mac_fapi_p7_sector_fastpath_adaptor.h"
+#include "ocudu/fapi_adaptor/phy/p5/phy_fapi_p5_sector_adaptor.h"
 #include "ocudu/fapi_adaptor/phy/p7/phy_fapi_p7_sector_adaptor.h"
 #include "ocudu/support/ocudu_assert.h"
 
@@ -20,19 +23,20 @@ split6_o_du_impl::split6_o_du_impl(unsigned                                     
   ocudu_assert(odu_hi, "Invalid O-DU high");
   ocudu_assert(adaptor, "Invalid PHY-FAPI adaptor");
 
-  slot_adaptors.reserve(nof_cells);
-
+  // Do NOT route through slot_point_extender_adaptor: wall-clock hfn diverges from air-frame hfn at rollover.
+  (void)slot_duration;
   for (unsigned i = 0; i != nof_cells; ++i) {
     auto& p7_mac_sector_adaptor = odu_hi->get_mac_fapi_fastpath_adaptor().get_sector_adaptor(i).get_p7_sector_adaptor();
     auto& p7_phy_sector_adaptor = adaptor->get_sector_adaptor(i).get_p7_sector_adaptor();
 
-    auto& slot_extender_adaptor =
-        slot_adaptors.emplace_back(slot_duration, p7_mac_sector_adaptor.get_p7_slot_indication_notifier());
     p7_phy_sector_adaptor.set_p7_indications_notifier(p7_mac_sector_adaptor.get_p7_indications_notifier());
     p7_phy_sector_adaptor.set_error_indication_notifier(p7_mac_sector_adaptor.get_error_indication_notifier());
-    p7_phy_sector_adaptor.set_p7_slot_indication_notifier(slot_extender_adaptor);
+    p7_phy_sector_adaptor.set_p7_slot_indication_notifier(p7_mac_sector_adaptor.get_p7_slot_indication_notifier());
 
-    // TODO: connect P5
+    auto& p5_mac_sector_adaptor = odu_hi->get_mac_fapi_fastpath_adaptor().get_sector_adaptor(i).get_p5_sector_fastpath_adaptor();
+    auto& p5_phy_sector_adaptor = adaptor->get_sector_adaptor(i).get_p5_sector_adaptor();
+    p5_phy_sector_adaptor.set_p5_responses_notifier(p5_mac_sector_adaptor.get_p5_responses_notifier());
+    p5_phy_sector_adaptor.set_error_indication_notifier(p5_mac_sector_adaptor.get_error_indication_notifier());
   }
 }
 
@@ -43,10 +47,18 @@ void split6_o_du_impl::start()
   for (unsigned i = 0; i != nof_cells; ++i) {
     adaptor->get_sector_adaptor(i).start();
   }
+
+  for (unsigned i = 0; i != nof_cells; ++i) {
+    odu_hi->get_mac_fapi_fastpath_adaptor().get_sector_adaptor(i).get_operation_controller().start();
+  }
 }
 
 void split6_o_du_impl::stop()
 {
+  for (unsigned i = 0; i != nof_cells; ++i) {
+    odu_hi->get_mac_fapi_fastpath_adaptor().get_sector_adaptor(i).get_operation_controller().stop();
+  }
+
   odu_hi->get_operation_controller().stop();
 
   for (unsigned i = 0; i != nof_cells; ++i) {

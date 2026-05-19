@@ -15,6 +15,7 @@
 #include "apps/services/remote_control/remote_control_appconfig.h"
 #include "apps/services/worker_manager/worker_manager_appconfig.h"
 #include <optional>
+#include <string>
 
 namespace ocudu {
 
@@ -26,9 +27,26 @@ struct metrics_appconfig {
   app_services::executor_metrics_config   executors_metrics_cfg;
 };
 
+struct fapi_stats_appconfig {
+  bool enabled = false;
+  std::string output_path = "./logs/odu_low_fapi_stats.json";
+  bool add_timestamp = true;
+};
+
+struct fapi_split_l1_appconfig {
+  int rx_cpu      = -1;
+  int rx_priority = 80;
+  /// xSM memzone name.
+  std::string xsm_device_name = "xsm_0";
+  /// DPDK proc-type ("primary" standalone, "secondary" with XFAPI bridge).
+  std::string dpdk_proc_type = "primary";
+  unsigned xsm_pair_index = 0;
+  /// Number of slot pairs to reserve (1 standalone, 2 with XFAPI bridge).
+  unsigned xsm_num_pairs = 1;
+};
+
 } // namespace odu_low
 
-/// DU low application configuration.
 struct du_low_appconfig {
   /// Default constructor to update the log filename.
   du_low_appconfig() { log_cfg.filename = "/tmp/du_low.log"; }
@@ -44,6 +62,8 @@ struct du_low_appconfig {
   remote_control_appconfig remote_control_config;
   /// HAL configuration.
   std::optional<hal_appconfig> hal_config;
+  odu_low::fapi_stats_appconfig fapi_stats_cfg;
+  odu_low::fapi_split_l1_appconfig fapi_split_l1_cfg;
   /// Dryrun mode enabled flag.
   bool enable_dryrun = false;
 };

@@ -30,5 +30,19 @@ bool ocudu::validate_appconfig(const du_appconfig& config)
     return false;
   }
 
+  const auto& l2 = config.fapi_split_l2_cfg;
+  if (l2.rx_priority < 1 || l2.rx_priority > 99) {
+    fmt::print("fapi_split_l2.rx_priority={} is out of range [1, 99]\n", l2.rx_priority);
+    return false;
+  }
+  if (l2.rx_cpu < -1) {
+    fmt::print("fapi_split_l2.rx_cpu={} is invalid; use -1 (no pinning) or a CPU index >=0\n", l2.rx_cpu);
+    return false;
+  }
+  if (l2.xsm_device_name.empty()) {
+    fmt::print("fapi_split_l2.xsm_device_name must be non-empty\n");
+    return false;
+  }
+
   return true;
 }

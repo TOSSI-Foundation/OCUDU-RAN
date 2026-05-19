@@ -514,6 +514,16 @@ static void configure_cli11_ssb_args(CLI::App& app, du_high_unit_ssb_config& ssb
       },
       "SSB PSS to SSS EPRE ratio in dB {0, 3}")
       ->check(CLI::IsMember({0, 3}));
+  add_option(app, "--offset_to_point_a", ssb_params.offset_to_point_a,
+             "offsetToPointA for SSB, as per TS 38.211 Section 4.4.4.2. "
+             "Must be set together with k_ssb and pdcch.common.coreset0_index "
+             "to bypass automatic SSB position derivation.")
+      ->check(CLI::Range(0, 2199));
+  add_option(app, "--k_ssb", ssb_params.k_ssb,
+             "k_SSB (SSB subcarrier offset), as per TS 38.211 Section 7.4.3.1. "
+             "Values: {0,..,23}. Must be set together with offset_to_point_a "
+             "and pdcch.common.coreset0_index.")
+      ->check(CLI::Range(0, 23));
 }
 
 static void configure_cli11_tdd_ul_dl_pattern_args(CLI::App& app, tdd_ul_dl_pattern_unit_config& pattern_params)

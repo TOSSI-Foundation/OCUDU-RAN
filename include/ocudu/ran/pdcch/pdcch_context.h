@@ -30,6 +30,10 @@ public:
   }
   bool operator!=(const pdcch_context& other) const { return !(*this == other); }
 
+  search_space_id get_ss_id() const { return ss_id; }
+  const char* get_dci_format() const { return dci_format; }
+  const std::optional<unsigned>& get_harq_feedback_timing() const { return harq_feedback_timing; }
+
 private:
   friend struct fmt::formatter<pdcch_context>;
   search_space_id         ss_id      = MAX_NOF_SEARCH_SPACES;

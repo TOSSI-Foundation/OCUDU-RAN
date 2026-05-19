@@ -25,7 +25,7 @@ public:
   void on_slot_indication(const fapi::slot_indication& msg) override;
 
   /// Sets the given cell-specific slot handler. This handler will be used to receive new slot notifications.
-  void set_cell_slot_handler(mac_cell_slot_handler& handler) { mac_slot_handler = &handler; }
+  void set_cell_slot_handler(mac_cell_slot_handler& handler);
 
 private:
   mac_cell_slot_handler& fapi_slot_handler;

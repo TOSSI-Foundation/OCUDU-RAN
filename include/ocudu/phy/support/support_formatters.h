@@ -18,7 +18,11 @@ struct formatter<std::chrono::nanoseconds> {
   template <typename ParseContext>
   auto parse(ParseContext& ctx)
   {
-    return ctx.begin();
+    auto it = ctx.begin();
+    while (it != ctx.end() && *it != '}') {
+      ++it;
+    }
+    return it;
   }
 
   template <typename FormatContext>

@@ -1,0 +1,104 @@
+# FAPI Split — O-DU Low (L1/PHY) — XFAPI BRIDGE topology.
+# Use with: ./odu_low -c configs/odu_low_xfapi.yaml
+#
+# Topology:
+#   odu_low (this binary) = DPDK PRIMARY + xSM SLAVE on pair 0 of "xsm_bridge"
+#                           (creates the shared memzone with 2 slot pairs)
+#   XFAPI                 = DPDK SECONDARY + xSM MASTER on pair 0 + SLAVE on pair 1
+#   odu_high              = DPDK SECONDARY + xSM MASTER on pair 1 of "xsm_bridge"
+#
+# Startup order:
+#   1. odu_low   (creates the memzone)
+#   2. XFAPI     (attaches, opens both pairs via XSM_OpenDual)
+#   3. odu_high  (attaches as master on pair 1)
+#
+#
+# Cell parameters arrive at runtime over xSM via FAPI CONFIG.request from L2
+# (relayed through XFAPI).
+
+log:
+  filename:  odu_low.log
+  # Production-grade verbosity. Per-slot info-level lines from SCHED/MAC/PHY
+  # at FAPI rate (~3000 lines/s) saturate the OCUDU logger backend's 8192-
+  # element queue and force cell_rt to block on the logger mutex during
+  # bursts. To debug a specific area, raise just that component
+  # (e.g. `phy_level: debug`).
+  all_level: warning
+  phy_level: warning
+  ofh_level: warning
+
+metrics:
+  enable_log: false
+  enable_json: false
+  enable_verbose: false
+  layers:
+    enable_du_low: true
+    enable_ru: true
+
+fapi_stats:
+  enabled: false
+  output_path: ./logs/odu_low_fapi_stats.json
+  add_timestamp: true
+
+fapi_split_l1:
+  rx_cpu: 29
+  # SCHED_FIFO priority. Kept below OFH timing (90) and cell_rt (89) so
+  # those never get preempted by the xSM RX thread.
+  rx_priority: 85
+  # Bridge topology: this binary owns the DPDK runtime and creates the
+  # shared memzone "xsm_bridge" with TWO slot pairs. XFAPI attaches as
+  # SECONDARY and opens both pairs via XSM_OpenDual; odu_high attaches as
+  # the master on pair 1.
+  xsm_device_name: xsm_bridge
+  dpdk_proc_type: primary
+  xsm_pair_index: 0
+  xsm_num_pairs: 2
+
+expert_execution:
+  affinities:
+    main_pool_cpus: "22,23,24,25,26,27"
+    main_pool_pinning: "mask"
+    ofh:
+      timing_cpu: "28"
+  threads:
+    main_pool:
+      nof_threads: 6
+
+hal:
+    eal_args: "--lcores (0-1)@(0,2,4) -a 0000:51:00.0 -a 0000:51:0a.0 -a 0000:51:0a.1 --iova-mode=pa --log-level=pmd.net.iavf:8 --log-level=bus.pci:8"
+
+expert_phy:
+  max_proc_delay: 5
+  allow_request_on_empty_uplink_slot: true
+
+ru_ofh:
+  warn_unreceived_ru_frames: always
+
+  t1a_max_cp_dl: 429
+  t1a_min_cp_dl: 285
+  t1a_max_cp_ul: 429
+  t1a_min_cp_ul: 285
+  t1a_max_up: 196
+  t1a_min_up: 96
+  ta4_max: 180
+  ta4_min: 110
+  is_prach_cp_enabled: true
+  ignore_ecpri_payload_size: false
+  ignore_ecpri_seq_id: true
+  compr_method_ul: bfp
+  compr_bitwidth_ul: 9
+  compr_method_dl: bfp
+  compr_bitwidth_dl: 9
+  compr_method_prach: bfp
+  compr_bitwidth_prach: 9
+  enable_ul_static_compr_hdr: true
+  enable_dl_static_compr_hdr: true
+  iq_scaling: 5.0
+  cells:
+    - network_interface: 0000:51:0a.0
+      ru_mac_addr: e8:c7:4f:1e:c7:4d
+      du_mac_addr: 00:11:22:33:44:55
+      enable_promiscuous: true
+      prach_port_id: [4, 5, 6, 7]
+      dl_port_id: [0, 1, 2, 3]
+      ul_port_id: [0, 1, 2, 3]

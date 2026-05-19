@@ -59,6 +59,7 @@ struct receiver_config {
   warn_unreceived_ru_frames log_unreceived_ru_frames = warn_unreceived_ru_frames::after_traffic_detection;
   /// If set to true, logs late events as warnings, otherwise as info.
   bool enable_log_warnings_for_lates = true;
+  bool is_promiscuous_mode_enabled = false;
 };
 
 } // namespace ofh

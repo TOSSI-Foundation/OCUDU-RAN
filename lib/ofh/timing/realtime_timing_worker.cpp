@@ -194,11 +194,17 @@ void realtime_timing_worker::poll()
   slot_symbol_point symbol_point(
       slot.without_hyper_sfn(), current_symbol_index % nof_symbols_per_slot, nof_symbols_per_slot);
 
+  // Skipped symbols crossing hfn boundary need decremented hfn to avoid spurious forward jump.
+  const uint32_t cur_hfn          = slot.hyper_sfn();
+  const uint32_t prev_hfn         = (cur_hfn == 0) ? (NOF_HYPER_SFNS - 1) : (cur_hfn - 1);
+  const uint32_t cur_symbol_count = symbol_point.to_uint();
+
   for (unsigned i = 0; i != delta; ++i) {
-    unsigned skipped_symbol_id = delta - 1 - i;
-    // Notify pending symbols from oldest to newest.
-    notify_slot_symbol_point(slot_symbol_point_context{.symbol_point = symbol_point - skipped_symbol_id,
-                                                       .hfn          = slot.hyper_sfn(),
+    unsigned          skipped_symbol_id = delta - 1 - i;
+    slot_symbol_point sym               = symbol_point - skipped_symbol_id;
+    const uint32_t    hfn_for_sym       = (sym.to_uint() > cur_symbol_count) ? prev_hfn : cur_hfn;
+    notify_slot_symbol_point(slot_symbol_point_context{.symbol_point = sym,
+                                                       .hfn          = hfn_for_sym,
                                                        .time_point   = std::chrono::system_clock::now()});
   }
 }

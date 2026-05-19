@@ -30,6 +30,9 @@ set(SOURCES
         byte_buffer_chain.cpp
         config_yaml.cpp
         cpu_architecture_info.cpp
+        fapi_split_trace.cpp
+        mac_phy_handoff_timing.cpp
+        mac_phy_latency_injector.cpp
         resource_usage/powercap_energy_reader_impl.cpp
         resource_usage/rapl_msr_energy_reader_impl.cpp
         resource_usage/power_consumption.cpp

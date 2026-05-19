@@ -16,8 +16,17 @@ set(SOURCES
             split6_o_du_low_unit_cli11_schema.cpp
             split6_o_du_low_unit_config_validator.cpp)
 
-add_library(ocudu_split6_o_du_low_plugin STATIC split6_o_du_low_plugin_dummy.cpp)
+set(LOW_PLUGIN_SOURCES split6_o_du_low_plugin_dummy.cpp)
+if(ENABLE_XSM_FAPI_SPLIT)
+    list(APPEND LOW_PLUGIN_SOURCES split6_o_du_low_plugin_xsm.cpp)
+endif()
+
+add_library(ocudu_split6_o_du_low_plugin STATIC ${LOW_PLUGIN_SOURCES})
 target_include_directories(ocudu_split6_o_du_low_plugin PRIVATE ${CMAKE_SOURCE_DIR})
+if(ENABLE_XSM_FAPI_SPLIT)
+    target_compile_definitions(ocudu_split6_o_du_low_plugin PUBLIC ENABLE_XSM_FAPI_SPLIT)
+    target_link_libraries(ocudu_split6_o_du_low_plugin PUBLIC fapi_xsm_transport)
+endif()
 
 add_library(ocudu_flexible_o_du_low_split_6 STATIC ${SOURCES})
 target_include_directories(ocudu_flexible_o_du_low_split_6 PRIVATE ${CMAKE_SOURCE_DIR})

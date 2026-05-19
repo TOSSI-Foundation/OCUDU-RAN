@@ -8,6 +8,7 @@
 #include "ocudu/fapi_adaptor/mac/operation_controller.h"
 #include "ocudu/fapi_adaptor/mac/p5/mac_fapi_p5_sector_fastpath_adaptor.h"
 #include "ocudu/fapi_adaptor/mac/p7/mac_fapi_p7_sector_fastpath_adaptor.h"
+#include "ocudu/support/async/fifo_async_task_scheduler.h"
 #include <memory>
 
 namespace ocudu {
@@ -16,6 +17,8 @@ namespace fapi_adaptor {
 /// MAC-FAPI bidirectional sector fastpath adaptor implementation.
 class mac_fapi_sector_fastpath_adaptor_impl : public mac_fapi_sector_fastpath_adaptor, public operation_controller
 {
+  static constexpr size_t P5_TASK_QUEUE_SIZE = 4;
+
 public:
   /// Constructor for the MAC-FAPI bidirectional sector adaptor.
   mac_fapi_sector_fastpath_adaptor_impl(std::unique_ptr<mac_fapi_p5_sector_fastpath_adaptor> p5_adaptor_,
@@ -31,14 +34,16 @@ public:
   operation_controller& get_operation_controller() override { return *this; }
 
   // See interface for documentation.
-  void start() override { p7_adaptor->get_operation_controller().start(); }
+  void start() override;
 
   // See interface for documentation.
-  void stop() override { p7_adaptor->get_operation_controller().stop(); }
+  void stop() override;
 
 private:
   std::unique_ptr<mac_fapi_p5_sector_fastpath_adaptor> p5_adaptor;
   std::unique_ptr<mac_fapi_p7_sector_fastpath_adaptor> p7_adaptor;
+  // Drives P5 start/stop coroutines; without this scheduler async_task<bool> suspends immediately and never runs.
+  fifo_async_task_scheduler                            p5_task_sched;
 };
 
 } // namespace fapi_adaptor

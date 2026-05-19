@@ -32,6 +32,11 @@ fapi_to_mac_slot_indication_fastpath_translator::fapi_to_mac_slot_indication_fas
 {
 }
 
+void fapi_to_mac_slot_indication_fastpath_translator::set_cell_slot_handler(mac_cell_slot_handler& handler)
+{
+  mac_slot_handler = &handler;
+}
+
 void fapi_to_mac_slot_indication_fastpath_translator::on_slot_indication(const fapi::slot_indication& msg)
 {
   mac_cell_timing_context context{.sl_tx = msg.slot, .time_point = msg.time_point};

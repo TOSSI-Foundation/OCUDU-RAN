@@ -141,7 +141,7 @@ struct worker_manager_config {
   /// RU dummy configuration.
   std::optional<ru_dummy_config> ru_dummy_cfg;
   /// Executor metrics channel registry.
-  executor_metrics_channel_registry* exec_metrics_channel_registry;
+  executor_metrics_channel_registry* exec_metrics_channel_registry = nullptr;
 };
 
 } // namespace ocudu

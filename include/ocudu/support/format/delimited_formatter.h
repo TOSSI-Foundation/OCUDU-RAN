@@ -63,29 +63,36 @@ public:
 
     format_buffer.clear();
     format_buffer.append(PREAMBLE_FORMAT.begin(), PREAMBLE_FORMAT.end());
+    bool any_propagated_spec = false;
 
     for (auto& it : context) {
       switch (it) {
         case 'n':
-          // New line delimiter.
+          // Meta-spec: consume but do NOT propagate to format_buffer (fmt 11 rejects 'n' in nested formatters).
           delimiter_buffer.clear();
           delimiter_buffer.append(NEWLINE_DELIMITER.begin(), NEWLINE_DELIMITER.end());
-          break;
+          continue;
         case ';':
-          // Semicolon delimiter.
           delimiter_buffer.clear();
           delimiter_buffer.append(SEMICOLON_DELIMITER.begin(), SEMICOLON_DELIMITER.end());
-          break;
+          continue;
         case 's':
-          // Short representation.
           verbose = false;
-          break;
+          continue;
         case '}':
-          format_buffer.push_back(it);
+          // No real format chars propagated: reset to "{}" — "{:}" breaks fmt 11 nested formatters.
+          if (!any_propagated_spec) {
+            static constexpr std::string_view DEFAULT_FORMAT = "{}";
+            format_buffer.clear();
+            format_buffer.append(DEFAULT_FORMAT.begin(), DEFAULT_FORMAT.end());
+          } else {
+            format_buffer.push_back(it);
+          }
           return &it;
       }
       // Propagate formatting to underlying structures.
       format_buffer.push_back(it);
+      any_propagated_spec = true;
     }
     // No end of context was found.
     return context.end();

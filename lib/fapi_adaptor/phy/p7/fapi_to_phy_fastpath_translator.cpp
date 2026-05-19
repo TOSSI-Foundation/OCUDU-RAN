@@ -22,8 +22,12 @@
 #include "ocudu/phy/upper/channel_processors/prach/prach_detector.h"
 #include "ocudu/phy/upper/downlink_processor.h"
 #include "ocudu/phy/upper/uplink_pdu_slot_repository.h"
+#include "ocudu/support/fapi_split_trace.h"
+#include "ocudu/support/mac_phy_handoff_timing.h"
 #include "ocudu/phy/upper/uplink_pdu_validator.h"
 #include "ocudu/phy/upper/uplink_request_processor.h"
+
+#include <atomic>
 
 using namespace ocudu;
 using namespace fapi_adaptor;
@@ -279,9 +283,41 @@ static expected<downlink_pdus> translate_dl_tti_pdus_to_phy_pdus(const fapi::dl_
 
 void fapi_to_phy_fastpath_translator::send_dl_tti_request(const fapi::dl_tti_request& msg)
 {
+  ocudu::mac_phy_handoff_timing::record(ocudu::mac_phy_handoff_timing::msg_kind::DL_TTI_REQUEST,
+                                        ocudu::mac_phy_handoff_timing::direction::RX_L1,
+                                        static_cast<uint16_t>(msg.slot.sfn()),
+                                        static_cast<uint16_t>(msg.slot.slot_index()));
+
   slot_point  slot(msg.slot);
   slot_point  current_slot = get_current_slot();
   trace_point tp           = l1_dl_tracer.now();
+
+  if (fapi_split_trace::is_enabled()) {
+    for (const auto& pdu : msg.pdus) {
+      if (pdu.pdu_type == fapi::dl_pdu_type::SSB) {
+        const auto& s = pdu.ssb_pdu;
+        fapi_split_trace::event("MIB",
+                                "DL_TTI.request SSB PDU sfn=%u slot=%u PCI=%u ssb_idx=%u "
+                                "k_ssb=%u bchPayload=0x%08X",
+                                msg.slot.sfn(), msg.slot.slot_index(),
+                                static_cast<unsigned>(s.phys_cell_id),
+                                static_cast<unsigned>(s.ssb_block_index),
+                                static_cast<unsigned>(s.subcarrier_offset.value()),
+                                s.bch_payload);
+      } else if (pdu.pdu_type == fapi::dl_pdu_type::PDSCH) {
+        const bool     is_sib  = (pdu.pdsch_pdu.rnti == to_rnti(0xFFFFu));
+        const size_t   nof_cws = pdu.pdsch_pdu.cws.size();
+        const unsigned tb0     = nof_cws > 0 ? static_cast<unsigned>(pdu.pdsch_pdu.cws[0].tb_size.value()) : 0u;
+        fapi_split_trace::event(is_sib ? "SIB" : "PDSCH",
+                                "DL_TTI.request PDSCH PDU sfn=%u slot=%u rnti=0x%04X "
+                                "nof_cws=%zu tb0_size=%u pdu_index=%u",
+                                msg.slot.sfn(), msg.slot.slot_index(),
+                                static_cast<unsigned>(pdu.pdsch_pdu.rnti),
+                                nof_cws, tb0,
+                                pdu.pdsch_pdu.pdu_index);
+      }
+    }
+  }
 
   if (!pdsch_repository.empty()) {
     logger.warning("Sector#{}: Could not process '{}' PDSCH PDUs from the slot '{}'",
@@ -478,6 +514,11 @@ static expected<uplink_pdus> translate_ul_tti_pdus_to_phy_pdus(const fapi::ul_tt
 
 void fapi_to_phy_fastpath_translator::send_ul_tti_request(const fapi::ul_tti_request& msg)
 {
+  ocudu::mac_phy_handoff_timing::record(ocudu::mac_phy_handoff_timing::msg_kind::UL_TTI_REQUEST,
+                                        ocudu::mac_phy_handoff_timing::direction::RX_L1,
+                                        static_cast<uint16_t>(msg.slot.sfn()),
+                                        static_cast<uint16_t>(msg.slot.slot_index()));
+
   // :TODO: check the messages order. Do this in a different class.
   slot_point  slot(msg.slot);
   slot_point  current_slot = get_current_slot();
@@ -576,6 +617,11 @@ void fapi_to_phy_fastpath_translator::send_ul_tti_request(const fapi::ul_tti_req
 
 void fapi_to_phy_fastpath_translator::send_ul_dci_request(const fapi::ul_dci_request& msg)
 {
+  ocudu::mac_phy_handoff_timing::record(ocudu::mac_phy_handoff_timing::msg_kind::UL_DCI_REQUEST,
+                                        ocudu::mac_phy_handoff_timing::direction::RX_L1,
+                                        static_cast<uint16_t>(msg.slot.sfn()),
+                                        static_cast<uint16_t>(msg.slot.slot_index()));
+
   slot_point  current_slot = get_current_slot();
   trace_point tp           = l1_ul_tracer.now();
 
@@ -627,6 +673,11 @@ void fapi_to_phy_fastpath_translator::send_ul_dci_request(const fapi::ul_dci_req
 
 void fapi_to_phy_fastpath_translator::send_tx_data_request(const fapi::tx_data_request& msg)
 {
+  ocudu::mac_phy_handoff_timing::record(ocudu::mac_phy_handoff_timing::msg_kind::TX_DATA_REQUEST,
+                                        ocudu::mac_phy_handoff_timing::direction::RX_L1,
+                                        static_cast<uint16_t>(msg.slot.sfn()),
+                                        static_cast<uint16_t>(msg.slot.slot_index()));
+
   slot_point  current_slot = get_current_slot();
   trace_point tp           = l1_dl_tracer.now();
 
@@ -707,6 +758,32 @@ void fapi_to_phy_fastpath_translator::send_tx_data_request(const fapi::tx_data_r
   }
 
   for (unsigned i = 0, e = msg.pdus.size(); i != e; ++i) {
+    if (fapi_split_trace::is_enabled()) {
+      const auto& pdsch_pdu = pdsch_repository.pdus[i];
+      const bool  is_sib    = (static_cast<unsigned>(pdsch_pdu.rnti) == 0xFFFFu);
+      const auto  buf       = msg.pdus[i].pdu.get_buffer();
+
+      if (is_sib && !buf.empty()) {
+        uint64_t hash = 0xcbf29ce484222325ULL;
+        for (uint8_t b : buf) {
+          hash ^= b;
+          hash *= 0x100000001b3ULL;
+        }
+        static std::atomic<uint64_t> last_sib1_hash{0};
+        uint64_t prev = last_sib1_hash.load(std::memory_order_relaxed);
+        if (hash != prev) {
+          last_sib1_hash.store(hash, std::memory_order_relaxed);
+          fapi_split_trace::payload_full("SIB1",
+                                         "SIB1_TO_RU",
+                                         msg.slot.sfn(),
+                                         msg.slot.slot_index(),
+                                         static_cast<uint16_t>(pdsch_pdu.rnti),
+                                         buf.data(),
+                                         buf.size());
+        }
+      }
+    }
+
     // Process PDSCH.
     controller->process_pdsch(
         static_vector<shared_transport_block, pdsch_processor::MAX_NOF_TRANSPORT_BLOCKS>{msg.pdus[i].pdu},

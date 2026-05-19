@@ -196,9 +196,8 @@ private:
     }
 
     if (nof_skipped >= MAX_SKIPPED) {
-      // Number of skipped slots is too high. This is likely an error.
       logger.warning("cell={}: Unexpected jump in slot indications of {}", cell_index, nof_skipped);
-      return cell_sl_counter;
+      nof_skipped = MAX_SKIPPED - 1;
     }
 
     // Tick the timer.

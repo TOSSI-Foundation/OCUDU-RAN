@@ -60,6 +60,32 @@ void p5_requests_handler::send_param_request(const fapi::param_request& msg)
 
 void p5_requests_handler::send_config_request(const fapi::config_request& msg)
 {
+  logger.warning(
+      "[CONFIG.request RX L1] sector={} pci={} scs_common={}kHz cp={} duplex={} "
+      "dl_arfcn={} dl_bw={}MHz ul_arfcn={} ul_bw={}MHz num_tx_ant={} num_rx_ant={} "
+      "ssb_block_power={}dBm ssb_offset_to_pointA={} ssb_k={} "
+      "prach_cfg_idx={} prach_root_seq={} prach_zero_corr_zone={} prach_freq_start={} "
+      "tdd_cfg_present={}",
+      sector,
+      msg.cell_cfg.pci,
+      scs_to_khz(msg.cell_cfg.scs_common),
+      msg.cell_cfg.cp.to_string(),
+      static_cast<unsigned>(msg.cell_cfg.duplex),
+      msg.cell_cfg.carrier_cfg.dl_f_ref_arfcn,
+      msg.cell_cfg.carrier_cfg.dl_bandwidth,
+      msg.cell_cfg.carrier_cfg.ul_f_ref_arfcn,
+      msg.cell_cfg.carrier_cfg.ul_bandwidth,
+      msg.cell_cfg.carrier_cfg.num_tx_ant,
+      msg.cell_cfg.carrier_cfg.num_rx_ant,
+      msg.cell_cfg.ssb_cfg.ssb_block_power,
+      msg.cell_cfg.ssb_cfg.offset_to_point_A.value(),
+      msg.cell_cfg.ssb_cfg.k_ssb.value(),
+      msg.cell_cfg.prach_cfg.rach_cfg_generic.prach_config_index,
+      msg.cell_cfg.prach_cfg.prach_root_seq_index,
+      msg.cell_cfg.prach_cfg.rach_cfg_generic.zero_correlation_zone_config,
+      msg.cell_cfg.prach_cfg.rach_cfg_generic.msg1_frequency_start,
+      msg.cell_cfg.tdd_ul_dl_cfg_common.has_value());
+
   fapi::config_response response;
   response.error_code = fapi::error_code_id::msg_ok;
 

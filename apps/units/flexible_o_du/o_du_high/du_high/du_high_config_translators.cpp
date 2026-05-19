@@ -525,6 +525,13 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
     param.min_k2             = base_cell.pusch_cfg.min_k2;
     param.cs0_index          = base_cell.pdcch_cfg.common.coreset0_index;
     param.ss0_index          = base_cell.pdcch_cfg.common.ss0_index;
+    if (base_cell.ssb_cfg.offset_to_point_a.has_value()) {
+      param.offset_to_point_a =
+          ssb_offset_to_pointA{static_cast<uint16_t>(base_cell.ssb_cfg.offset_to_point_a.value())};
+    }
+    if (base_cell.ssb_cfg.k_ssb.has_value()) {
+      param.k_ssb = ssb_subcarrier_offset{static_cast<uint8_t>(base_cell.ssb_cfg.k_ssb.value())};
+    }
     // If the CORESET#0 maximum duration is not set, set maximum CORESET#0 duration to 1 OFDM symbol for BW > 50MHz in
     // FR1 to spread CORESET RBs across the BW. This results in one extra symbol to be used for PDSCH.
     if (base_cell.pdcch_cfg.common.max_coreset0_duration.has_value()) {

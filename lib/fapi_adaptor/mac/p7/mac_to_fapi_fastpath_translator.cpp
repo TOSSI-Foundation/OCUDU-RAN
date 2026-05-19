@@ -18,6 +18,8 @@
 #include "ocudu/fapi/p7/p7_last_request_notifier.h"
 #include "ocudu/fapi/p7/p7_requests_gateway.h"
 #include "ocudu/scheduler/result/sched_result.h"
+#include "ocudu/support/mac_phy_handoff_timing.h"
+#include "ocudu/support/mac_phy_latency_injector.h"
 
 using namespace ocudu;
 using namespace fapi_adaptor;
@@ -154,6 +156,12 @@ void mac_to_fapi_fastpath_translator::on_new_downlink_scheduler_results(const ma
                                *pm_mapper,
                                cell_nof_prbs);
 
+  ocudu::mac_phy_handoff_timing::record(ocudu::mac_phy_handoff_timing::msg_kind::DL_TTI_REQUEST,
+                                        ocudu::mac_phy_handoff_timing::direction::TX_L2,
+                                        static_cast<uint16_t>(msg.slot.sfn()),
+                                        static_cast<uint16_t>(msg.slot.slot_index()));
+
+
   // Send the message.
   p7_gateway.send_dl_tti_request(msg);
 
@@ -214,6 +222,12 @@ void mac_to_fapi_fastpath_translator::on_new_downlink_data(const mac_dl_data_res
     }
   }
 
+  ocudu::mac_phy_handoff_timing::record(ocudu::mac_phy_handoff_timing::msg_kind::TX_DATA_REQUEST,
+                                        ocudu::mac_phy_handoff_timing::direction::TX_L2,
+                                        static_cast<uint16_t>(msg.slot.sfn()),
+                                        static_cast<uint16_t>(msg.slot.slot_index()));
+
+
   // Send the message.
   p7_gateway.send_tx_data_request(msg);
 }
@@ -255,6 +269,12 @@ void mac_to_fapi_fastpath_translator::on_new_uplink_scheduler_results(const mac_
     convert_srs_mac_to_fapi(pdu_builder, pdu);
   }
 
+  ocudu::mac_phy_handoff_timing::record(ocudu::mac_phy_handoff_timing::msg_kind::UL_TTI_REQUEST,
+                                        ocudu::mac_phy_handoff_timing::direction::TX_L2,
+                                        static_cast<uint16_t>(msg.slot.sfn()),
+                                        static_cast<uint16_t>(msg.slot.slot_index()));
+
+
   // Send the message.
   p7_gateway.send_ul_tti_request(msg);
 }
@@ -274,6 +294,12 @@ void mac_to_fapi_fastpath_translator::handle_ul_dci_request(span<const pdcch_ul_
   builder.set_slot(slot);
 
   add_pdcch_pdus_to_builder(builder, pdcch_info, payloads, *pm_mapper, cell_nof_prbs);
+
+  ocudu::mac_phy_handoff_timing::record(ocudu::mac_phy_handoff_timing::msg_kind::UL_DCI_REQUEST,
+                                        ocudu::mac_phy_handoff_timing::direction::TX_L2,
+                                        static_cast<uint16_t>(msg.slot.sfn()),
+                                        static_cast<uint16_t>(msg.slot.slot_index()));
+
 
   // Send the message.
   p7_gateway.send_ul_dci_request(msg);

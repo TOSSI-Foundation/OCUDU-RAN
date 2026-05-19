@@ -110,7 +110,8 @@ public:
                                      executor_metrics_channel_registry*                       metric_channel_registry)
   {
     ocudu_assert(cfg.nof_cells > 0, "Invalid number of cells");
-    concurrent_queue_params slot_qparams{concurrent_queue_policy::lockfree_spsc, 4};
+    // Depth 64: ~32 ms headroom against strand preemption, avoids silent slot drops.
+    concurrent_queue_params slot_qparams{concurrent_queue_policy::lockfree_spsc, 64};
     concurrent_queue_params other_qparams{concurrent_queue_policy::lockfree_mpmc, cfg.default_task_queue_size};
     bool                    is_sync = not rt_mode_enabled;
 

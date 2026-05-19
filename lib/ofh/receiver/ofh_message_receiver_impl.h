@@ -45,6 +45,7 @@ struct message_receiver_config {
   bool are_metrics_enabled = false;
   /// If set to true, logs late events as warnings, otherwise as info.
   bool enable_log_warnings_for_lates;
+  bool is_promiscuous_mode_enabled = false;
 };
 
 /// Message receiver dependencies.
@@ -115,6 +116,7 @@ private:
   std::unique_ptr<data_flow_uplane_uplink_prach>        data_flow_prach;
   message_receiver_metrics_collector                    metrics_collector;
   bool                                                  enable_log_warnings_for_lates;
+  const bool                                            is_promiscuous_mode_enabled;
   operation_controller_dummy                            controller;
 };
 

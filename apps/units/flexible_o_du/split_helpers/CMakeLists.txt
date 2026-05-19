@@ -14,7 +14,11 @@ set(SOURCES
 
 add_library(ocudu_flexible_o_du_helpers STATIC ${SOURCES})
 target_include_directories(ocudu_flexible_o_du_helpers PRIVATE ${CMAKE_SOURCE_DIR})
+
 target_link_libraries(ocudu_flexible_o_du_helpers
+        PUBLIC
+        fapi_xsm_transport
+        PRIVATE
         ocudu_o_du
         ocudu_pcap
         ocudu_app_services

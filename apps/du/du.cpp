@@ -22,6 +22,10 @@
 #include "du_appconfig_translators.h"
 #include "du_appconfig_validators.h"
 #include "du_appconfig_yaml_writer.h"
+#include "fapi_stats.h"
+#include "ocudu/support/fapi_split_trace.h"
+#include "ocudu/support/mac_phy_handoff_timing.h"
+#include "ocudu/support/mac_phy_latency_injector.h"
 #include "ocudu/adt/scope_exit.h"
 #include "ocudu/du/du_high/du_high_clock_controller.h"
 #include "ocudu/du/du_operation_controller.h"
@@ -46,6 +50,10 @@
 #ifdef DPDK_FOUND
 #include "ocudu/hal/dpdk/dpdk_eal_factory.h"
 #endif
+#ifdef ENABLE_XSM_FAPI_SPLIT
+#include "fapi_xsm_transport.h"
+#include "fapi_xsm_proxy.h"
+#endif
 // Include ThreadSanitizer (TSAN) options if thread sanitization is enabled.
 // This include is not unused - it helps prevent false alarms from the thread sanitizer.
 #include "ocudu/support/tsan_options.h"
@@ -65,7 +73,7 @@ static constexpr unsigned MAX_CONFIG_FILES = 10;
 static void populate_cli11_generic_args(CLI::App& app)
 {
   fmt::memory_buffer buffer;
-  format_to(std::back_inserter(buffer), "OCUDU 5G DU version {} ({})", get_version(), get_build_hash());
+  fmt::format_to(std::back_inserter(buffer), "OCUDU 5G DU version {} ({})", get_version(), get_build_hash());
   app.set_version_flag("-v,--version", ocudu::to_c_str(buffer));
   app.set_config("-c,", config_file, "Read config from file", false)->expected(1, MAX_CONFIG_FILES);
 }
@@ -200,7 +208,24 @@ int main(int argc, char** argv)
   auto log_flusher = make_scope_exit([]() { ocudulog::flush(); });
   register_app_logs(du_cfg, *o_du_app_unit);
 
-  // Check the metrics and metrics consumers.
+  fapi_stats::initialize(du_cfg.fapi_stats_cfg.enabled,
+                         du_cfg.fapi_stats_cfg.output_path,
+                         du_cfg.fapi_stats_cfg.add_timestamp);
+
+  fapi_split_trace::init(du_cfg.fapi_stats_cfg.enabled,
+                         "./logs/fapi_split_trace.log",
+                         "odu_high");
+  fapi_split_trace::event("LIFECYCLE", "odu_high process started, fapi_stats.enabled=%d",
+                          du_cfg.fapi_stats_cfg.enabled ? 1 : 0);
+
+#ifndef ENABLE_XSM_FAPI_SPLIT
+  ocudu::mac_phy_handoff_timing::initialize(
+      true,
+      "./logs/mac_phy_handoff_timing.csv");
+
+  ocudu::mac_phy_latency_injector::initialize_from_env();
+#endif
+
   ocudulog::basic_logger& gnb_logger = ocudulog::fetch_basic_logger("GNB");
   bool metrics_enabled = o_du_app_unit->are_metrics_enabled() || du_cfg.metrics_cfg.rusage_config.enable_app_usage;
 
@@ -209,7 +234,6 @@ int main(int argc, char** argv)
     fmt::println("Logger or JSON metrics output enabled but no metrics will be reported as no layer was enabled");
   }
 
-  // Log input configuration.
   ocudulog::basic_logger& config_logger = ocudulog::fetch_basic_logger("CONFIG");
   if (config_logger.debug.enabled()) {
     YAML::Node node;
@@ -229,11 +253,40 @@ int main(int argc, char** argv)
                              du_logger);
   }
 
-#ifdef DPDK_FOUND
+#ifdef ENABLE_XSM_FAPI_SPLIT
+  fapi_xsm_transport xsm_transport;
+  {
+    auto& xsm = xsm_transport.get_xsm_context();
+    const std::string& file_prefix = du_cfg.fapi_split_l2_cfg.xsm_file_prefix;
+    const bool         is_primary  = (du_cfg.fapi_split_l2_cfg.dpdk_proc_type == "primary");
+    if (!xsm.dpdk_init(file_prefix, is_primary)) {
+      report_error("xSM DPDK EAL init failed (file_prefix={}, proc_type={}). "
+                   "Is the primary running?\n",
+                   file_prefix, du_cfg.fapi_split_l2_cfg.dpdk_proc_type);
+    }
+
+    uint64_t           mac_mem_size = 2346713088ULL;
+    uint64_t           phy_mem_size = 0;
+    const std::string& xsm_device   = du_cfg.fapi_split_l2_cfg.xsm_device_name;
+    const uint32_t     pair_index   = du_cfg.fapi_split_l2_cfg.xsm_pair_index;
+    if (!xsm.open(xsm_device.c_str(), true, mac_mem_size, phy_mem_size, pair_index, 1)) {
+      report_error("xSM open failed (device={}, pair={}). Is the primary (odu_low or XFAPI) running?\n",
+                   xsm_device, pair_index);
+    }
+
+    xsm_transport.init_l2_side();
+
+    if (xsm.wait_for_peer(std::chrono::milliseconds(60000))) {
+      xsm_transport.set_rx_cpu(du_cfg.fapi_split_l2_cfg.rx_cpu);
+      xsm_transport.set_rx_priority(du_cfg.fapi_split_l2_cfg.rx_priority);
+      xsm_transport.start_receiver();
+    }
+  }
+#elif defined(DPDK_FOUND)
   std::unique_ptr<dpdk::dpdk_eal> eal;
   if (du_cfg.hal_config) {
     // Prepend the application name in argv[0] as it is expected by EAL.
-    eal = dpdk::create_dpdk_eal(std::string(argv[0]) + " " + du_cfg.hal_config->eal_args,
+      eal = dpdk::create_dpdk_eal(std::string(argv[0]) + " " + du_cfg.hal_config->eal_args,
                                 ocudulog::fetch_basic_logger("EAL", false));
   }
 #endif
@@ -273,7 +326,6 @@ int main(int argc, char** argv)
       metrics_notifier_forwarder, app_timers, du_cfg.metrics_cfg.executors_metrics_cfg, remote_server_gateway);
   std::vector<app_services::metrics_config> app_metrics = std::move(exec_metrics_service.metrics);
 
-  // Instantiate worker manager.
   worker_manager_config worker_manager_cfg;
   o_du_app_unit->fill_worker_manager_config(worker_manager_cfg);
   fill_du_worker_manager_config(worker_manager_cfg, du_cfg);
@@ -366,6 +418,9 @@ int main(int argc, char** argv)
   du_dependencies.e2_client_handler      = e2_gw.get();
   du_dependencies.metrics_notifier       = &metrics_notifier_forwarder;
   du_dependencies.remote_metrics_gateway = remote_server_gateway;
+#ifdef ENABLE_XSM_FAPI_SPLIT
+  du_dependencies.xsm_transport          = &xsm_transport;
+#endif
 
   auto du_inst_and_cmds = o_du_app_unit->create_flexible_o_du_unit(du_dependencies);
 
@@ -425,6 +480,23 @@ int main(int argc, char** argv)
 
   // Stop DU activity.
   du_inst.get_operation_controller().stop();
+
+#ifdef ENABLE_XSM_FAPI_SPLIT
+  xsm_transport.stop_receiver();
+  xsm_transport.shutdown();
+#endif
+
+  fapi_stats::dump_to_json();
+  fapi_stats::shutdown();
+
+  fapi_split_trace::event("LIFECYCLE", "odu_high process shutting down");
+  fapi_split_trace::shutdown();
+
+#ifndef ENABLE_XSM_FAPI_SPLIT
+  ocudu::mac_phy_handoff_timing::dump_to_csv();
+  ocudu::mac_phy_handoff_timing::shutdown();
+  ocudu::mac_phy_latency_injector::shutdown();
+#endif
 
   return 0;
 }

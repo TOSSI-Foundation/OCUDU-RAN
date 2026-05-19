@@ -7,8 +7,10 @@ if (NOT DISABLE_MBEDTLS AND NOT DISABLE_SCTP)
     add_subdirectory(cu)
     add_subdirectory(cu_cp)
     add_subdirectory(cu_up)
-    add_subdirectory(du)
+    # apps/du_low must precede apps/du so apps/du can link its odu_low_fapi
+    # target (FAPI split L1 binary) against odu_low_base defined in apps/du_low.
     add_subdirectory(du_low)
+    add_subdirectory(du)
     add_subdirectory(gnb)
 endif ()
 add_subdirectory(examples)

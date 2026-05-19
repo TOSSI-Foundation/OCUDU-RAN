@@ -14,6 +14,10 @@
 
 namespace ocudu {
 
+#ifdef ENABLE_XSM_FAPI_SPLIT
+class fapi_xsm_transport;
+#endif
+
 namespace app_services {
 class metrics_notifier;
 class remote_server_metrics_gateway;
@@ -55,6 +59,9 @@ struct o_du_unit_dependencies {
   e2_connection_client*                        e2_client_handler      = nullptr;
   app_services::metrics_notifier*              metrics_notifier       = nullptr;
   app_services::remote_server_metrics_gateway* remote_metrics_gateway = nullptr;
+#ifdef ENABLE_XSM_FAPI_SPLIT
+  fapi_xsm_transport* xsm_transport = nullptr;
+#endif
 };
 
 } // namespace ocudu

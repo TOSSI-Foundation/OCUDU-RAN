@@ -118,6 +118,8 @@ struct du_high_unit_ssb_config {
   int ssb_block_power = -16;
   /// PSS EPRE to SSS EPRE for SSB, as per TS 38.213, Section 4.1.
   ssb_pss_to_sss_epre pss_to_sss_epre = ssb_pss_to_sss_epre::dB_0;
+  std::optional<unsigned> offset_to_point_a;
+  std::optional<unsigned> k_ssb;
 };
 
 /// Common uplink parameters of a cell.

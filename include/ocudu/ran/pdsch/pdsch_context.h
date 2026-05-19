@@ -35,6 +35,9 @@ public:
   /// Gets if the PDSCH transmission is new.
   bool is_new_data() const { return nof_retxs == 0; }
 
+  unsigned get_k1() const { return k1; }
+  unsigned get_nof_retxs() const { return nof_retxs; }
+
 private:
   friend struct fmt::formatter<pdsch_context>;
   harq_id_t h_id      = INVALID_HARQ_ID;

@@ -266,11 +266,40 @@ void worker_manager::create_du_high_executors(const worker_manager_config::du_hi
 {
   odu::du_high_executor_config cfg;
 
-  odu::du_high_executor_config::strand_based_worker_pool pool_desc;
-  pool_desc.nof_cells                  = du_hi.nof_cells;
-  pool_desc.default_task_queue_size    = task_worker_queue_size;
-  pool_desc.pool_executors             = {rt_hi_prio_exec};
-  cfg.cell_executors                   = pool_desc;
+  // Dedicated SCHED_FIFO thread per cell, pinned to highest non-main-pool CPU.
+  odu::du_high_executor_config::dedicated_cell_worker_list cell_workers;
+  cell_workers.reserve(du_hi.nof_cells);
+  for (unsigned cell_id = 0; cell_id != du_hi.nof_cells; ++cell_id) {
+    const std::string worker_name = "cell_rt#" + std::to_string(cell_id);
+    const std::string exec_name   = "cell_rt_exec#" + std::to_string(cell_id);
+
+    os_sched_affinity_bitmask cell_mask{};
+    {
+      const auto& avail      = os_sched_affinity_bitmask::available_cpus();
+      const auto  avail_cpus = avail.get_cpu_ids();
+      const auto  pool_mask  = main_pool_affinity_mng.calcute_affinity_mask(sched_affinity_mask_types::main);
+      int         best       = -1;
+      for (size_t cpu : avail_cpus) {
+        if (cpu < pool_mask.size() && !pool_mask.test(cpu)) {
+          best = static_cast<int>(cpu);
+        }
+      }
+      if (best >= 0) {
+        cell_mask.set(static_cast<size_t>(best));
+      }
+    }
+
+    create_prio_worker(worker_name,
+                       exec_name,
+                       task_worker_queue_size,
+                       concurrent_queue_policy::locking_mpsc,
+                       std::chrono::microseconds{50},
+                       cell_mask,
+                       os_thread_realtime_priority::max() - 10);
+    task_executor* cell_exec = exec_mng.executors().at(exec_name);
+    cell_workers.push_back({cell_exec, cell_exec});
+  }
+  cfg.cell_executors = cell_workers;
   cfg.ue_executors.policy              = odu::du_high_executor_config::ue_executor_config::map_policy::per_cell;
   cfg.ue_executors.max_nof_strands     = 1;
   cfg.ue_executors.ctrl_queue_size     = task_worker_queue_size;
@@ -315,28 +344,27 @@ static unsigned get_default_nof_workers(const worker_manager_config& worker_cfg)
     avail_cpus = cpu_architecture_info::get().get_host_nof_available_cpus();
   }
   report_fatal_error_if_not(avail_cpus > 0, "Unable to derive the number of available CPUs");
-  // Allow some spare CPUs for, e.g. processing of packets by the kernel, RU timing, etc.
+
+  const unsigned min_pool_workers = 1;
+
+  if (worker_cfg.nof_main_pool_threads.has_value()) {
+    return std::max(std::min(worker_cfg.nof_main_pool_threads.value(), avail_cpus), min_pool_workers);
+  }
+
+  // Reserve spare CPUs for kernel, RU timing, etc.
   const unsigned spare_cpus = std::min(avail_cpus, 3U);
 
   unsigned nof_workers = 0;
-  if (worker_cfg.nof_main_pool_threads.has_value()) {
-    nof_workers = worker_cfg.nof_main_pool_threads.value();
-  } else {
-    // Estimation of minimum number of workers needed for the application using the formula:
-    // nof_workers = nof_cells * (nof_dl_antennas + nof_ul_antennas + 1) + 2
-    if (worker_cfg.du_low_cfg.has_value()) {
-      for (unsigned i = 0, e = worker_cfg.du_low_cfg->cell_nof_dl_antennas.size(); i != e; ++i) {
-        nof_workers += worker_cfg.du_low_cfg->cell_nof_dl_antennas[i] + worker_cfg.du_low_cfg->cell_nof_ul_antennas[i];
-      }
+  if (worker_cfg.du_low_cfg.has_value()) {
+    for (unsigned i = 0, e = worker_cfg.du_low_cfg->cell_nof_dl_antennas.size(); i != e; ++i) {
+      nof_workers += worker_cfg.du_low_cfg->cell_nof_dl_antennas[i] + worker_cfg.du_low_cfg->cell_nof_ul_antennas[i];
     }
-    if (worker_cfg.du_hi_cfg.has_value()) {
-      nof_workers += worker_cfg.du_hi_cfg->nof_cells * 1;
-    }
-    nof_workers += 2;
   }
+  if (worker_cfg.du_hi_cfg.has_value()) {
+    nof_workers += worker_cfg.du_hi_cfg->nof_cells * 1;
+  }
+  nof_workers += 2;
 
-  // The number of workers of the pool needs to be at least 1.
-  const unsigned min_pool_workers = 1;
   return std::max(std::min(nof_workers, avail_cpus - spare_cpus), min_pool_workers);
 }
 
