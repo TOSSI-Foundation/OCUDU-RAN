@@ -5,7 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
 # OCUDU
 
-<img src="https://srs.io/wp-content/uploads/ocudu_color.png" alt="OCUDU" width="50%"/>
+
 
 **OCUDU India : An integrated open telecom ecosystem.**
 
@@ -32,8 +32,11 @@ This repository is a **fork of [OCUDU](https://gitlab.com/ocudu/ocudu)** that se
 
 | Branch | Status | Contents |
 |---|---|---|
+| **[`fapi_split`](../../tree/fapi_split)** | Active | **In-process FAPI L1/L2 split with XFAPI translator-bridge**. Adds a serialized P5/P7 FAPI transport over **xSM (DPDK-backed shared memory)**, enabling `odu_high` (L2/MAC) and `odu_low` (L1/PHY) to run as separate processes while remaining wire-compatible with upstream OCUDU FAPI. Includes an **XFAPI translator-bridge** that decouples L1 and L2 endpoints, enabling deployments across different DPDK domains or even separate hosts. Supports both **single-host bridge** and **two-host XFAPI split** topologies, with configuration-driven activation via YAML (`fapi_split_l1` / `fapi_split_l2`) while preserving the same monolithic deployment flow. See the branch's [`README.md`](../../blob/fapi_split/README.md) and [`docs/fapi_split_topologies.md`](../../blob/fapi_split/docs/fapi_split_topologies.md) for deployment details and startup flow. |
 | **[`hwacc_acc100`](../../tree/hwacc_acc100)** | Active | **Intel ACC100 LDPC hardware offload** via DPDK BBDEV. Adds hardware-accelerated PDSCH encode and PUSCH decode (the two heaviest channel-coding stages), a unified PHY metrics layer that lets operators A/B compare software vs. HW paths in one log format, and a full operator deployment guide. See the branch's [`README.md`](../../blob/hwacc_acc100/README.md) and [`docs/DEPLOYMENT.md`](../../blob/hwacc_acc100/docs/DEPLOYMENT.md) for details and measured results. |
 | **[`hwacc_gpu`](../../tree/hwacc_gpu)** | Active | **NVIDIA GPU PRACH detection offload** via cuFFTDx fused kernel + CUDA graph capture. Replaces the AVX-512 FFTW PRACH inner loop (correlation, IDFT, power accumulation, peak detection) with a device-resident pipeline launched as a single `cudaGraphLaunch`. Selectable at runtime via the `OCUDU_PRACH_DFT_BACKEND=gpu_full` environment variable; reuses the same unified PHY metrics layer for direct A/B comparison. See the branch's [`README.md`](../../blob/hwacc_gpu/README.md) and [`docs/DEPLOYMENT.md`](../../blob/hwacc_gpu/docs/DEPLOYMENT.md) for details and measured results. |
+
+Additional branches for further accelerator work, deployment tooling, and downstream integrations will be added here as they land.
 
 Additional branches for further accelerator work, deployment tooling, and downstream integrations will be added here as they land.
 
