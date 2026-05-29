@@ -595,6 +595,7 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
     rach_cfg.is_prach_root_seq_index_l839 = is_long_prach;
     rach_cfg.msg1_scs                     = is_long_prach ? subcarrier_spacing::invalid : base_cell.common_scs;
     rach_cfg.prach_root_seq_index         = base_cell.prach_cfg.prach_root_sequence_index;
+    rach_cfg.detection_threshold_margin   = base_cell.prach_cfg.detection_threshold_margin;
     rach_cfg.total_nof_ra_preambles       = base_cell.prach_cfg.total_nof_ra_preambles;
     rach_cfg.nof_ssb_per_ro               = base_cell.prach_cfg.nof_ssb_per_ro;
     rach_cfg.nof_cb_preambles_per_ssb     = base_cell.prach_cfg.nof_cb_preambles_per_ssb;

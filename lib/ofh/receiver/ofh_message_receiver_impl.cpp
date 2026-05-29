@@ -5,9 +5,21 @@
 #include "../support/logger_utils.h"
 #include "ofh_rx_window_checker.h"
 #include "ocudu/instrumentation/traces/ofh_traces.h"
+#include <chrono>
+#include <cstdio>
+#include <cstdlib>
+#include <fmt/core.h>
 
 using namespace ocudu;
 using namespace ofh;
+
+namespace {
+bool prach_bench_logs()
+{
+  static const bool on = std::getenv("OCUDU_PRACH_BENCH") != nullptr;
+  return on;
+}
+} // namespace
 
 message_receiver_impl::message_receiver_impl(const message_receiver_config&  config,
                                              message_receiver_dependencies&& dependencies) :
@@ -18,6 +30,7 @@ message_receiver_impl::message_receiver_impl(const message_receiver_config&  con
   vlan_params(config.vlan_params),
   ul_prach_eaxc(config.prach_eaxc),
   ul_eaxc(config.ul_eaxc),
+  prach_rx_to_gpu(config.prach_rx_to_gpu),
   warn_unreceived_frames_on_first_rx_message(config.warn_unreceived_frames ==
                                              warn_unreceived_ru_frames::after_traffic_detection),
   window_checker(*dependencies.window_checker),
@@ -112,7 +125,39 @@ void message_receiver_impl::process_new_frame(ether::unique_rx_buffer buffer)
   }
 
   trace_point decode_tp = ofh_tracer.now();
-  if (is_a_prach_message(*filter_type)) {
+
+  static thread_local uint64_t                          host_rx_total         = 0;
+  static thread_local uint64_t                          host_rx_prach_dropped = 0;
+  static thread_local uint64_t                          host_rx_non_prach     = 0;
+  static thread_local std::chrono::steady_clock::time_point host_rx_last_log =
+      std::chrono::steady_clock::now();
+
+  ++host_rx_total;
+  const bool is_prach = is_a_prach_message(*filter_type);
+  if (is_prach && prach_rx_to_gpu) {
+    ++host_rx_prach_dropped;
+  } else if (!is_prach) {
+    ++host_rx_non_prach;
+  }
+
+  const auto now = std::chrono::steady_clock::now();
+  if (prach_bench_logs() && std::chrono::duration_cast<std::chrono::seconds>(now - host_rx_last_log).count() >= 1) {
+    fmt::print(stderr,
+               "[ofh_host_rx] sector={} total={} non_prach={} prach_dropped_gpu_owns={} "
+               "(prach_rx_to_gpu={})\n",
+               sector_id,
+               host_rx_total,
+               host_rx_non_prach,
+               host_rx_prach_dropped,
+               prach_rx_to_gpu);
+    host_rx_last_log = now;
+  }
+
+  if (is_prach) {
+    if (prach_rx_to_gpu) {
+      ofh_tracer << trace_event("ofh_receiver_drop_prach_gpu_owns", decode_tp);
+      return;
+    }
     data_flow_prach->decode_type1_message(eaxc, ofh_pdu);
     metrics_collector.update_prach_stats(meas.stop());
     ofh_tracer << trace_event("ofh_receiver_decode_prach", decode_tp);

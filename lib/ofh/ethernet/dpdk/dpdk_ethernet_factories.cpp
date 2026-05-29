@@ -17,6 +17,10 @@ std::shared_ptr<dpdk_port_context> ocudu::ether::create_dpdk_port_context(const 
   port_cfg.is_promiscuous_mode_enabled  = config.is_promiscuous_mode_enabled;
   port_cfg.is_link_status_check_enabled = config.is_link_status_check_enabled;
   port_cfg.mtu_size                     = config.mtu_size;
+  port_cfg.gpu_rx.enabled                  = config.enable_gpu_rx_queue;
+  port_cfg.gpu_rx.prach_eaxcs              = config.gpu_prach_eaxcs;
+  port_cfg.gpu_rx.inline_pipeline          = config.inline_pipeline;
+  port_cfg.gpu_rx.iq_payload_offset_bytes  = config.gpu_iq_payload_offset_bytes;
 
   return dpdk_port_context::create(port_cfg);
 }

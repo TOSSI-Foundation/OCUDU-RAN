@@ -97,7 +97,9 @@ static void generate_config(ru_ofh_configuration&                            out
     sector_cfg.cp              = cell.cp;
     sector_cfg.scs             = cell.scs;
     sector_cfg.bw              = cell.bw;
-    sector_cfg.nof_antennas_ul = cell.nof_rx_antennas;
+    sector_cfg.nof_antennas_ul     = cell.nof_rx_antennas;
+    sector_cfg.nof_prach_rx_ports        = cell.nof_prach_rx_ports;
+    sector_cfg.detection_threshold_margin = cell.detection_threshold_margin;
     sector_cfg.ru_operating_bw =
         ofh_cell_cfg.cell.ru_operating_bw ? ofh_cell_cfg.cell.ru_operating_bw.value() : sector_cfg.bw;
     sector_cfg.is_uplink_static_compr_hdr_enabled   = ofh_cell_cfg.cell.is_uplink_static_comp_hdr_enabled;
@@ -129,6 +131,7 @@ static void generate_config(ru_ofh_configuration&                            out
     sector_cfg.prach_eaxc.assign(ofh_cell_cfg.ru_prach_port_id.begin(), ofh_cell_cfg.ru_prach_port_id.end());
     sector_cfg.dl_eaxc.assign(ofh_cell_cfg.ru_dl_port_id.begin(), ofh_cell_cfg.ru_dl_port_id.end());
     sector_cfg.ul_eaxc.assign(ofh_cell_cfg.ru_ul_port_id.begin(), ofh_cell_cfg.ru_ul_port_id.end());
+    sector_cfg.prach_rx_to_gpu = ofh_cell_cfg.prach_rx_to_gpu;
 
     // TDD UL DL config.
     sector_cfg.tdd_config = cell.tdd_config;

@@ -42,6 +42,7 @@ public:
     unsigned nof_rx_ports;
     /// Slot and numerology, for logging.
     slot_point slot;
+    float detection_threshold_margin = 1.0F;
   };
 
   /// Default destructor.

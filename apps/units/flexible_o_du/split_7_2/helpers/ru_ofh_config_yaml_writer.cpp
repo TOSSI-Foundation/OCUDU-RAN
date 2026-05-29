@@ -121,6 +121,8 @@ static YAML::Node build_ru_ofh_cell_section(const ru_ofh_unit_cell_config& confi
   node["ul_port_id"] = config.ru_ul_port_id;
   node["ul_port_id"].SetStyle(YAML::EmitterStyle::Flow);
 
+  node["prach_rx_to_gpu"] = config.prach_rx_to_gpu;
+
   return node;
 }
 

@@ -4,16 +4,42 @@
 #pragma once
 
 #include "ocudu/support/units.h"
+#include <atomic>
+#include <cstdint>
 #include <memory>
+#include <string>
+#include <thread>
+#include <vector>
 
+struct rte_flow;
 struct rte_mempool;
 
 namespace ocudu {
+
+namespace hal {
+namespace cuda {
+
+class inline_prach_pipeline;
+
+class gpu_dpdk_mempool;
+}
+}
+
 namespace ether {
 
 /// DPDK configuration settings.
 constexpr unsigned MAX_BURST_SIZE  = 64;
 constexpr unsigned MAX_BUFFER_SIZE = 9600;
+
+struct dpdk_gpu_rx_config {
+  bool                  enabled    = false;
+  int                   gpu_dev_id = 0;
+  std::vector<uint16_t> prach_eaxcs;
+
+  std::shared_ptr<hal::cuda::inline_prach_pipeline> inline_pipeline;
+
+  unsigned iq_payload_offset_bytes = 37;
+};
 
 /// DPDK port configuration.
 struct dpdk_port_config {
@@ -25,6 +51,7 @@ struct dpdk_port_config {
   bool is_link_status_check_enabled;
   /// MTU size.
   units::bytes mtu_size;
+  dpdk_gpu_rx_config gpu_rx;
 };
 
 /// \brief DPDK Ethernet port context.
@@ -55,10 +82,25 @@ public:
   /// Returns the mbuf memory pool of this context.
   const ::rte_mempool* get_mempool() const { return mem_pool; }
 
+  const dpdk_gpu_rx_config& get_gpu_rx_config() const { return gpu_rx; }
+
+  uint64_t get_gpu_prach_frame_count() const { return gpu_prach_frames.load(std::memory_order_relaxed); }
+  uint64_t get_gpu_other_frame_count() const { return gpu_other_frames.load(std::memory_order_relaxed); }
+
 private:
   const std::string    port_id;
   const unsigned       dpdk_port_id;
   ::rte_mempool* const mem_pool;
+
+  dpdk_gpu_rx_config                          gpu_rx;
+  std::shared_ptr<hal::cuda::gpu_dpdk_mempool> gpu_mempool;
+  std::vector<::rte_flow*>                    gpu_flow_rules;
+  std::thread                                 gpu_listener_thread;
+  std::atomic<bool>                           gpu_stop{false};
+  std::atomic<uint64_t>                       gpu_prach_frames{0};
+  std::atomic<uint64_t>                       gpu_other_frames{0};
+
+  friend bool init_port_with_gpu(dpdk_port_context& ctx, const dpdk_port_config& config, unsigned port_id);
 };
 
 } // namespace ether

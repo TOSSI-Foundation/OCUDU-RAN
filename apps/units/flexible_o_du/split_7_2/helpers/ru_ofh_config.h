@@ -144,6 +144,7 @@ struct ru_ofh_unit_cell_config {
   std::vector<unsigned> ru_dl_port_id = {0};
   /// RU Uplink port.
   std::vector<unsigned> ru_ul_port_id = {0};
+  bool prach_rx_to_gpu = false;
 };
 
 /// RU OFH logging functionalities.

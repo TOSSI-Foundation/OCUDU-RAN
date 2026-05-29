@@ -4,3 +4,7 @@
 
 add_subdirectory(dpdk)
 add_subdirectory(phy)
+
+if (ENABLE_GPU_FRONTHAUL)
+    add_subdirectory(cuda)
+endif ()

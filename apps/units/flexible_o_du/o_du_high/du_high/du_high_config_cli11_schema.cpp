@@ -1404,6 +1404,14 @@ static void configure_cli11_prach_args(CLI::App& app, du_high_unit_prach_config&
   add_option(app, "--zero_correlation_zone", prach_params.zero_correlation_zone, "Zero correlation zone index")
       ->capture_default_str()
       ->check(CLI::Range(0, 15));
+  add_option(app,
+             "--detection_threshold_margin",
+             prach_params.detection_threshold_margin,
+             "Multiplier on the PRACH detector table threshold. Default 1.0 = use the bare "
+             "threshold; values > 1 filter near-threshold detections symmetrically on the CPU "
+             "and inline-GPU detectors")
+      ->capture_default_str()
+      ->check(CLI::Range(1.0F, 10.0F));
   add_option(app, "--fixed_msg3_mcs", prach_params.fixed_msg3_mcs, "Fixed message 3 MCS")
       ->capture_default_str()
       ->check(CLI::Range(0, 28));

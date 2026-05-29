@@ -121,6 +121,9 @@ generate_o_du_ru_config(span<const odu::du_cell_config> cells, unsigned max_proc
     out_cell.bw                         = cell.ran.dl_carrier.carrier_bw;
     out_cell.freq_range                 = band_helper::get_freq_range(cell.ran.dl_carrier.band);
     out_cell.cp                         = cell.ran.dl_cfg_common.init_dl_bwp.generic_params.cp;
+    out_cell.nof_prach_rx_ports         = prach_nof_ports;
+    out_cell.detection_threshold_margin =
+        cell.ran.ul_cfg_common.init_ul_bwp.rach_cfg_common->detection_threshold_margin;
   }
 
   return out_cfg;

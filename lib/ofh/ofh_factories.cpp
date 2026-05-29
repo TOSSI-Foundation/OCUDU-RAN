@@ -13,8 +13,30 @@
 #include "ocudu/ofh/ethernet/dpdk/dpdk_ethernet_factories.h"
 #endif
 
+#ifdef ENABLE_GPU_FRONTHAUL
+#include "ocudu/hal/cuda/inline_prach_pipeline.h"
+#include "ocudu/ran/prach/prach_format_type.h"
+#include "ocudu/ran/prach/prach_subcarrier_spacing.h"
+#include "ocudu/ran/prach/restricted_set_config.h"
+#include "ocudu/ran/slot_point.h"
+#include "ocudu/ran/subcarrier_spacing.h"
+#include "ocudu/ofh/compression/compression_params.h"
+#include "fmt/format.h"
+#include <cstdlib>
+#endif
+
 using namespace ocudu;
 using namespace ofh;
+
+#ifdef ENABLE_GPU_FRONTHAUL
+namespace {
+bool prach_bench_logs()
+{
+  static const bool on = std::getenv("OCUDU_PRACH_BENCH") != nullptr;
+  return on;
+}
+} // namespace
+#endif
 
 std::unique_ptr<sequence_id_checker> ofh::create_sequence_id_checker()
 {
@@ -62,6 +84,7 @@ static receiver_config generate_receiver_config(const sector_configuration& conf
   rx_config.mac_src_address  = config.mac_dst_address;
   rx_config.tci              = config.tci_up;
   rx_config.rx_timing_params = config.rx_window_timing_params;
+  rx_config.prach_rx_to_gpu  = config.prach_rx_to_gpu;
 
   return rx_config;
 }
@@ -115,6 +138,69 @@ create_dpdk_txrx(const sector_configuration& sector_cfg, task_executor& rx_execu
   eth_cfg.are_metrics_enabled          = sector_cfg.are_metrics_enabled;
   eth_cfg.mtu_size                     = sector_cfg.mtu_size;
   eth_cfg.mac_dst_address              = sector_cfg.mac_dst_address;
+  eth_cfg.enable_gpu_rx_queue          = sector_cfg.prach_rx_to_gpu;
+  if (sector_cfg.prach_rx_to_gpu) {
+    eth_cfg.gpu_prach_eaxcs.reserve(sector_cfg.prach_eaxc.size());
+    for (unsigned e : sector_cfg.prach_eaxc) {
+      eth_cfg.gpu_prach_eaxcs.push_back(static_cast<uint16_t>(e));
+    }
+    eth_cfg.gpu_iq_payload_offset_bytes = sector_cfg.is_uplink_static_compr_hdr_enabled ? 34u : 36u;
+
+#ifdef ENABLE_GPU_FRONTHAUL
+    hal::cuda::inline_prach_pipeline::config pcfg{};
+    pcfg.nof_prbs_per_packet = 12;
+    pcfg.k_bar               = 2;
+    pcfg.prb_bytes           = (sector_cfg.prach_compression_params.data_width * 12 * 2 +
+                                (sector_cfg.prach_compression_params.type == compression_type::BFP ? 8 : 0) + 7) /
+                               8;
+    pcfg.data_width          = sector_cfg.prach_compression_params.data_width;
+    pcfg.quantizer_gain      = 32767.0F;
+    pcfg.L_ra                = 139;
+    pcfg.nof_prach_eaxc      = sector_cfg.prach_eaxc.size();
+    pcfg.nof_prach_symbols   = 12;
+    pcfg.detector_inline_cfg = {};
+    pcfg.detector_cfg.root_sequence_index   = 1;
+    pcfg.detector_cfg.format                = prach_format_type::B4;
+    pcfg.detector_cfg.restricted_set        = restricted_set_config::UNRESTRICTED;
+    pcfg.detector_cfg.zero_correlation_zone = 14;
+    pcfg.detector_cfg.start_preamble_index  = 0;
+    pcfg.detector_cfg.nof_preamble_indices  = 64;
+    pcfg.detector_cfg.ra_scs                = prach_subcarrier_spacing::kHz30;
+    pcfg.detector_cfg.nof_rx_ports               = sector_cfg.nof_prach_rx_ports;
+    pcfg.detector_cfg.slot                       = slot_point(to_numerology_value(sector_cfg.scs), 0);
+    pcfg.detector_cfg.detection_threshold_margin = sector_cfg.detection_threshold_margin;
+    pcfg.on_result_cb = [](const prach_detection_result& r, uint32_t slot_id) {
+      if (!prach_bench_logs() || r.preambles.empty()) {
+        return;
+      }
+      for (const auto& p : r.preambles) {
+        fmt::print(stderr,
+                   "[prach_pipeline backend=gpu] slot={} preamble idx={} metric={:.3f} "
+                   "ta={}ns power={:.2f}dB\n",
+                   slot_id,
+                   p.preamble_index,
+                   p.detection_metric,
+                   static_cast<long>(p.time_advance.to_seconds() * 1e9),
+                   p.preamble_power_dB);
+      }
+    };
+    eth_cfg.inline_pipeline = hal::cuda::inline_prach_pipeline::create(pcfg);
+    if (!eth_cfg.inline_pipeline) {
+      fmt::print(stderr,
+                 "[ofh_factories] WARN: inline_prach_pipeline::create returned null; "
+                 "prach_rx_to_gpu will run in Phase-5-only mode (classify + counter, no detect)\n");
+    } else {
+      fmt::print(stderr,
+                 "[ofh_factories] Sector#{} inline GPU PRACH pipeline active "
+                 "(nof_prach_eaxc={} nof_rx_ports={} prach_compr=BFP{} iq_offset={})\n",
+                 sector_cfg.sector_id,
+                 pcfg.nof_prach_eaxc,
+                 pcfg.detector_cfg.nof_rx_ports,
+                 pcfg.data_width,
+                 eth_cfg.gpu_iq_payload_offset_bytes);
+    }
+#endif
+  }
 
   return ether::create_dpdk_txrx(eth_cfg, rx_executor, logger);
 }

@@ -45,6 +45,7 @@ struct message_receiver_config {
   bool are_metrics_enabled = false;
   /// If set to true, logs late events as warnings, otherwise as info.
   bool enable_log_warnings_for_lates;
+  bool prach_rx_to_gpu = false;
 };
 
 /// Message receiver dependencies.
@@ -105,6 +106,7 @@ private:
   const ether::vlan_frame_params                        vlan_params;
   const static_vector<unsigned, MAX_NOF_SUPPORTED_EAXC> ul_prach_eaxc;
   const static_vector<unsigned, MAX_NOF_SUPPORTED_EAXC> ul_eaxc;
+  const bool                                            prach_rx_to_gpu;
   bool                                                  warn_unreceived_frames_on_first_rx_message;
   rx_window_checker&                                    window_checker;
   closed_rx_window_handler&                             window_handler;

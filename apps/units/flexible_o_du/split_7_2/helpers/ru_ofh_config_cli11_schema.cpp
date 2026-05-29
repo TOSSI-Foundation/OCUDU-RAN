@@ -323,6 +323,12 @@ static void configure_cli11_ru_ofh_cells_args(CLI::App& app, ru_ofh_unit_cell_co
   add_option(app, "--prach_port_id", config.ru_prach_port_id, "RU PRACH port identifier")->capture_default_str();
   add_option(app, "--dl_port_id", config.ru_dl_port_id, "RU downlink port identifier")->capture_default_str();
   add_option(app, "--ul_port_id", config.ru_ul_port_id, "RU uplink port identifier")->capture_default_str();
+  add_option(app,
+             "--prach_rx_to_gpu",
+             config.prach_rx_to_gpu,
+             "If true (and the build has ENABLE_GPU_FRONTHAUL), route eCPRI frames through a "
+             "GPU-backed RX queue (PCIe P2P NIC->VRAM); PRACH eAxCs are classified in software")
+      ->capture_default_str();
 }
 
 static void configure_cli11_ru_ofh_args(CLI::App& app, ru_ofh_unit_parsed_config& config)

@@ -95,6 +95,7 @@ struct rach_config_common {
   uint8_t nof_cb_preambles_per_ssb = 4;
   /// List of slice-specific RACH configurations.
   std::vector<ra_prioritization_slice_info> ra_prio_slice_info_list;
+  float detection_threshold_margin = 1.0F;
 
   bool operator==(const rach_config_common& other) const
   {

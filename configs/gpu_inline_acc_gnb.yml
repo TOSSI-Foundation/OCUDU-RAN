@@ -1,0 +1,114 @@
+    cu_cp:
+      amf:
+        addr: 192.168.70.132
+        port: 38412
+        bind_addr: 192.168.70.129
+        supported_tracking_areas:
+          - tac: 1
+            plmn_list:
+              - plmn: "00101"
+                tai_slice_support_list:
+                  - sst: 1
+    hal:
+       eal_args: "--lcores (0-1)@(4,6) -a 0000:53:00.1 -a 0000:18:00.0 --iova-mode=pa --huge-dir /mnt/huge1G --file-prefix=gnb"
+    expert_phy:
+      allow_request_on_empty_uplink_slot: true
+      max_proc_delay: 5
+    ru_ofh:
+      t1a_max_cp_dl: 429
+      t1a_min_cp_dl: 285
+      t1a_max_cp_ul: 429
+      t1a_min_cp_ul: 285
+      t1a_max_up: 196
+      t1a_min_up: 96
+      ta4_max: 180
+      ta4_min: 110
+      is_prach_cp_enabled: true
+      ignore_ecpri_payload_size: false
+      ignore_ecpri_seq_id: true
+      compr_method_ul: bfp
+      compr_bitwidth_ul: 9
+      compr_method_dl: bfp
+      compr_bitwidth_dl: 9
+      compr_method_prach: bfp
+      compr_bitwidth_prach: 9
+      enable_ul_static_compr_hdr: false
+      enable_dl_static_compr_hdr: true
+      iq_scaling: 5.0
+      cells:
+        - network_interface: 0000:53:00.1
+          ru_mac_addr: b8:3f:d2:b6:ff:e2
+          du_mac_addr: b8:3f:d2:b6:ff:e3
+          enable_promiscuous: true
+          prach_port_id: [4, 5, 6, 7]
+          dl_port_id: [0, 1, 2, 3]
+          ul_port_id: [0, 1, 2, 3]
+          prach_rx_to_gpu: true
+
+    cell_cfg:
+      dl_arfcn: 630048
+      band: 78
+      channel_bandwidth_MHz: 100
+      common_scs: 30
+      plmn: "00101"
+      tac: 1
+      pci: 1
+      nof_antennas_dl: 4
+      nof_antennas_ul: 4
+      ssb:
+        ssb_block_power_dbm: 0
+      pdcch:
+        common:
+          coreset0_index: 11
+      prach:
+        prach_config_index: 159
+        prach_root_sequence_index: 1
+        zero_correlation_zone: 0
+        prach_frequency_start: 22
+        preamble_rx_target_pw: -100
+        preamble_trans_max: 200
+        ra_resp_window: 10
+        detection_threshold_margin: 1.2
+        ports: [0, 1, 2, 3]
+
+      tdd_ul_dl_cfg:
+        dl_ul_tx_period: 5
+        nof_dl_slots: 3
+        nof_dl_symbols: 6
+        nof_ul_slots: 1
+        nof_ul_symbols: 4
+
+      pusch:
+        p0_nominal_with_grant: -96
+        msg3_delta_preamble: 2
+
+    expert_execution:
+      affinities:
+        main_pool_cpus: "1,3,5,7,9,11,13"
+        main_pool_pinning: "mask"
+      threads:
+        main_pool:
+          nof_threads: 7
+
+    log:
+      filename: gnb.log
+      all_level: info
+
+    pcap:
+      mac_enable: false
+      mac_filename: /tmp/gnb_mac.pcap
+      ngap_enable: false
+      ngap_filename: /tmp/gnb_ngap.pcap
+
+    metrics:
+      enable_log: true
+      enable_json: false
+      enable_verbose: true
+      layers:
+        enable_du_low: true
+      autostart_stdout_metrics: true
+
+    remote_control:
+      bind_addr: 0.0.0.0
+      enabled: false
+      port: 8001

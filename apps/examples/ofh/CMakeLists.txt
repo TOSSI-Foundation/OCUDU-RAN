@@ -18,7 +18,9 @@ endif (DPDK_FOUND)
 add_executable(ru_emulator ${SOURCES})
 target_include_directories(ru_emulator PRIVATE ${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/external)
-target_link_libraries(ru_emulator ocudulog ocudu_ofh ocudu_phy_support ocudu_support)
+# ocudu_prach_detector pulls in the prach_generator_factory_sw symbol; ocudu_ofh_compression
+# provides create_iq_compressor. Both are needed for Phase 6 real-preamble injection.
+target_link_libraries(ru_emulator ocudulog ocudu_ofh ocudu_ofh_compression ocudu_phy_support ocudu_prach_detector ocudu_support)
 
 if (DPDK_FOUND)
     target_compile_options(ru_emulator PRIVATE ${DPDK_CFLAGS})

@@ -157,6 +157,26 @@ public:
     ocudu_assert(prach_out_buffer.last(prach_out_buffer.size() - re_start).size() >= iq_buffer.size(),
                  "Invalid IQ data buffer size to copy as it does not fit into the PRACH buffer");
 
+    static bool dbg_dump_done = false;
+    if (!dbg_dump_done && std::getenv("OCUDU_PRACH_DEBUG") && iq_buffer.size() >= 8) {
+      dbg_dump_done = true;
+      fmt::print(stderr,
+                 "[prach_writer] first symbol IQ: port={} symbol={} re_start={} len={} values=[",
+                 port,
+                 symbol,
+                 re_start,
+                 iq_buffer.size());
+      for (unsigned i = 0; i < 8; ++i) {
+        cf_t v = to_cf(iq_buffer[i]);
+        fmt::print(stderr,
+                   "({:+.3f},{:+.3f}){}",
+                   v.real(),
+                   v.imag(),
+                   i + 1 < 8 ? " " : "");
+      }
+      fmt::print(stderr, "]\n");
+    }
+
     ocuduvec::copy(prach_out_buffer.subspan(re_start, iq_buffer.size()), iq_buffer);
 
     // Update statistics.

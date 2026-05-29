@@ -4,6 +4,9 @@
 
 #include "prach_detector_generic_impl.h"
 #include "prach_detector_generic_thresholds.h"
+#include "fmt/format.h"
+#include <chrono>
+#include <cstdlib>
 #include "ocudu/adt/interval.h"
 #include "ocudu/ocuduvec/accumulate.h"
 #include "ocudu/ocuduvec/add.h"
@@ -22,6 +25,16 @@
 #include "ocudu/support/math/math_utils.h"
 
 using namespace ocudu;
+
+namespace {
+constexpr unsigned long long LOG_STATS_EVERY = 1000;
+
+bool prach_bench_logs()
+{
+  static const bool on = std::getenv("OCUDU_PRACH_BENCH") != nullptr;
+  return on;
+}
+} // namespace
 
 error_type<std::string> prach_detector_validator_impl::is_valid(const prach_detector::configuration& config) const
 {
@@ -55,10 +68,46 @@ prach_detector_generic_impl::prach_detector_generic_impl(std::unique_ptr<dft_pro
                "IDFT size for short preambles (i.e., {}) must be in range {}.",
                idft_short->get_size(),
                idft_long_sz_range);
+
+  fmt::print(stderr,
+             "[prach_detector_cpu] constructed: idft_long={} idft_short={}\n",
+             idft_long->get_size(),
+             idft_short->get_size());
+}
+
+static void record_cpu_detect_stats(unsigned long long&                   total_detects,
+                                    unsigned long long&                   sum_detect_ns,
+                                    unsigned long long&                   max_detect_ns,
+                                    unsigned long long&                   min_detect_ns,
+                                    std::chrono::steady_clock::time_point start)
+{
+  auto ns = static_cast<unsigned long long>(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count());
+  ++total_detects;
+  sum_detect_ns += ns;
+  if (ns > max_detect_ns) {
+    max_detect_ns = ns;
+  }
+  if (min_detect_ns == 0 || ns < min_detect_ns) {
+    min_detect_ns = ns;
+  }
+  if (prach_bench_logs() && (total_detects % LOG_STATS_EVERY) == 0) {
+    fmt::print(stderr,
+               "[prach_detector_cpu] stats: detects={} mean={}us min={}us max={}us (last_window={})\n",
+               total_detects,
+               (sum_detect_ns / LOG_STATS_EVERY) / 1000,
+               min_detect_ns / 1000,
+               max_detect_ns / 1000,
+               LOG_STATS_EVERY);
+    sum_detect_ns = 0;
+    max_detect_ns = 0;
+    min_detect_ns = 0;
+  }
 }
 
 prach_detection_result prach_detector_generic_impl::detect(const prach_buffer& input, const configuration& config)
 {
+  auto detect_t0 = std::chrono::steady_clock::now();
   ocudu_assert(config.start_preamble_index + config.nof_preamble_indices <= prach_constants::MAX_NUM_PREAMBLES,
                "The start preamble index (i.e., {}) and the number of preambles to detect (i.e., {}), exceed the "
                "maximum of 64.",
@@ -171,6 +220,7 @@ prach_detection_result prach_detector_generic_impl::detect(const prach_buffer& i
 
   // Early stop if the RSSI is zero.
   if (!std::isnormal(rssi)) {
+    record_cpu_detect_stats(total_detects, sum_detect_ns, max_detect_ns, min_detect_ns, detect_t0);
     return result;
   }
 
@@ -319,7 +369,7 @@ prach_detection_result prach_detector_generic_impl::detect(const prach_buffer& i
 
       // Compare with the threshold. Note that we neglect the last 1/5 of the detection window because it may contain
       // spurious peaks due to the adjacent window.
-      if ((delay < metric_global.size()) && (peak > threshold) &&
+      if ((delay < metric_global.size()) && (peak > threshold * config.detection_threshold_margin) &&
           (delay < static_cast<float>(max_delay_samples) * 0.8)) {
         prach_detection_result::preamble_indication& info = result.preambles.emplace_back();
         info.preamble_index                               = preamble_index;
@@ -338,5 +388,21 @@ prach_detection_result prach_detector_generic_impl::detect(const prach_buffer& i
     }
   }
 
+  if (prach_bench_logs() && !result.preambles.empty()) {
+    const uint32_t slot_id_packed = (static_cast<uint32_t>(config.slot.sfn() & 0xFFu) << 16) |
+                                    (static_cast<uint32_t>(config.slot.subframe_index() & 0xFFu) << 8) |
+                                    static_cast<uint32_t>(config.slot.subframe_slot_index() & 0xFFu);
+    for (const auto& p : result.preambles) {
+      fmt::print(stderr,
+                 "[prach_pipeline backend=cpu] slot={} preamble idx={} metric={:.3f} ta={}ns power={:.2f}dB\n",
+                 slot_id_packed,
+                 p.preamble_index,
+                 p.detection_metric,
+                 static_cast<long>(p.time_advance.to_seconds() * 1e9),
+                 p.preamble_power_dB);
+    }
+  }
+
+  record_cpu_detect_stats(total_detects, sum_detect_ns, max_detect_ns, min_detect_ns, detect_t0);
   return result;
 }

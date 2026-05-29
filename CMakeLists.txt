@@ -138,6 +138,21 @@ else (ENABLE_DPDK)
   unset(ENABLE_PUSCH_HWACC CACHE)
 endif (ENABLE_DPDK)
 
+option(ENABLE_GPU_FRONTHAUL "Enable GPU-backed DPDK mempools for inline OFH (requires DPDK + CUDA + DPDK gpudev)" OFF)
+if (ENABLE_GPU_FRONTHAUL)
+    include(CheckLanguage)
+    check_language(CUDA)
+    if (CMAKE_CUDA_COMPILER)
+        enable_language(CUDA)
+        find_package(CUDAToolkit REQUIRED)
+        if (NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+            set(CMAKE_CUDA_ARCHITECTURES 86)
+        endif ()
+    else ()
+        message(FATAL_ERROR "ENABLE_GPU_FRONTHAUL=ON requires CUDA but no CUDA compiler was found.")
+    endif ()
+endif ()
+
 ########################################################################
 # ENABLE_EXPORT
 ########################################################################
@@ -539,6 +554,20 @@ if (ENABLE_DPDK)
 else (ENABLE_DPDK)
     unset(DPDK_FOUND CACHE)
 endif (ENABLE_DPDK)
+
+if (ENABLE_GPU_FRONTHAUL)
+    if (NOT DPDK_FOUND)
+        message(FATAL_ERROR "ENABLE_GPU_FRONTHAUL=ON requires DPDK.")
+    endif ()
+    if (NOT CMAKE_CUDA_COMPILER)
+        message(FATAL_ERROR "ENABLE_GPU_FRONTHAUL=ON requires CUDA.")
+    endif ()
+    find_path(DPDK_GPUDEV_INCLUDE rte_gpudev.h PATHS ${DPDK_INCLUDE_DIRS} NO_DEFAULT_PATH)
+    if (NOT DPDK_GPUDEV_INCLUDE)
+        message(FATAL_ERROR "ENABLE_GPU_FRONTHAUL=ON: rte_gpudev.h not found in DPDK include path.")
+    endif ()
+    add_definitions(-DENABLE_GPU_FRONTHAUL)
+endif ()
 
 if(SCTP_FOUND)
     sbom_add(

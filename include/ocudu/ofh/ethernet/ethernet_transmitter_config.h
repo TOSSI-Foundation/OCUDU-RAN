@@ -5,8 +5,17 @@
 
 #include "ocudu/ofh/ethernet/ethernet_mac_address.h"
 #include "ocudu/support/units.h"
+#include <cstdint>
+#include <memory>
+#include <vector>
 
 namespace ocudu {
+namespace hal {
+namespace cuda {
+class inline_prach_pipeline;
+}
+}
+
 namespace ether {
 
 /// Configuration for the Ethernet transmitter.
@@ -23,6 +32,11 @@ struct transmitter_config {
   units::bytes mtu_size;
   /// Destination MAC address.
   mac_address mac_dst_address;
+
+  bool                  enable_gpu_rx_queue = false;
+  std::vector<uint16_t> gpu_prach_eaxcs;
+  std::shared_ptr<hal::cuda::inline_prach_pipeline> inline_pipeline;
+  unsigned gpu_iq_payload_offset_bytes = 37;
 };
 
 } // namespace ether

@@ -69,6 +69,7 @@ struct prach_buffer_context {
   ///
   /// The sum <tt>start_preamble_index + nof_preamble_indices</tt> should not exceed 64.
   uint8_t nof_preamble_indices;
+  float detection_threshold_margin = 1.0F;
 };
 
 } // namespace ocudu

@@ -71,6 +71,7 @@ struct sector_configuration {
 
   /// Enables the Control-Plane PRACH message signalling.
   bool is_prach_control_plane_enabled = false;
+  bool prach_rx_to_gpu = false;
   /// Ignore the start symbol value received in the PRACH U-Plane packets.
   bool ignore_prach_start_symbol = false;
   /// If set to true, the payload size encoded in a eCPRI header is ignored.
@@ -107,6 +108,8 @@ struct sector_configuration {
   std::chrono::microseconds ul_processing_time;
   /// Number of reception antennas.
   unsigned nof_antennas_ul;
+  unsigned nof_prach_rx_ports = 1;
+  float detection_threshold_margin = 1.0F;
 
   /// Indicates if DPDK should be used by the underlying implementation.
   bool uses_dpdk;

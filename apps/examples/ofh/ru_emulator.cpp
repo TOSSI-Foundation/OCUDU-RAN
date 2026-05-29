@@ -13,8 +13,13 @@
 #include "ocudu/adt/expected.h"
 #include "ocudu/adt/to_array.h"
 #include "ocudu/ocudulog/logger.h"
+#include "ocudu/ofh/compression/compression_factory.h"
 #include "ocudu/ofh/compression/compression_params.h"
 #include "ocudu/ofh/ecpri/ecpri_constants.h"
+#include "ocudu/phy/upper/channel_processors/prach/factories.h"
+#include "ocudu/ran/prach/prach_frequency_mapping.h"
+#include "ocudu/ran/prach/prach_subcarrier_spacing.h"
+#include "ocudu/ran/prach/restricted_set_config.h"
 #include "ocudu/ofh/ecpri/ecpri_packet_properties.h"
 #include "ocudu/ofh/ethernet/dpdk/dpdk_ethernet_factories.h"
 #include "ocudu/ofh/ofh_constants.h"
@@ -104,6 +109,12 @@ struct ru_emulator_config {
   std::vector<unsigned> prach_eaxc;
   /// PRACH format.
   ru_emulator_prach_format prach_format;
+  bool     prach_inject_real_preamble    = false;
+  unsigned prach_root_sequence_index     = 1;
+  unsigned prach_zero_correlation_zone   = 14;
+  unsigned prach_preamble_index          = 0;
+  bool     prach_round_robin             = false;
+  unsigned prach_start_prb                = 0;
 };
 
 /// RU emulator dependencies.
@@ -293,8 +304,66 @@ static std::vector<eaxc_buffers> generate_test_data(const ru_emulator_config& cf
 }
 
 /// Returns pre-generated PRACH U-Plane data for each configured eAxC.
-static std::vector<prach_eaxc_buffers>
-generate_test_prach(const ru_emulator_config& cfg, span<const unsigned> prach_eaxc, unsigned nof_prach_symbols)
+static std::vector<uint8_t> build_preamble_iq_bytes(const ru_emulator_config& cfg,
+                                                    unsigned                  nof_prbs,
+                                                    unsigned                  iq_data_size,
+                                                    unsigned                  preamble_index,
+                                                    ocudulog::basic_logger&   logger)
+{
+  if (!cfg.prach_inject_real_preamble) {
+    return {};
+  }
+
+  auto gen_factory = create_prach_generator_factory_sw();
+  if (!gen_factory) {
+    fmt::print(stderr, "[ru_emu] create_prach_generator_factory_sw returned null; skipping injection\n");
+    return {};
+  }
+  auto generator = gen_factory->create();
+
+  prach_generator::configuration gen_cfg;
+  gen_cfg.format = (cfg.prach_format == ru_emulator_prach_format::LONG_F0) ? prach_format_type::zero
+                                                                            : prach_format_type::B4;
+  gen_cfg.root_sequence_index   = cfg.prach_root_sequence_index;
+  gen_cfg.preamble_index        = preamble_index;
+  gen_cfg.restricted_set        = restricted_set_config::UNRESTRICTED;
+  gen_cfg.zero_correlation_zone = cfg.prach_zero_correlation_zone;
+
+  span<const cf_t> zc = generator->generate(gen_cfg);
+
+  const prach_subcarrier_spacing ra_scs       = (cfg.prach_format == ru_emulator_prach_format::LONG_F0)
+                                                    ? prach_subcarrier_spacing::kHz1_25
+                                                    : prach_subcarrier_spacing::kHz30;
+  const prach_frequency_mapping_information map = prach_frequency_mapping_get(ra_scs, subcarrier_spacing::kHz30);
+  const unsigned k_bar = map.k_bar;
+
+  const unsigned       total_scs = nof_prbs * NOF_SUBCARRIERS_PER_RB;
+  std::vector<cbf16_t> samples(total_scs, cbf16_t{});
+  const size_t         n_copy = std::min<size_t>(zc.size(), total_scs - std::min<unsigned>(k_bar, total_scs));
+  for (size_t i = 0; i < n_copy; ++i) {
+    samples[k_bar + i] = to_cbf16(zc[i]);
+  }
+  fmt::print("[ru_emu] preamble layout: total_scs={} k_bar={} zc_len={} placed=[{}..{}]\n",
+             total_scs,
+             k_bar,
+             zc.size(),
+             k_bar,
+             k_bar + n_copy - 1);
+
+  auto compressor = ocudu::ofh::create_iq_compressor(cfg.compr_params.type, logger);
+  if (!compressor) {
+    fmt::print(stderr, "[ru_emu] create_iq_compressor returned null; skipping injection\n");
+    return {};
+  }
+  std::vector<uint8_t> bytes(iq_data_size);
+  compressor->compress(bytes, samples, cfg.compr_params);
+  return bytes;
+}
+
+static std::vector<prach_eaxc_buffers> generate_test_prach(const ru_emulator_config& cfg,
+                                                           span<const unsigned>      prach_eaxc,
+                                                           unsigned                  nof_prach_symbols,
+                                                           ocudulog::basic_logger&   logger)
 {
   // Vector of bytes for each OFDM symbol of each eAxC.
   std::vector<prach_eaxc_buffers> test_data;
@@ -313,6 +382,22 @@ generate_test_prach(const ru_emulator_config& cfg, span<const unsigned> prach_ea
                               .round_up_to_bytes();
   unsigned iq_data_size = nof_prbs * prb_size.value();
 
+  std::vector<uint8_t> preamble_iq_bytes =
+      build_preamble_iq_bytes(cfg, nof_prbs, iq_data_size, cfg.prach_preamble_index, logger);
+  if (cfg.prach_inject_real_preamble && !preamble_iq_bytes.empty()) {
+    fmt::print("[ru_emu] real preamble injection enabled: root_seq={} preamble_idx={} format={} "
+               "iq_bytes={}\n",
+               cfg.prach_root_sequence_index,
+               cfg.prach_preamble_index,
+               (cfg.prach_format == ru_emulator_prach_format::LONG_F0) ? "LONG_F0" : "SHORT_B4",
+               iq_data_size);
+    if (cfg.prach_round_robin) {
+      fmt::print("[ru_emu] note: prach_round_robin requested but not yet implemented; using fixed "
+                 "preamble_index={} for all occasions (TODO Phase 6b)\n",
+                 cfg.prach_preamble_index);
+    }
+  }
+
   for (unsigned port = 0, last = prach_eaxc.size(); port != last; ++port) {
     auto& eaxc_frames = test_data.emplace_back();
 
@@ -325,15 +410,19 @@ generate_test_prach(const ru_emulator_config& cfg, span<const unsigned> prach_ea
       header_parameters params;
       params.port         = prach_eaxc[port];
       params.payload_size = iq_data_size + ofh_header_size.value() + ecpri::ECPRI_COMMON_HEADER_SIZE.value();
-      params.start_prb    = 0;
+      params.start_prb    = cfg.prach_start_prb;
       params.nof_prbs     = nof_prbs;
       params.filter_index = to_value(cfg.prach_format == ocudu::ru_emulator_prach_format::LONG_F0
                                          ? filter_index_type::ul_prach_preamble_1p25khz
                                          : filter_index_type::ul_prach_preamble_short);
       set_static_header_params(frame_header, params, cfg);
 
-      // Prepare IQ data.
-      fill_random_data(span<uint8_t>(frame).last(iq_data_size), prach_eaxc[port] + symbol);
+      span<uint8_t> iq_region = span<uint8_t>(frame).last(iq_data_size);
+      if (!preamble_iq_bytes.empty()) {
+        std::copy(preamble_iq_bytes.begin(), preamble_iq_bytes.end(), iq_region.begin());
+      } else {
+        fill_random_data(iq_region, prach_eaxc[port] + symbol);
+      }
     }
   }
   return test_data;
@@ -539,7 +628,7 @@ public:
     }
 
     test_data  = generate_test_data(cfg, ul_eaxc);
-    test_prach = generate_test_prach(cfg, prach_eaxc, nof_prach_symbols);
+    test_prach = generate_test_prach(cfg, prach_eaxc, nof_prach_symbols, logger);
   }
 
   // See interface for documentation.
@@ -693,11 +782,35 @@ private:
     static_vector<span<const uint8_t>, MAX_BURST_SIZE> frame_burst;
 
     unsigned eaxc_idx    = std::distance(ul_eaxc.begin(), std::find(ul_eaxc.begin(), ul_eaxc.end(), message_info.eaxc));
+    if (eaxc_idx >= test_data.size()) {
+      fmt::print(stderr,
+                 "[ru_emu] generate_ul_uplane: eaxc={} not in ul_eaxc (size={}), filter_index={}, dir={}, type={}\n",
+                 message_info.eaxc,
+                 ul_eaxc.size(),
+                 unsigned(message_info.filter_index),
+                 unsigned(message_info.direction),
+                 unsigned(message_info.type));
+      return;
+    }
     auto&    eaxc_frames = test_data[eaxc_idx];
 
+    unsigned start_sym  = message_info.symbol_point.get_symbol_index();
+    unsigned nof_sym    = message_info.nof_symbols;
+
     // Set correct header parameters and send UL U-Plane packets for each symbol.
-    for (unsigned symbol = message_info.symbol_point.get_symbol_index(), end = message_info.nof_symbols; symbol != end;
-         ++symbol) {
+    for (unsigned i = 0; i < nof_sym; ++i) {
+      unsigned symbol = start_sym + i;
+      if (symbol >= eaxc_frames.size()) {
+        fmt::print(stderr,
+                   "[ru_emu] generate_ul_uplane: symbol {} out of range (eaxc_frames.size()={}, start_sym={}, "
+                   "nof_sym={}, eaxc={})\n",
+                   symbol,
+                   eaxc_frames.size(),
+                   start_sym,
+                   nof_sym,
+                   message_info.eaxc);
+        return;
+      }
       auto& symbol_frames = eaxc_frames[symbol];
       // Set runtime header parameters.
       for (auto& frame : symbol_frames) {
@@ -720,6 +833,14 @@ private:
 
     unsigned eaxc_idx =
         std::distance(prach_eaxc.begin(), std::find(prach_eaxc.begin(), prach_eaxc.end(), message_info.eaxc));
+    if (eaxc_idx >= test_prach.size()) {
+      fmt::print(stderr,
+                 "[ru_emu] generate_prach_uplane: eaxc={} not in prach_eaxc (size={}), filter_index={}\n",
+                 message_info.eaxc,
+                 prach_eaxc.size(),
+                 unsigned(message_info.filter_index));
+      return;
+    }
     auto& eaxc_frames = test_prach[eaxc_idx];
 
     // Set correct header parameters and send PRACH U-Plane packets for each symbol.
@@ -1038,10 +1159,16 @@ int main(int argc, char** argv)
                                                                   ru_cfg.T2a_min_cp_ul,
                                                                   ru_cfg.T2a_max_up,
                                                                   ru_cfg.T2a_min_up);
-    emu_cfg.dl_eaxc       = ru_cfg.ru_dl_port_id;
-    emu_cfg.ul_eaxc       = ru_cfg.ru_ul_port_id;
-    emu_cfg.prach_eaxc    = ru_cfg.ru_prach_port_id;
-    emu_cfg.prach_format  = ru_cfg.prach_format;
+    emu_cfg.dl_eaxc                    = ru_cfg.ru_dl_port_id;
+    emu_cfg.ul_eaxc                    = ru_cfg.ru_ul_port_id;
+    emu_cfg.prach_eaxc                 = ru_cfg.ru_prach_port_id;
+    emu_cfg.prach_format               = ru_cfg.prach_format;
+    emu_cfg.prach_inject_real_preamble = ru_cfg.prach_inject_real_preamble;
+    emu_cfg.prach_root_sequence_index  = ru_cfg.prach_root_sequence_index;
+    emu_cfg.prach_zero_correlation_zone = ru_cfg.prach_zero_correlation_zone;
+    emu_cfg.prach_preamble_index       = ru_cfg.prach_preamble_index;
+    emu_cfg.prach_round_robin          = ru_cfg.prach_round_robin;
+    emu_cfg.prach_start_prb            = ru_cfg.prach_start_prb;
 
     ru_emulators.push_back(std::make_unique<ru_emulator>(
         resolve_ru_emulator_dependencies(logger, *workers.ru_emulators_exec[i], *transceivers[i]), emu_cfg));

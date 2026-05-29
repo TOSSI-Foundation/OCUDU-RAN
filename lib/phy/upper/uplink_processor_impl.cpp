@@ -11,6 +11,7 @@
 #include "ocudu/phy/upper/upper_phy_rx_results_notifier.h"
 #include "ocudu/ran/sch/sch_segmentation.h"
 #include "ocudu/support/rtsan.h"
+#include "fmt/format.h"
 
 using namespace ocudu;
 
@@ -25,8 +26,9 @@ static prach_detector::configuration get_prach_dectector_config_from_prach_conte
   config.start_preamble_index  = context.start_preamble_index;
   config.nof_preamble_indices  = context.nof_preamble_indices;
   config.ra_scs                = to_ra_subcarrier_spacing(context.pusch_scs);
-  config.nof_rx_ports          = context.ports.size();
-  config.slot                  = context.slot;
+  config.nof_rx_ports                = context.ports.size();
+  config.slot                        = context.slot;
+  config.detection_threshold_margin  = context.detection_threshold_margin;
 
   return config;
 }

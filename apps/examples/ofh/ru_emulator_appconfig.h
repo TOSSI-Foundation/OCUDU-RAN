@@ -52,6 +52,13 @@ struct ru_emulator_ofh_appconfig {
   unsigned ul_compr_bitwidth = 9;
   /// PRACH format used when sending dummy PRACH U-Plane packets.
   ru_emulator_prach_format prach_format = ru_emulator_prach_format::LONG_F0;
+
+  bool prach_inject_real_preamble = false;
+  unsigned prach_root_sequence_index = 1;
+  unsigned prach_zero_correlation_zone = 14;
+  unsigned prach_preamble_index = 0;
+  bool prach_round_robin = false;
+  unsigned prach_start_prb = 0;
 };
 
 /// RU emulator logging parameters.

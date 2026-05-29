@@ -948,6 +948,7 @@ struct du_high_unit_prach_config {
   unsigned prach_root_sequence_index = 1;
   /// Zero correlation zone
   unsigned zero_correlation_zone = 0;
+  float detection_threshold_margin = 1.0F;
   unsigned fixed_msg3_mcs        = 0;
   unsigned max_msg3_harq_retx    = 4;
   /// \c preambleReceivedTargetPower, target power at the network rx side, in dBm. Only values multiple of 2 are

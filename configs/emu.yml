@@ -1,0 +1,32 @@
+ru_emu:
+    cells:
+    - bandwidth: 100
+      network_interface: 0000:53:00.0
+      ru_mac_addr: b8:3f:d2:b6:ff:e2
+      du_mac_addr: b8:3f:d2:b6:ff:e3
+      enable_promiscuous: true
+      dl_port_id:    [0, 1, 2, 3]
+      ul_port_id:    [0, 1, 2, 3]
+      prach_port_id: [4, 5, 6, 7]
+      compr_method_ul: "bfp"
+      compr_bitwidth_ul: 9
+      t2a_max_cp_dl: 470
+      t2a_min_cp_dl: 350
+      t2a_max_cp_ul: 200
+      t2a_min_cp_ul: 90
+      t2a_max_up: 345
+      t2a_min_up: 70
+      prach_format: short
+      prach_inject_real_preamble: true
+      prach_root_sequence_index: 1
+      prach_zero_correlation_zone: 14
+      prach_preamble_index: 0
+      prach_round_robin: false
+      prach_start_prb: 0
+
+dpdk:
+  eal_args: "--lcores (0-1)@(0,2) -a 0000:53:00.0 --iova-mode=pa --huge-dir /mnt/huge1G --file-prefix=ruemu"
+
+log:
+  filename: /tmp/ru_emu.log
+  level: info

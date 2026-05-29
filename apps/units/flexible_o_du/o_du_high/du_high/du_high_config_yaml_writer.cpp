@@ -427,8 +427,9 @@ static YAML::Node build_du_high_prach_section(const du_high_unit_prach_config& c
     node["prach_frequency_start"] = config.prach_frequency_start.value();
   }
 
-  node["prach_root_sequence_index"] = config.prach_root_sequence_index;
-  node["zero_correlation_zone"]     = config.zero_correlation_zone;
+  node["prach_root_sequence_index"]    = config.prach_root_sequence_index;
+  node["zero_correlation_zone"]        = config.zero_correlation_zone;
+  node["detection_threshold_margin"]   = config.detection_threshold_margin;
   node["fixed_msg3_mcs"]            = config.fixed_msg3_mcs;
   node["max_msg3_harq_retx"]        = config.max_msg3_harq_retx;
   node["preamble_rx_target_pw"]     = config.preamble_rx_target_pw;

@@ -48,6 +48,8 @@ struct flexible_o_du_ru_config {
     arfcn_t                                dl_arfcn;
     arfcn_t                                ul_arfcn;
     frequency_range                        freq_range;
+    unsigned nof_prach_rx_ports = 1;
+    float detection_threshold_margin = 1.0F;
   };
 
   std::vector<cell_config> cells;

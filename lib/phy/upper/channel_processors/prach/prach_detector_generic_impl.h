@@ -89,6 +89,11 @@ private:
   std::unique_ptr<dft_processor>   idft_long;
   std::unique_ptr<dft_processor>   idft_short;
   std::unique_ptr<prach_generator> generator;
+
+  unsigned long long total_detects = 0;
+  unsigned long long sum_detect_ns = 0;
+  unsigned long long max_detect_ns = 0;
+  unsigned long long min_detect_ns = 0;
 };
 
 } // namespace ocudu
