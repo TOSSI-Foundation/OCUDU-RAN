@@ -15,6 +15,9 @@
 #ifdef ENABLE_GPU_FRONTHAUL
 #include "ocudu/hal/cuda/gpu_dpdk_mempool.h"
 #include "ocudu/hal/cuda/inline_prach_pipeline.h"
+#include "ocudu/hal/cuda/inline_srs_pipeline.h"
+#include "ocudu/support/srs_schedule_tap.h"
+#include <cstdio>
 #include <cstdlib>
 #include <cuda_runtime.h>
 #endif
@@ -192,7 +195,7 @@ static std::vector<::rte_flow*> install_gpu_steering_rules(uint16_t             
     rules.push_back(h_host);
     fmt::print("DPDK GPU - installed duplicate host-queue rule (queue 0) — non-PRACH eCPRI now reaches the CPU OFH receiver natively\n");
   } else {
-    fmt::print("DPDK GPU - WARN: host-queue duplicate rule REJECTED by mlx5 — non-PRACH eCPRI will be silently dropped by the GPU listener. `prach_rx_to_gpu: true` is dev-only in this configuration.\n");
+    fmt::print("DPDK GPU - WARN: host-queue duplicate rule REJECTED by mlx5 — non-PRACH eCPRI (PUSCH/PUCCH/SRS) will be silently dropped by the GPU listener. `prach_rx_to_gpu: true` is dev-only in this configuration.\n");
   }
   return rules;
 }
@@ -203,9 +206,13 @@ static void gpu_listener_loop(uint16_t                     port_id,
                               ::rte_mempool*               gpu_pool,
                               std::atomic<bool>&           stop,
                               std::atomic<uint64_t>&       prach_count,
+                              std::atomic<uint64_t>&       srs_count,
                               std::atomic<uint64_t>&       other_count,
                               std::shared_ptr<hal::cuda::inline_prach_pipeline> inline_pipeline,
-                              unsigned                     iq_payload_offset_bytes)
+                              unsigned                     iq_payload_offset_bytes,
+                              bool                         srs_classify_enabled,
+                              std::vector<uint16_t>        ul_eaxcs,
+                              std::shared_ptr<hal::cuda::inline_srs_pipeline> srs_pipeline)
 {
   std::array<::rte_mbuf*, 32> mbufs;
   std::array<uint8_t, GPU_HEADER_PEEK> host_hdr{};
@@ -223,6 +230,46 @@ static void gpu_listener_loop(uint16_t                     port_id,
              port_id,
              queue_id,
              prach_eaxcs.size());
+
+  bool     force_srs_enabled = false;
+  unsigned force_srs_sf = 0, force_srs_slot = 0, force_srs_sym = 0;
+  if (const char* fenv = std::getenv("OCUDU_SRS_GPU_FORCE")) {
+    if (std::sscanf(fenv, "%u:%u:%u", &force_srs_sf, &force_srs_slot, &force_srs_sym) == 3) {
+      force_srs_enabled = true;
+      fmt::print(stderr,
+                 "[gpu_listener] OCUDU_SRS_GPU_FORCE active — forcing SRS classification on "
+                 "(sf={}, slot={}, sym={})\n",
+                 force_srs_sf, force_srs_slot, force_srs_sym);
+    }
+  }
+  bool                       force_res_enabled = false;
+  uint8_t                    force_res_nrx     = 4;
+  srs_resource_configuration force_res{};
+  if (const char* renv = std::getenv("OCUDU_SRS_GPU_RES")) {
+    unsigned csrs = 0, bsrs = 0, fpos = 0, fshift = 0, comb = 4, coff = 0, seqid = 0, nsym = 1, nrx = 4;
+    if (std::sscanf(renv, "%u:%u:%u:%u:%u:%u:%u:%u:%u", &csrs, &bsrs, &fpos, &fshift, &comb, &coff, &seqid,
+                    &nsym, &nrx) == 9) {
+      force_res.nof_antenna_ports   = srs_resource_configuration::one_two_four_enum::one;
+      force_res.nof_symbols         = static_cast<srs_nof_symbols>(nsym);
+      force_res.start_symbol        = static_cast<uint8_t>(force_srs_sym);
+      force_res.configuration_index = static_cast<uint8_t>(csrs);
+      force_res.sequence_id         = static_cast<uint16_t>(seqid);
+      force_res.bandwidth_index     = static_cast<uint8_t>(bsrs);
+      force_res.comb_size           = (comb == 2) ? tx_comb_size::n2 : tx_comb_size::n4;
+      force_res.comb_offset         = static_cast<uint8_t>(coff);
+      force_res.cyclic_shift        = 0;
+      force_res.freq_position       = static_cast<uint8_t>(fpos);
+      force_res.freq_shift          = static_cast<uint16_t>(fshift);
+      force_res.freq_hopping        = 0;
+      force_res.hopping             = srs_group_or_sequence_hopping::neither;
+      force_res_nrx                 = static_cast<uint8_t>(nrx);
+      force_res_enabled             = true;
+      fmt::print(stderr,
+                 "[gpu_listener] OCUDU_SRS_GPU_RES active — synthetic SRS resource (csrs={} bsrs={} "
+                 "freqpos={} comb={} seqid={} nsym={} nrx={})\n",
+                 csrs, bsrs, fpos, comb, seqid, nsym, nrx);
+    }
+  }
 
   while (!stop.load(std::memory_order_relaxed)) {
     const unsigned nb = ::rte_eth_rx_burst(port_id, queue_id, mbufs.data(), mbufs.size());
@@ -262,19 +309,31 @@ static void gpu_listener_loop(uint16_t                     port_id,
           }
           last_pc_id  = pc_id;
           last_msgtyp = msg_type;
+
+          bool     have_ofh       = false;
+          uint32_t packed_slot_id = 0;
+          unsigned symbol_idx     = 0;
+          unsigned ofh_start_prb  = 0;
+          unsigned ofh_num_prbu   = 0;
+          if (peek_len >= 30 && off + 16 <= peek_len) {
+            const unsigned ofh_hdr_off = off + 8;
+            const uint8_t  sfn         = host_hdr[ofh_hdr_off + 1];
+            const uint8_t  b_subslot   = host_hdr[ofh_hdr_off + 2];
+            const uint8_t  b_slotsym   = host_hdr[ofh_hdr_off + 3];
+            const unsigned subframe    = (b_subslot >> 4) & 0x0Fu;
+            const unsigned slot_in_sf  = ((b_subslot & 0x0Fu) << 2) | ((b_slotsym >> 6) & 0x03u);
+            symbol_idx                 = b_slotsym & 0x3Fu;
+            packed_slot_id =
+                (static_cast<uint32_t>(sfn) << 16) | (static_cast<uint32_t>(subframe) << 8) | slot_in_sf;
+            ofh_start_prb = ((static_cast<unsigned>(host_hdr[off + 13]) & 0x03u) << 8) | host_hdr[off + 14];
+            ofh_num_prbu  = host_hdr[off + 15];
+            have_ofh = true;
+          }
+
           if (is_prach) {
             prach_count.fetch_add(1, std::memory_order_relaxed);
 
-            if (inline_pipeline && peek_len >= 30 && off + 14 <= peek_len) {
-              const unsigned ofh_hdr_off = off + 8;
-              const uint8_t  sfn         = host_hdr[ofh_hdr_off + 1];
-              const uint8_t  b_subslot   = host_hdr[ofh_hdr_off + 2];
-              const uint8_t  b_slotsym   = host_hdr[ofh_hdr_off + 3];
-              const unsigned subframe    = (b_subslot >> 4) & 0x0Fu;
-              const unsigned slot_in_sf  = ((b_subslot & 0x0Fu) << 2) | ((b_slotsym >> 6) & 0x03u);
-              const unsigned symbol_idx  = b_slotsym & 0x3Fu;
-              const uint32_t system_slot_id =
-                  (static_cast<uint32_t>(sfn) << 16) | (static_cast<uint32_t>(subframe) << 8) | slot_in_sf;
+            if (inline_pipeline && have_ofh) {
               unsigned eaxc_idx = 0;
               for (unsigned k = 0; k < prach_eaxcs.size(); ++k) {
                 if (prach_eaxcs[k] == pc_id) {
@@ -294,8 +353,53 @@ static void gpu_listener_loop(uint16_t                     port_id,
                   seg = nxt;
                 }
               };
-              inline_pipeline->on_packet(system_slot_id, symbol_idx, eaxc_idx, vram_iq_ptr, std::move(release));
+              inline_pipeline->on_packet(packed_slot_id, symbol_idx, eaxc_idx, vram_iq_ptr, std::move(release));
               continue;
+            }
+          } else if (srs_classify_enabled && msg_type == 0 && have_ofh &&
+                     (srs_schedule_tap::is_srs_symbol(packed_slot_id, static_cast<uint8_t>(symbol_idx)) ||
+                      (force_srs_enabled && ((packed_slot_id >> 8) & 0xFFu) == force_srs_sf &&
+                       (packed_slot_id & 0xFFu) == force_srs_slot && symbol_idx == force_srs_sym))) {
+            srs_count.fetch_add(1, std::memory_order_relaxed);
+
+            if (force_res_enabled && ((packed_slot_id >> 8) & 0xFFu) == force_srs_sf &&
+                (packed_slot_id & 0xFFu) == force_srs_slot && symbol_idx == force_srs_sym) {
+              srs_schedule_tap::publish(packed_slot_id, static_cast<uint8_t>(force_srs_sym),
+                                        static_cast<uint8_t>(force_res.nof_symbols), force_res, force_res_nrx);
+            }
+
+            if (srs_pipeline) {
+              srs_resource_configuration sched_res{};
+              uint8_t                    sched_nof_rx = 0;
+              const bool                 have_res =
+                  srs_schedule_tap::lookup_resource(packed_slot_id, sched_res, sched_nof_rx) && sched_nof_rx > 0;
+              unsigned rx_port_idx = 0;
+              bool     port_found  = false;
+              for (unsigned k = 0; k < ul_eaxcs.size(); ++k) {
+                if (ul_eaxcs[k] == pc_id) {
+                  rx_port_idx = k;
+                  port_found  = true;
+                  break;
+                }
+              }
+              if (have_res && port_found) {
+                const uint8_t* vram_iq_ptr =
+                    static_cast<const uint8_t*>(vram_data) + iq_payload_offset_bytes;
+                ::rte_mbuf* hold_m  = m;
+                auto        release = [hold_m]() {
+                  ::rte_mbuf* seg = hold_m->next;
+                  ::rte_pktmbuf_free_seg(hold_m);
+                  while (seg != nullptr) {
+                    ::rte_mbuf* nxt = seg->next;
+                    ::rte_pktmbuf_free_seg(seg);
+                    seg = nxt;
+                  }
+                };
+                srs_pipeline->on_packet(packed_slot_id, symbol_idx, rx_port_idx, ofh_num_prbu,
+                                        ofh_start_prb, sched_res, sched_nof_rx, vram_iq_ptr,
+                                        std::move(release));
+                continue;
+              }
             }
           } else {
             other_count.fetch_add(1, std::memory_order_relaxed);
@@ -327,12 +431,13 @@ static void gpu_listener_loop(uint16_t                     port_id,
       const unsigned mp_avail = gpu_pool != nullptr ? ::rte_mempool_avail_count(gpu_pool) : 0;
       const unsigned mp_inuse = gpu_pool != nullptr ? ::rte_mempool_in_use_count(gpu_pool) : 0;
       fmt::print(stderr,
-                 "[gpu_listener] bursts={} pkts={} prach={} other={} peek_fail={} cuda_fail={} "
+                 "[gpu_listener] bursts={} pkts={} prach={} srs={} other={} peek_fail={} cuda_fail={} "
                  "last_msg_type=0x{:02x} last_pc_id={} nic_q0_pkts={} nic_q1_pkts={} "
                  "mempool_avail={} mempool_inuse={}\n",
                  total_bursts,
                  total_pkts,
                  prach_count.load(),
+                 srs_count.load(),
                  other_count.load(),
                  peek_fail,
                  cuda_fail,
@@ -513,9 +618,13 @@ bool init_port_with_gpu(dpdk_port_context& ctx, const dpdk_port_config& config, 
       ctx.gpu_mempool->mempool(),
       std::ref(ctx.gpu_stop),
       std::ref(ctx.gpu_prach_frames),
+      std::ref(ctx.gpu_srs_frames),
       std::ref(ctx.gpu_other_frames),
       config.gpu_rx.inline_pipeline,
-      config.gpu_rx.iq_payload_offset_bytes);
+      config.gpu_rx.iq_payload_offset_bytes,
+      config.gpu_rx.srs_classify_enabled,
+      config.gpu_rx.ul_eaxcs,
+      config.gpu_rx.srs_inline_pipeline);
 
   fmt::print("DPDK GPU - port {} initialized with 2 RX queues (host=0, gpu=1, prach_eaxcs={} entries)\n",
              port_id,

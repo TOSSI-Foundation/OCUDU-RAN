@@ -184,6 +184,25 @@ static void configure_cli11_ru_emu_args(CLI::App& app, ru_emulator_ofh_appconfig
              "prach.prach_frequency_start or the DU writer drops the section as out-of-band")
       ->capture_default_str()
       ->check(CLI::Range(0u, 274u));
+
+  add_option(app,
+             "--srs_replay_file",
+             config.srs_replay_file,
+             "Path to a binary SRS capture; when non-empty, captured IQ bytes are spliced into "
+             "UL U-plane frames on the matching SRS symbol/subframe/slot")
+      ->capture_default_str();
+  add_option(app, "--srs_start_symbol", config.srs_start_symbol,
+             "SRS symbol index inside the UL slot")
+      ->capture_default_str()
+      ->check(CLI::Range(0u, 13u));
+  add_option(app, "--srs_subframe", config.srs_subframe,
+             "Subframe (0..9) where SRS lives")
+      ->capture_default_str()
+      ->check(CLI::Range(0u, 9u));
+  add_option(app, "--srs_subslot", config.srs_subslot,
+             "Slot-in-subframe (0 or 1 at SCS=30kHz) where SRS lives")
+      ->capture_default_str()
+      ->check(CLI::Range(0u, 1u));
 }
 
 void ocudu::configure_cli11_with_ru_emulator_appconfig_schema(CLI::App& app, ru_emulator_appconfig& ru_emu_parsed_cfg)

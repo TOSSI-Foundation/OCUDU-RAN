@@ -6,3 +6,7 @@
 add_subdirectory(ofh)
 add_subdirectory(phy)
 add_subdirectory(radio)
+
+if (ENABLE_GPU_FRONTHAUL)
+    add_subdirectory(srs_inline_benchmark)
+endif ()

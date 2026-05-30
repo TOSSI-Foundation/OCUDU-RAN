@@ -8,6 +8,12 @@
 #include "ru_emulator_rx_window_checker.h"
 #include "ru_emulator_seq_id_checker.h"
 #include "ru_emulator_timing_notifier.h"
+#include <cerrno>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <map>
+#include <tuple>
 #include "ru_emulator_transceiver.h"
 #include "ocudu/adt/circular_map.h"
 #include "ocudu/adt/expected.h"
@@ -115,6 +121,11 @@ struct ru_emulator_config {
   unsigned prach_preamble_index          = 0;
   bool     prach_round_robin             = false;
   unsigned prach_start_prb                = 0;
+
+  std::string srs_replay_file;
+  unsigned    srs_start_symbol = 13;
+  unsigned    srs_subframe     = 1;
+  unsigned    srs_subslot      = 1;
 };
 
 /// RU emulator dependencies.
@@ -576,6 +587,9 @@ class ru_emulator : public frame_notifier
   static_vector<unsigned, MAX_NOF_SUPPORTED_EAXC> dl_eaxc;
   static_vector<unsigned, MAX_NOF_SUPPORTED_EAXC> prach_eaxc;
 
+  std::map<uint16_t, std::vector<std::vector<uint8_t>>> srs_replay_pool;
+  std::map<uint16_t, size_t>                            srs_replay_idx;
+
   // Other KPI counters.
   kpi_counter rx_total_counter;
   kpi_counter tx_total_counter;
@@ -629,9 +643,77 @@ public:
 
     test_data  = generate_test_data(cfg, ul_eaxc);
     test_prach = generate_test_prach(cfg, prach_eaxc, nof_prach_symbols, logger);
+
+    load_srs_replay_pool();
   }
 
-  // See interface for documentation.
+  void load_srs_replay_pool()
+  {
+    if (cfg.srs_replay_file.empty()) {
+      fmt::print(stderr, "[srs_replay] disabled (srs_replay_file is empty)\n");
+      return;
+    }
+    FILE* fp = std::fopen(cfg.srs_replay_file.c_str(), "rb");
+    if (!fp) {
+      fmt::print(stderr,
+                 "[srs_replay] ERROR: cannot open '{}': {} — continuing with random-fill\n",
+                 cfg.srs_replay_file, std::strerror(errno));
+      return;
+    }
+    constexpr unsigned OFH_HDR_STRIP = 9;
+
+    struct __attribute__((packed)) rec_hdr {
+      uint32_t packed_slot_id;
+      uint16_t eaxc;
+      uint8_t  sym;
+      uint16_t len;
+    };
+
+    unsigned total = 0, skipped_wrong_sym = 0, skipped_short = 0;
+    while (true) {
+      rec_hdr h{};
+      if (std::fread(&h, sizeof(h), 1, fp) != 1) {
+        break;
+      }
+      std::vector<uint8_t> payload(h.len);
+      if (std::fread(payload.data(), 1, h.len, fp) != h.len) {
+        fmt::print(stderr, "[srs_replay] WARN: truncated payload at record {}\n", total);
+        break;
+      }
+      ++total;
+      if (h.sym != cfg.srs_start_symbol) {
+        ++skipped_wrong_sym;
+        continue;
+      }
+      if (h.len <= OFH_HDR_STRIP) {
+        ++skipped_short;
+        continue;
+      }
+
+      std::vector<uint8_t> iq_only(payload.begin() + OFH_HDR_STRIP, payload.end());
+      srs_replay_pool[h.eaxc].emplace_back(std::move(iq_only));
+    }
+    std::fclose(fp);
+
+    size_t iq_bytes_kept = 0;
+    for (auto& kv : srs_replay_pool) {
+      srs_replay_idx[kv.first] = 0;
+      for (auto& p : kv.second) {
+        iq_bytes_kept += p.size();
+      }
+    }
+    fmt::print(stderr,
+               "[srs_replay] loaded {} records from '{}' (skipped {} wrong-sym, {} too-short); "
+               "kept per-eaxc: ",
+               total, cfg.srs_replay_file, skipped_wrong_sym, skipped_short);
+    for (auto& kv : srs_replay_pool) {
+      fmt::print(stderr, "eaxc{}={} ", kv.first, kv.second.size());
+    }
+    fmt::print(stderr,
+               "; total IQ bytes={} ; splice on (sf={},slot={},sym={})\n",
+               iq_bytes_kept, cfg.srs_subframe, cfg.srs_subslot, cfg.srs_start_symbol);
+  }
+
   void on_new_frame(unique_rx_buffer buffer) override
   {
     if (!executor.execute([this, b = std::move(buffer)]() mutable { process_new_frame(std::move(b)); })) {
@@ -816,6 +898,49 @@ private:
       for (auto& frame : symbol_frames) {
         uint8_t& seq_id = seq_counters[message_info.eaxc];
         set_runtime_header_params(frame, message_info.symbol_point.get_slot(), symbol, seq_id);
+
+        if (!srs_replay_pool.empty()) {
+          const auto slot = message_info.symbol_point.get_slot();
+          if (symbol == cfg.srs_start_symbol &&
+              slot.subframe_index() == cfg.srs_subframe &&
+              slot.subframe_slot_index() == cfg.srs_subslot) {
+            auto it = srs_replay_pool.find(static_cast<uint16_t>(message_info.eaxc));
+            if (it != srs_replay_pool.end() && !it->second.empty()) {
+              auto&  pool    = it->second;
+              size_t idx     = srs_replay_idx[message_info.eaxc] % pool.size();
+              const std::vector<uint8_t>& iq_src = pool[idx];
+              srs_replay_idx[message_info.eaxc] = idx + 1;
+
+              if (frame.size() >= iq_src.size()) {
+                const size_t copy_n = std::min(iq_src.size(), frame.size());
+                std::copy(iq_src.begin(), iq_src.begin() + copy_n, frame.end() - copy_n);
+              } else {
+                static bool warned = false;
+                if (!warned) {
+                  warned = true;
+                  fmt::print(stderr,
+                             "[srs_replay] WARN: captured IQ ({} B) > ru_emu frame ({} B); "
+                             "PRB-count mismatch between capturing gnb and ru_emu config — "
+                             "splicing truncated payload\n",
+                             iq_src.size(), frame.size());
+                }
+                std::copy_n(iq_src.begin(), frame.size(), frame.end() - frame.size());
+              }
+
+              static unsigned                                       splice_count = 0;
+              static std::chrono::steady_clock::time_point          last_log     = std::chrono::steady_clock::now();
+              ++splice_count;
+              auto now = std::chrono::steady_clock::now();
+              if (std::chrono::duration_cast<std::chrono::seconds>(now - last_log).count() >= 1) {
+                fmt::print(stderr,
+                           "[srs_replay] spliced {} payloads so far (last eaxc={} idx={}/{} bytes={})\n",
+                           splice_count, message_info.eaxc, idx, pool.size(), iq_src.size());
+                last_log = now;
+              }
+            }
+          }
+        }
+
         frame_burst.emplace_back(frame.data(), frame.size());
       }
     }
@@ -1169,6 +1294,10 @@ int main(int argc, char** argv)
     emu_cfg.prach_preamble_index       = ru_cfg.prach_preamble_index;
     emu_cfg.prach_round_robin          = ru_cfg.prach_round_robin;
     emu_cfg.prach_start_prb            = ru_cfg.prach_start_prb;
+    emu_cfg.srs_replay_file            = ru_cfg.srs_replay_file;
+    emu_cfg.srs_start_symbol           = ru_cfg.srs_start_symbol;
+    emu_cfg.srs_subframe               = ru_cfg.srs_subframe;
+    emu_cfg.srs_subslot                = ru_cfg.srs_subslot;
 
     ru_emulators.push_back(std::make_unique<ru_emulator>(
         resolve_ru_emulator_dependencies(logger, *workers.ru_emulators_exec[i], *transceivers[i]), emu_cfg));

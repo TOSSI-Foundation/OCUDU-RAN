@@ -46,6 +46,7 @@ struct message_receiver_config {
   /// If set to true, logs late events as warnings, otherwise as info.
   bool enable_log_warnings_for_lates;
   bool prach_rx_to_gpu = false;
+  bool srs_rx_to_gpu   = false;
 };
 
 /// Message receiver dependencies.

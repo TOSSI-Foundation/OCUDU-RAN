@@ -21,6 +21,9 @@ std::shared_ptr<dpdk_port_context> ocudu::ether::create_dpdk_port_context(const 
   port_cfg.gpu_rx.prach_eaxcs              = config.gpu_prach_eaxcs;
   port_cfg.gpu_rx.inline_pipeline          = config.inline_pipeline;
   port_cfg.gpu_rx.iq_payload_offset_bytes  = config.gpu_iq_payload_offset_bytes;
+  port_cfg.gpu_rx.srs_classify_enabled     = config.enable_srs_classification;
+  port_cfg.gpu_rx.ul_eaxcs                 = config.gpu_ul_eaxcs;
+  port_cfg.gpu_rx.srs_inline_pipeline      = config.srs_inline_pipeline;
 
   return dpdk_port_context::create(port_cfg);
 }

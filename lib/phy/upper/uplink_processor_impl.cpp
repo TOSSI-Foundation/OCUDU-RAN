@@ -11,6 +11,7 @@
 #include "ocudu/phy/upper/upper_phy_rx_results_notifier.h"
 #include "ocudu/ran/sch/sch_segmentation.h"
 #include "ocudu/support/rtsan.h"
+#include "ocudu/support/srs_result_tap.h"
 #include "fmt/format.h"
 
 using namespace ocudu;
@@ -452,8 +453,17 @@ void uplink_processor_impl::process_srs(const uplink_pdu_slot_repository::srs_pd
     trace_point tp = l1_ul_tracer.now();
 
     ul_srs_results result;
-    result.context          = pdu.context;
-    result.processor_result = srs->estimate(grid->get_reader(), pdu.config);
+    result.context = pdu.context;
+
+    const slot_point    sp     = pdu.config.slot;
+    const std::uint32_t packed = (static_cast<std::uint32_t>(sp.sfn() & 0xFFu) << 16) |
+                                 (static_cast<std::uint32_t>(sp.subframe_index() & 0xFFu) << 8) |
+                                 static_cast<std::uint32_t>(sp.subframe_slot_index() & 0xFFu);
+    if (!srs_result_tap::consume(packed, result.processor_result)) {
+      result.processor_result = srs->estimate(grid->get_reader(), pdu.config);
+    } else {
+      l1_ul_tracer << trace_event("process_srs_gpu_offload", tp);
+    }
 
     l1_ul_tracer << trace_event("process_srs", tp);
 

@@ -15,12 +15,16 @@
 
 #ifdef ENABLE_GPU_FRONTHAUL
 #include "ocudu/hal/cuda/inline_prach_pipeline.h"
+#include "ocudu/hal/cuda/inline_srs_pipeline.h"
+#include "ocudu/ran/band_helper.h"
 #include "ocudu/ran/prach/prach_format_type.h"
 #include "ocudu/ran/prach/prach_subcarrier_spacing.h"
 #include "ocudu/ran/prach/restricted_set_config.h"
+#include "ocudu/ran/resource_block.h"
 #include "ocudu/ran/slot_point.h"
 #include "ocudu/ran/subcarrier_spacing.h"
 #include "ocudu/ofh/compression/compression_params.h"
+#include "ocudu/support/srs_result_tap.h"
 #include "fmt/format.h"
 #include <cstdlib>
 #endif
@@ -85,6 +89,7 @@ static receiver_config generate_receiver_config(const sector_configuration& conf
   rx_config.tci              = config.tci_up;
   rx_config.rx_timing_params = config.rx_window_timing_params;
   rx_config.prach_rx_to_gpu  = config.prach_rx_to_gpu;
+  rx_config.srs_rx_to_gpu    = config.srs_rx_to_gpu;
 
   return rx_config;
 }
@@ -139,6 +144,7 @@ create_dpdk_txrx(const sector_configuration& sector_cfg, task_executor& rx_execu
   eth_cfg.mtu_size                     = sector_cfg.mtu_size;
   eth_cfg.mac_dst_address              = sector_cfg.mac_dst_address;
   eth_cfg.enable_gpu_rx_queue          = sector_cfg.prach_rx_to_gpu;
+  eth_cfg.enable_srs_classification    = sector_cfg.srs_rx_to_gpu;
   if (sector_cfg.prach_rx_to_gpu) {
     eth_cfg.gpu_prach_eaxcs.reserve(sector_cfg.prach_eaxc.size());
     for (unsigned e : sector_cfg.prach_eaxc) {
@@ -198,6 +204,51 @@ create_dpdk_txrx(const sector_configuration& sector_cfg, task_executor& rx_execu
                  pcfg.detector_cfg.nof_rx_ports,
                  pcfg.data_width,
                  eth_cfg.gpu_iq_payload_offset_bytes);
+    }
+
+    if (sector_cfg.srs_rx_to_gpu) {
+      eth_cfg.gpu_ul_eaxcs.reserve(sector_cfg.ul_eaxc.size());
+      for (unsigned e : sector_cfg.ul_eaxc) {
+        eth_cfg.gpu_ul_eaxcs.push_back(static_cast<uint16_t>(e));
+      }
+
+      const unsigned cell_nof_prbs =
+          band_helper::get_n_rbs_from_bw(sector_cfg.bw, sector_cfg.scs, frequency_range::FR1);
+      const unsigned nof_srs_rx_ports = std::min<unsigned>(sector_cfg.nof_antennas_ul, 4u);
+      const unsigned max_seq_len      = cell_nof_prbs * NOF_SUBCARRIERS_PER_RB / 2u;
+
+      hal::cuda::inline_srs_pipeline::config srs_pcfg{};
+      srs_pcfg.prb_bytes      = (sector_cfg.ul_compression_params.data_width * 12 * 2 +
+                                 (sector_cfg.ul_compression_params.type == compression_type::BFP ? 8 : 0) + 7) /
+                                8;
+      srs_pcfg.data_width          = sector_cfg.ul_compression_params.data_width;
+      srs_pcfg.quantizer_gain      = 32767.0F;
+      srs_pcfg.cell_nof_prbs       = cell_nof_prbs;
+      srs_pcfg.numerology          = to_numerology_value(sector_cfg.scs);
+      srs_pcfg.max_nof_rx_ports    = nof_srs_rx_ports;
+      srs_pcfg.max_nof_symbols     = 4;
+      srs_pcfg.max_sequence_length = max_seq_len;
+
+      srs_pcfg.on_result_cb = [](const srs_estimator_result& r, uint32_t slot_id) {
+        srs_result_tap::publish(slot_id, r);
+      };
+
+      eth_cfg.srs_inline_pipeline = hal::cuda::inline_srs_pipeline::create(srs_pcfg);
+      if (!eth_cfg.srs_inline_pipeline) {
+        fmt::print(stderr,
+                   "[ofh_factories] WARN: inline_srs_pipeline::create returned null; srs_rx_to_gpu "
+                   "will run in Phase-3a mode (classify + counter, no estimate)\n");
+      } else {
+        fmt::print(stderr,
+                   "[ofh_factories] Sector#{} inline GPU SRS pipeline active "
+                   "(nof_rx_ports={} ul_eaxcs={} cell_prbs={} max_seq={} ul_compr=BFP{})\n",
+                   sector_cfg.sector_id,
+                   nof_srs_rx_ports,
+                   eth_cfg.gpu_ul_eaxcs.size(),
+                   cell_nof_prbs,
+                   max_seq_len,
+                   srs_pcfg.data_width);
+      }
     }
 #endif
   }

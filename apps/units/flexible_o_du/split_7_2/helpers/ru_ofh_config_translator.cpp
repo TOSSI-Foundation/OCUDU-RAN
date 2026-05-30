@@ -132,6 +132,7 @@ static void generate_config(ru_ofh_configuration&                            out
     sector_cfg.dl_eaxc.assign(ofh_cell_cfg.ru_dl_port_id.begin(), ofh_cell_cfg.ru_dl_port_id.end());
     sector_cfg.ul_eaxc.assign(ofh_cell_cfg.ru_ul_port_id.begin(), ofh_cell_cfg.ru_ul_port_id.end());
     sector_cfg.prach_rx_to_gpu = ofh_cell_cfg.prach_rx_to_gpu;
+    sector_cfg.srs_rx_to_gpu   = ofh_cell_cfg.srs_rx_to_gpu;
 
     // TDD UL DL config.
     sector_cfg.tdd_config = cell.tdd_config;

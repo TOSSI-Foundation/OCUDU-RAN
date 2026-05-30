@@ -329,6 +329,12 @@ static void configure_cli11_ru_ofh_cells_args(CLI::App& app, ru_ofh_unit_cell_co
              "If true (and the build has ENABLE_GPU_FRONTHAUL), route eCPRI frames through a "
              "GPU-backed RX queue (PCIe P2P NIC->VRAM); PRACH eAxCs are classified in software")
       ->capture_default_str();
+  add_option(app,
+             "--srs_rx_to_gpu",
+             config.srs_rx_to_gpu,
+             "If true (and prach_rx_to_gpu is also true), the GPU listener classifies SRS "
+             "packets in the VRAM stream via srs_schedule_tap")
+      ->capture_default_str();
 }
 
 static void configure_cli11_ru_ofh_args(CLI::App& app, ru_ofh_unit_parsed_config& config)

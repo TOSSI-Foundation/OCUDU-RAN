@@ -24,6 +24,7 @@
 #include "ocudu/phy/upper/uplink_pdu_slot_repository.h"
 #include "ocudu/phy/upper/uplink_pdu_validator.h"
 #include "ocudu/phy/upper/uplink_request_processor.h"
+#include "ocudu/support/srs_schedule_tap.h"
 
 using namespace ocudu;
 using namespace fapi_adaptor;
@@ -548,6 +549,16 @@ void fapi_to_phy_fastpath_translator::send_ul_tti_request(const fapi::ul_tti_req
   }
   for (const auto& pdu : pdus.value().srs) {
     ul_pdu_slot_repository->add_srs_pdu(pdu);
+
+    const slot_point sp                = pdu.config.slot;
+    const uint32_t   packed_slot_id    = (static_cast<uint32_t>(sp.sfn() & 0xFFu) << 16) |
+                                      (static_cast<uint32_t>(sp.subframe_index() & 0xFFu) << 8) |
+                                      static_cast<uint32_t>(sp.subframe_slot_index() & 0xFFu);
+    srs_schedule_tap::publish(packed_slot_id,
+                              static_cast<uint8_t>(pdu.config.resource.start_symbol.value()),
+                              static_cast<uint8_t>(pdu.config.resource.nof_symbols),
+                              pdu.config.resource,
+                              static_cast<uint8_t>(pdu.config.ports.size()));
   }
 
   // Release repository and obtain uplink resource grid - it ensures that the uplink processing associated with the slot

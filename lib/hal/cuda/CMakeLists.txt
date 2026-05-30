@@ -5,7 +5,9 @@ if (ENABLE_GPU_FRONTHAUL)
         dpdk_gpu_ethernet_receiver.cpp
         prach_flow_rules.cpp
         vram_prach_buffer.cpp
+        vram_srs_buffer.cpp
         prach_inline_bfp_kernel.cu
+        srs_inline_bfp_kernel.cu
     )
 
     set_target_properties(ocudu_hal_gpu_dpdk_mempool PROPERTIES
@@ -32,6 +34,9 @@ if (ENABLE_GPU_FRONTHAUL)
         prach_detector_inline_impl.cpp
         prach_detector_inline_kernels.cu
         inline_prach_pipeline.cpp
+        srs_estimator_inline_impl.cpp
+        srs_inline_estimator_kernels.cu
+        inline_srs_pipeline.cpp
     )
 
     set_target_properties(ocudu_hal_prach_detector_inline PROPERTIES
@@ -45,7 +50,7 @@ if (ENABLE_GPU_FRONTHAUL)
 
     target_link_libraries(ocudu_hal_prach_detector_inline
         PUBLIC  CUDA::cudart CUDA::cufft
-        PRIVATE ocudu_hal_gpu_dpdk_mempool ocudu_prach_detector ocudu_ran ocudu_support
+        PRIVATE ocudu_hal_gpu_dpdk_mempool ocudu_prach_detector ocudu_ran ocudu_sequence_generators ocudu_srs_estimator ocudu_support
     )
 
     add_to_exported_libs(ocudu_hal_prach_detector_inline)

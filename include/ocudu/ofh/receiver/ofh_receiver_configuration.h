@@ -60,6 +60,7 @@ struct receiver_config {
   /// If set to true, logs late events as warnings, otherwise as info.
   bool enable_log_warnings_for_lates = true;
   bool prach_rx_to_gpu = false;
+  bool srs_rx_to_gpu   = false;
 };
 
 } // namespace ofh

@@ -27,6 +27,7 @@ static message_receiver_config get_message_receiver_configuration(const receiver
   config.ul_eaxc    = rx_config.ul_eaxc;
 
   config.prach_rx_to_gpu = rx_config.prach_rx_to_gpu;
+  config.srs_rx_to_gpu   = rx_config.srs_rx_to_gpu;
 
   return config;
 }

@@ -20,6 +20,7 @@ namespace hal {
 namespace cuda {
 
 class inline_prach_pipeline;
+class inline_srs_pipeline;
 
 class gpu_dpdk_mempool;
 }
@@ -39,6 +40,12 @@ struct dpdk_gpu_rx_config {
   std::shared_ptr<hal::cuda::inline_prach_pipeline> inline_pipeline;
 
   unsigned iq_payload_offset_bytes = 37;
+
+  bool srs_classify_enabled = false;
+
+  std::vector<uint16_t> ul_eaxcs;
+
+  std::shared_ptr<hal::cuda::inline_srs_pipeline> srs_inline_pipeline;
 };
 
 /// DPDK port configuration.
@@ -87,6 +94,8 @@ public:
   uint64_t get_gpu_prach_frame_count() const { return gpu_prach_frames.load(std::memory_order_relaxed); }
   uint64_t get_gpu_other_frame_count() const { return gpu_other_frames.load(std::memory_order_relaxed); }
 
+  uint64_t get_gpu_srs_frame_count() const { return gpu_srs_frames.load(std::memory_order_relaxed); }
+
 private:
   const std::string    port_id;
   const unsigned       dpdk_port_id;
@@ -99,6 +108,7 @@ private:
   std::atomic<bool>                           gpu_stop{false};
   std::atomic<uint64_t>                       gpu_prach_frames{0};
   std::atomic<uint64_t>                       gpu_other_frames{0};
+  std::atomic<uint64_t>                       gpu_srs_frames{0};
 
   friend bool init_port_with_gpu(dpdk_port_context& ctx, const dpdk_port_config& config, unsigned port_id);
 };

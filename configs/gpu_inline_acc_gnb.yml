@@ -43,7 +43,8 @@
           prach_port_id: [4, 5, 6, 7]
           dl_port_id: [0, 1, 2, 3]
           ul_port_id: [0, 1, 2, 3]
-          prach_rx_to_gpu: true
+          prach_rx_to_gpu: false
+          srs_rx_to_gpu: true
 
     cell_cfg:
       dl_arfcn: 630048
@@ -70,6 +71,15 @@
         ra_resp_window: 10
         detection_threshold_margin: 1.2
         ports: [0, 1, 2, 3]
+
+      srs:
+        type_enabled: periodic
+        period_ms: 20
+        max_nof_sym_per_slot: 2
+        nof_sym_per_resource: 1
+        tx_comb: 4
+        cyclic_shift_reuse: 1
+        sequence_id_reuse: 1
 
       tdd_ul_dl_cfg:
         dl_ul_tx_period: 5

@@ -13,6 +13,7 @@ namespace ocudu {
 namespace hal {
 namespace cuda {
 class inline_prach_pipeline;
+class inline_srs_pipeline;
 }
 }
 
@@ -37,6 +38,10 @@ struct transmitter_config {
   std::vector<uint16_t> gpu_prach_eaxcs;
   std::shared_ptr<hal::cuda::inline_prach_pipeline> inline_pipeline;
   unsigned gpu_iq_payload_offset_bytes = 37;
+
+  bool                  enable_srs_classification = false;
+  std::vector<uint16_t> gpu_ul_eaxcs;
+  std::shared_ptr<hal::cuda::inline_srs_pipeline> srs_inline_pipeline;
 };
 
 } // namespace ether

@@ -1,0 +1,1877 @@
+2026-05-30T12:01:13.587519 [GNB     ] [I] Built in Release mode using commit f1ab25b44e on branch dev
+2026-05-30T12:01:13.589494 [CONFIG  ] [I] Input configuration (only non-default values): 
+log:
+  filename: gnb.log
+  all_level: info
+metrics:
+  autostart_stdout_metrics: true
+  enable_json: false
+  enable_log: true
+  enable_verbose: true
+  layers:
+    enable_du_low: true
+expert_execution:
+  affinities:
+    main_pool_cpus: 1,3,5,7,9,11,13
+    main_pool_pinning: mask
+  threads:
+    main_pool:
+      nof_threads: 7
+hal:
+  eal_args: --lcores (0-1)@(4,6) -a 0000:53:00.1 -a 0000:18:00.0 --iova-mode=pa --huge-dir /mnt/huge1G --file-prefix=gnb
+remote_control:
+  enabled: false
+  bind_addr: 0.0.0.0
+  port: 8001
+cu_cp:
+  amf:
+    addrs: 192.168.70.132
+    port: 38412
+    bind_addrs: 192.168.70.129
+    supported_tracking_areas: "tac: 1\nplmn_list:\n  - plmn: 00101\n    tai_slice_support_list:\n      - sst: 1"
+pcap:
+  ngap_filename: /tmp/gnb_ngap.pcap
+  ngap_enable: false
+  mac_filename: /tmp/gnb_mac.pcap
+  mac_enable: false
+cell_cfg:
+  pci: 1
+  dl_arfcn: 630048
+  band: 78
+  common_scs: 30
+  channel_bandwidth_MHz: 100
+  nof_antennas_ul: 4
+  nof_antennas_dl: 4
+  plmn: 00101
+  tac: 1
+  ssb:
+    ssb_block_power_dbm: 0
+  pdcch:
+    common:
+      coreset0_index: 11
+  pusch:
+    msg3_delta_preamble: 2
+    p0_nominal_with_grant: -96
+  srs:
+    type_enabled: periodic
+    period_ms: 20
+    max_nof_sym_per_slot: 2
+    nof_sym_per_resource: 1
+    tx_comb: 4
+    cyclic_shift_reuse: 1
+    sequence_id_reuse: 1
+  prach:
+    prach_config_index: 159
+    prach_root_sequence_index: 1
+    zero_correlation_zone: 0
+    detection_threshold_margin: 1.2
+    prach_frequency_start: 22
+    preamble_rx_target_pw: -100
+    preamble_trans_max: 200
+    ports: [0, 1, 2, 3]
+    ra_resp_window: 10
+  tdd_ul_dl_cfg:
+    dl_ul_tx_period: 5
+    nof_dl_slots: 3
+    nof_dl_symbols: 6
+    nof_ul_slots: 1
+    nof_ul_symbols: 4
+expert_phy:
+  max_proc_delay: 5
+  allow_request_on_empty_uplink_slot: true
+ru_ofh:
+  cells: "network_interface: 0000:53:00.1\nru_mac_addr: b8:3f:d2:b6:ff:e2\ndu_mac_addr: b8:3f:d2:b6:ff:e3\nenable_promiscuous: true\nprach_port_id: [4, 5, 6, 7]\ndl_port_id: [0, 1, 2, 3]\nul_port_id: [0, 1, 2, 3]\nprach_rx_to_gpu: true\nsrs_rx_to_gpu: true"
+  "":
+    t1a_max_cp_dl: 429
+    t1a_min_cp_dl: 285
+    t1a_max_cp_ul: 429
+    t1a_min_cp_ul: 285
+    t1a_max_up: 196
+    t1a_min_up: 96
+    ta4_max: 180
+    ta4_min: 110
+    is_prach_cp_enabled: true
+    ignore_ecpri_seq_id: true
+    ignore_ecpri_payload_size: false
+    compr_method_ul: bfp
+    compr_bitwidth_ul: 9
+    compr_method_dl: bfp
+    compr_bitwidth_dl: 9
+    compr_method_prach: bfp
+    compr_bitwidth_prach: 9
+    enable_ul_static_compr_hdr: false
+    enable_dl_static_compr_hdr: true
+    iq_scaling: 5.0
+2026-05-30T12:01:15.187944 [GNB     ] [W] DRM KMS polling is enabled, which may hinder performance. You can disable it using the "ocudu_performance" script
+2026-05-30T12:01:15.188723 [CONFIG  ] [I] Worker pool "main_pool" instantiated with #workers=4, task_queue_size=2048, backoff_period=50us and priority=96.
+2026-05-30T12:01:15.213462 [GTPU    ] [I] GTP-U demux. queue_size=2046 batch_size=256 warn_on_drop=false test_mode=false
+2026-05-30T12:01:15.213607 [GTPU    ] [I] Tunnel added. teid=0x000000
+2026-05-30T12:01:15.506860 [DU-MNG  ] [I] The upper-bound on the number of UEs supported by cell {pci=1, du_cell_index=0} is 64 (the actual number might be lower than that). This is determined by the lowest of the following limits: SR (64), CSI (64) and SRS (192).
+2026-05-30T12:01:15.508265 [DU      ] [I] DU created successfully
+2026-05-30T12:01:15.508274 [DU      ] [I] O-DU created successfully
+2026-05-30T12:01:16.253686 [GNB     ] [I] SSB derived parameters for cell: 1, band: 78, dl_arfcn:630048, nof_crbs: 273 scs:30kHz, ssb_scs:30kHz:
+	 - SSB offset pointA:28 
+	 - k_SSB:12 
+	 - SSB arfcn:627360 
+	 - Coreset index:11 
+	 - Searchspace index:0
+2026-05-30T12:01:16.253728 [GNB     ] [I] Starting CU-CP...
+2026-05-30T12:01:16.253913 [CU-CP   ] [I] N2: Connection to AMF on 192.168.70.132:38412 was established
+2026-05-30T12:01:16.253975 [NGAP    ] [I] Tx PDU: NGSetupRequest
+2026-05-30T12:01:16.254269 [NGAP    ] [I] Rx PDU: NGSetupResponse
+2026-05-30T12:01:16.254288 [CU-CP   ] [I] Connected to AMF. Supported PLMNs: 00101 
+2026-05-30T12:01:16.254299 [GNB     ] [I] CU-CP started successfully
+2026-05-30T12:01:16.254303 [CU-UP   ] [I] CU-UP starting...
+2026-05-30T12:01:16.254352 [CU-CP   ] [I] Added TNL connection to CU-UP 0
+2026-05-30T12:01:16.254363 [CU-UP-E1] [I] Sending E1SetupRequest
+2026-05-30T12:01:16.254365 [CU-UP-E1] [I] Tx PDU tid=0: GNB-CU-UP-E1SetupRequest
+2026-05-30T12:01:16.254374 [CU-CP-E1] [I] Rx PDU tid=0: GNB-CU-UP-E1SetupRequest
+2026-05-30T12:01:16.254382 [CU-CP-E1] [I] Tx PDU tid=0: GNB-CU-UP-E1SetupResponse
+2026-05-30T12:01:16.254389 [CU-UP-E1] [I] Rx PDU tid=0: GNB-CU-UP-E1SetupResponse
+2026-05-30T12:01:16.254390 [CU-UP-E1] [I] "E1AP CU-UP Setup Procedure" finalized
+2026-05-30T12:01:16.254395 [CU-UP   ] [I] CU-UP started successfully
+2026-05-30T12:01:16.254398 [DU      ] [I] Starting DU...
+2026-05-30T12:01:16.254399 [DU      ] [I] Starting DU-High...
+2026-05-30T12:01:16.254400 [DU-MNG  ] [I] DU manager starting...
+2026-05-30T12:01:16.254451 [CU-CP   ] [I] Added TNL connection to DU 0
+2026-05-30T12:01:16.288153 [DU-MNG  ] [I] SIB1 cell=0: {
+  "cellSelectionInfo": {
+    "q-RxLevMin": -70,
+    "q-QualMin": -20
+  },
+  "cellAccessRelatedInfo": {
+    "plmn-IdentityInfoList": [
+      {
+        "plmn-IdentityList": [
+          {
+            "mcc": [
+              0,
+              0,
+              1
+            ],
+            "mnc": [
+              0,
+              1
+            ]
+          }
+        ],
+        "trackingAreaCode": "000000000000000000000001",
+        "cellIdentity": "000000000000011001101100000000000000",
+        "cellReservedForOperatorUse": "notReserved"
+      }
+    ]
+  },
+  "connEstFailureControl": {
+    "connEstFailCount": "n1",
+    "connEstFailOffsetValidity": "s30",
+    "connEstFailOffset": 1
+  },
+  "servingCellConfigCommon": {
+    "downlinkConfigCommon": {
+      "frequencyInfoDL": {
+        "frequencyBandList": [
+          {
+            "freqBandIndicatorNR": 78
+          }
+        ],
+        "offsetToPointA": 28,
+        "scs-SpecificCarrierList": [
+          {
+            "offsetToCarrier": 0,
+            "subcarrierSpacing": "kHz30",
+            "carrierBandwidth": 273,
+            "txDirectCurrentLocation": 1638
+          }
+        ]
+      },
+      "initialDownlinkBWP": {
+        "genericParameters": {
+          "locationAndBandwidth": 1099,
+          "subcarrierSpacing": "kHz30"
+        },
+        "pdcch-ConfigCommon": {
+          {
+            "commonSearchSpaceList": [
+              {
+                "searchSpaceId": 1,
+                "controlResourceSetId": 0,
+                "monitoringSlotPeriodicityAndOffset": {
+                },
+                "monitoringSymbolsWithinSlot": "10000000000000",
+                "nrofCandidates": {
+                  "aggregationLevel1": "n0",
+                  "aggregationLevel2": "n0",
+                  "aggregationLevel4": "n1",
+                  "aggregationLevel8": "n0",
+                  "aggregationLevel16": "n0"
+                },
+                "searchSpaceType": {
+                  "common": {
+                    "dci-Format0-0-AndFormat1-0": {
+                    }
+                  }
+                }
+              }
+            ],
+            "searchSpaceSIB1": 0,
+            "pagingSearchSpace": 1,
+            "ra-SearchSpace": 1
+          }
+        },
+        "pdsch-ConfigCommon": {
+          {
+            "pdsch-TimeDomainAllocationList": [
+              {
+                "mappingType": "typeA",
+                "startSymbolAndLength": 40
+              },
+              {
+                "mappingType": "typeA",
+                "startSymbolAndLength": 57
+              }
+            ]
+          }
+        }
+      },
+      "bcch-Config": {
+        "modificationPeriodCoeff": "n4"
+      },
+      "pcch-Config": {
+        "defaultPagingCycle": "rf128",
+        "nAndPagingFrameOffset": {
+        },
+        "ns": "one"
+      }
+    },
+    "uplinkConfigCommon": {
+      "frequencyInfoUL": {
+        "frequencyBandList": [
+          {
+            "freqBandIndicatorNR": 78
+          }
+        ],
+        "absoluteFrequencyPointA": 626772,
+        "scs-SpecificCarrierList": [
+          {
+            "offsetToCarrier": 0,
+            "subcarrierSpacing": "kHz30",
+            "carrierBandwidth": 273
+          }
+        ]
+      },
+      "initialUplinkBWP": {
+        "genericParameters": {
+          "locationAndBandwidth": 1099,
+          "subcarrierSpacing": "kHz30"
+        },
+        "rach-ConfigCommon": {
+          {
+            "rach-ConfigGeneric": {
+              "prach-ConfigurationIndex": 159,
+              "msg1-FDM": "one",
+              "msg1-FrequencyStart": 22,
+              "zeroCorrelationZoneConfig": 0,
+              "preambleReceivedTargetPower": -100,
+              "preambleTransMax": "n200",
+              "powerRampingStep": "dB4",
+              "ra-ResponseWindow": "sl10"
+            },
+            "ssb-perRACH-OccasionAndCB-PreamblesPerSSB": {
+              "one": "n64"
+            },
+            "ra-ContentionResolutionTimer": "sf64",
+            "prach-RootSequenceIndex": {
+              "l139": 1
+            },
+            "msg1-SubcarrierSpacing": "kHz30",
+            "restrictedSetConfig": "unrestrictedSet"
+          }
+        },
+        "pusch-ConfigCommon": {
+          {
+            "pusch-TimeDomainAllocationList": [
+              {
+                "k2": 4,
+                "mappingType": "typeA",
+                "startSymbolAndLength": 27
+              },
+              {
+                "k2": 4,
+                "mappingType": "typeA",
+                "startSymbolAndLength": 41
+              },
+              {
+                "k2": 4,
+                "mappingType": "typeA",
+                "startSymbolAndLength": 55
+              },
+              {
+                "k2": 6,
+                "mappingType": "typeA",
+                "startSymbolAndLength": 27
+              },
+              {
+                "k2": 6,
+                "mappingType": "typeA",
+                "startSymbolAndLength": 41
+              },
+              {
+                "k2": 6,
+                "mappingType": "typeA",
+                "startSymbolAndLength": 55
+              },
+              {
+                "k2": 7,
+                "mappingType": "typeA",
+                "startSymbolAndLength": 27
+              },
+              {
+                "k2": 7,
+                "mappingType": "typeA",
+                "startSymbolAndLength": 41
+              },
+              {
+                "k2": 7,
+                "mappingType": "typeA",
+                "startSymbolAndLength": 55
+              },
+              {
+                "k2": 8,
+                "mappingType": "typeA",
+                "startSymbolAndLength": 27
+              },
+              {
+                "k2": 8,
+                "mappingType": "typeA",
+                "startSymbolAndLength": 41
+              },
+              {
+                "k2": 8,
+                "mappingType": "typeA",
+                "startSymbolAndLength": 55
+              }
+            ],
+            "msg3-DeltaPreamble": 2,
+            "p0-NominalWithGrant": -96
+          }
+        },
+        "pucch-ConfigCommon": {
+          {
+            "pucch-ResourceCommon": 11,
+            "pucch-GroupHopping": "neither",
+            "p0-nominal": -90
+          }
+        }
+      },
+      "timeAlignmentTimerCommon": "infinity"
+    },
+    "n-TimingAdvanceOffset": "n25600",
+    "ssb-PositionsInBurst": {
+      "inOneGroup": "10000000"
+    },
+    "ssb-PeriodicityServingCell": "ms10",
+    "tdd-UL-DL-ConfigurationCommon": {
+      "referenceSubcarrierSpacing": "kHz30",
+      "pattern1": {
+        "dl-UL-TransmissionPeriodicity": "ms2p5",
+        "nrofDownlinkSlots": 3,
+        "nrofDownlinkSymbols": 6,
+        "nrofUplinkSlots": 1,
+        "nrofUplinkSymbols": 4
+      }
+    },
+    "ss-PBCH-BlockPower": 0
+  },
+  "ue-TimersAndConstants": {
+    "t300": "ms1000",
+    "t301": "ms1000",
+    "t310": "ms1000",
+    "n310": "n1",
+    "t311": "ms3000",
+    "n311": "n1",
+    "t319": "ms1000"
+  }
+}
+2026-05-30T12:01:16.288221 [DU-F1   ] [I] F1 Setup: Sending F1 Setup Request to CU-CP...
+2026-05-30T12:01:16.288225 [DU-F1   ] [I] Tx PDU du=0 tid=0: F1SetupRequest
+2026-05-30T12:01:16.288266 [CU-CP-F1] [I] Rx PDU du=0 tid=0: F1SetupRequest
+2026-05-30T12:01:16.288334 [CU-CP-F1] [I] Tx PDU du=0 tid=0: F1SetupResponse
+2026-05-30T12:01:16.288339 [DU-F1   ] [I] Rx PDU du=0 tid=0: F1SetupResponse
+2026-05-30T12:01:16.288342 [DU-F1   ] [I] F1 Setup: Procedure completed successfully.
+2026-05-30T12:01:16.288349 [SCHED   ] [I] [     0.0] cell=0: Cell scheduling was activated.
+2026-05-30T12:01:16.288355 [MAC     ] [I] [     0.0] cell=0: Cell was activated
+2026-05-30T12:01:16.288366 [DU-MNG  ] [I] DU manager started successfully.
+2026-05-30T12:01:16.288367 [DU      ] [I] DU-High started successfully
+2026-05-30T12:01:16.288370 [DU      ] [I] DU started successfully
+2026-05-30T12:01:16.288371 [OFH     ] [I] Starting the operation of the Open Fronthaul interface
+2026-05-30T12:01:16.288372 [OFH     ] [I] Starting the realtime timing worker
+2026-05-30T12:01:16.288382 [OFH     ] [I] Started the realtime timing worker
+2026-05-30T12:01:16.288401 [OFH     ] [I] Starting the DPDK ethernet frame receiver
+2026-05-30T12:01:16.288426 [OFH     ] [I] Started the DPDK ethernet frame receiver on port '0000:53:00.1'
+2026-05-30T12:01:16.288426 [OFH     ] [I] Started the operation of the Open Fronthaul interface
+2026-05-30T12:01:16.288568 [SCHED   ] [I] [   981.2] Processed slot events pci=1: Cell creation idx=0 pci=1
+2026-05-30T12:01:16.300256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '981.19'
+2026-05-30T12:01:16.310285 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '982.19'
+2026-05-30T12:01:16.320263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '983.19'
+2026-05-30T12:01:16.330273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '984.19'
+2026-05-30T12:01:16.340265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '985.19'
+2026-05-30T12:01:16.350254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '986.19'
+2026-05-30T12:01:16.360285 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '987.19'
+2026-05-30T12:01:16.370278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '988.19'
+2026-05-30T12:01:16.380284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '989.19'
+2026-05-30T12:01:16.390259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '990.19'
+2026-05-30T12:01:16.400261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '991.19'
+2026-05-30T12:01:16.410259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '992.19'
+2026-05-30T12:01:16.420256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '993.19'
+2026-05-30T12:01:16.430278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '994.19'
+2026-05-30T12:01:16.440261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '995.19'
+2026-05-30T12:01:16.450289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '996.19'
+2026-05-30T12:01:16.460255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '997.19'
+2026-05-30T12:01:16.470293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '998.19'
+2026-05-30T12:01:16.480258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '999.19'
+2026-05-30T12:01:16.490285 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1000.19'
+2026-05-30T12:01:16.500262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1001.19'
+2026-05-30T12:01:16.510290 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1002.19'
+2026-05-30T12:01:16.520269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1003.19'
+2026-05-30T12:01:16.530255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1004.19'
+2026-05-30T12:01:16.540261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1005.19'
+2026-05-30T12:01:16.550277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1006.19'
+2026-05-30T12:01:16.560264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1007.19'
+2026-05-30T12:01:16.570273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1008.19'
+2026-05-30T12:01:16.580270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1009.19'
+2026-05-30T12:01:16.590260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1010.19'
+2026-05-30T12:01:16.600287 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1011.19'
+2026-05-30T12:01:16.610290 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1012.19'
+2026-05-30T12:01:16.620284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1013.19'
+2026-05-30T12:01:16.630273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1014.19'
+2026-05-30T12:01:16.640256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1015.19'
+2026-05-30T12:01:16.650276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1016.19'
+2026-05-30T12:01:16.660264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1017.19'
+2026-05-30T12:01:16.670253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1018.19'
+2026-05-30T12:01:16.680258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1019.19'
+2026-05-30T12:01:16.690257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1020.19'
+2026-05-30T12:01:16.700279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1021.19'
+2026-05-30T12:01:16.710256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1022.19'
+2026-05-30T12:01:16.720257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1023.19'
+2026-05-30T12:01:16.730289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '0.19'
+2026-05-30T12:01:16.740290 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1.19'
+2026-05-30T12:01:16.750256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '2.19'
+2026-05-30T12:01:16.760257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '3.19'
+2026-05-30T12:01:16.770257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '4.19'
+2026-05-30T12:01:16.780267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '5.19'
+2026-05-30T12:01:16.790289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '6.19'
+2026-05-30T12:01:16.800283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '7.19'
+2026-05-30T12:01:16.810283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '8.19'
+2026-05-30T12:01:16.820254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '9.19'
+2026-05-30T12:01:16.830290 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '10.19'
+2026-05-30T12:01:16.840278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '11.19'
+2026-05-30T12:01:16.844564 [METRICS ] MAC cell pci=1 metrics: slots=[981.2, 12.0(+1 HFNs)) nof_slots=1098 slot_duration=500usec nof_voluntary_context_switches=4 nof_involuntary_context_switches=0 wall_clock_latency=[avg=8usec max=604usec max_slot=981.2] sched_latency=[avg=3usec max=42usec max_slot=981.2] dl_tti_req_latency=[avg=5usec max=584usec max_slot=981.10] tx_data_req_latency=[avg=4usec max=5usec max_slot=0.1] ul_tti_req_latency=[avg=3usec max=231usec max_slot=981.4] slot_ind_dequeue_latency=[avg=16usec max=140usec max_slot=981.6] slot_ind_msg_time_diff=[avg=500usec max=507usec max_slot=1011.16]
+2026-05-30T12:01:16.844584 [METRICS ] Scheduler cell pci=1 metrics: total_dl_brate= 0.0bps total_ul_brate= 0.0bps nof_prbs=273 nof_dl_slots=878 nof_ul_slots=440 nof_prach_preambles=0 error_indications=0 pdsch_rbs_per_slot=0 pusch_rbs_per_slot=0 pdschs_per_slot=0 puschs_per_slot=0 failed_pdcch=0 failed_uci=0 nof_ues=0 mean_latency=1usec max_latency=35usec max_latency_slot=981.2 latency_hist=[1098, 0, 0, 0, 0, 0, 0, 0, 0, 0] msg3_ok=0 msg3_nok=0 late_dl_harqs=0 late_ul_harqs=0 pucch_tot_rb_usage_avg=0 pusch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] pdsch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] avg_prach_delay=n/a
+2026-05-30T12:01:16.844614 [METRICS ] PHY metrics: dl_processing_max_latency=0.0us dl_processing_max_slot=0.0 ul_processing_max_latency=0.0us ul_processing_max_slot=0.0 ldpc_encoder_avg_latency=0.0us ldpc_encoder_max_latency=0.0us ldpc_decoder_avg_latency=0.0us ldpc_decoder_max_latency=0.0us ldpc_decoder_avg_nof_iter=0.0
+  DL processing:          max_latency=0.00 us in slot=0.0
+  LDPC Encoder:           avg_cb_size=0.00 bits, avg_latency=0.00 us, max_latency=0.00 us, encode_rate=0.00 Mbps
+  LDPC Rate matcher:      avg_latency=0.00 us, proc_rate=0.00 Mbps
+  LDPC Decoder:           avg_cb_size=0.00 bits, avg_latency=0.00 us, max_latency=0.00 us, avg_nof_iter=0.00, decode_rate=0.00 Mbps
+  LDPC Rate dematcher:    avg_latency=0.00 us, max_latency=0.00 us, proc_rate=0.00 Mbps
+  PUSCH chan. estimator:  avg_latency=0.00 us, proc_rate=0.00 MPRBps
+  PUSCH chan. equalizer:  proc_rate_per_nof_layers=[0.00, 0.00, 0.00, 0.00] MREps
+  PUSCH scrambling:       avg_init_time=0.00 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=0.00 Mbps
+  PDSCH scrambling:       avg_init_time=0.00 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=0.00 Mbps
+  Transform precoding:    proc_rate=0.00 MREps, avg_latency=0.00 us/symbol
+  Modulation rates:       QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  Demodulation rates:     QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  EVM calc. rates:        QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  UL-SCH demux:           avg_init_time=0.00 us, avg_finish_time=0.00 us, proc_rate=0.00 Mbps
+  PUSCH Processor:        avg_data_latency=0.00 us, avg_uci_latency=0.00 us, proc_rate=0.00 Mbps, decoder_time=0.00% (asynchronous)
+  PDSCH precoding:        proc_rate_per_nof_layers=[0.00, 0.00, 0.00, 0.00] MREps
+  PDSCH Processor:        avg_latency=0.00 us, max_latency=0.00 us at slot=0.0, proc_rate=0.00 Mbps
+  PDSCH DM-RS:            avg_generation_latency=0.00 us
+  PDSCH CRC calculator {avg_latency, avg_rate}: crc16={0.00 us, 0.00 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH CRC calculator {avg_latency, avg_rate}: crc16={0.00 us, 0.00 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH Processor breakdown:
+     |-> Channel estimator: 0.00 %
+       |-> Ch. estimator: 0.00 %
+         |-> TA estimator: 0.00 %
+     |-> Demodulation: 0.00 %
+       |---> Channel equalizer: 0.00 %
+       |-> Demodulation mapper: 0.00 %
+       |-----> EVM calculation: 0.00 %
+       |----------> Scrambling: 0.00 %
+       |-> Transform precoding: 0.00 %
+     |-> UL-SCH Demux: 0.00 %
+     |------> Decoder: 0.00 % (multi-threaded)
+  CPU usage over 0.000 ms:
+    DL: upper_phy_dl=0.00%, fec=0.00%, ldpc_enc=0.00%, ldpc_rm=0.00%, pdsch_scrambling=0.00%, mod_mapper=0.00%, dl_layer_map=0.00%
+    UL: upper_phy_ul=0.00%, ul_fec=0.00%, ldpc_dec=0.00%, ldpc_rdm=0.00%, pusch_scrambling=0.00%, demod_mapper=0.00%, ul_precoding=0.00%
+2026-05-30T12:01:16.850256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '12.19'
+2026-05-30T12:01:16.860255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '13.19'
+2026-05-30T12:01:16.870271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '14.19'
+2026-05-30T12:01:16.880264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '15.19'
+2026-05-30T12:01:16.890272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '16.19'
+2026-05-30T12:01:16.900283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '17.19'
+2026-05-30T12:01:16.910255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '18.19'
+2026-05-30T12:01:16.920263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '19.19'
+2026-05-30T12:01:16.930273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '20.19'
+2026-05-30T12:01:16.940269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '21.19'
+2026-05-30T12:01:16.950262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '22.19'
+2026-05-30T12:01:16.960258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '23.19'
+2026-05-30T12:01:16.970285 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '24.19'
+2026-05-30T12:01:16.980255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '25.19'
+2026-05-30T12:01:16.990272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '26.19'
+2026-05-30T12:01:17.000262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '27.19'
+2026-05-30T12:01:17.010259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '28.19'
+2026-05-30T12:01:17.020276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '29.19'
+2026-05-30T12:01:17.030265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '30.19'
+2026-05-30T12:01:17.040257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '31.19'
+2026-05-30T12:01:17.050274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '32.19'
+2026-05-30T12:01:17.060259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '33.19'
+2026-05-30T12:01:17.070291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '34.19'
+2026-05-30T12:01:17.080265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '35.19'
+2026-05-30T12:01:17.090254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '36.19'
+2026-05-30T12:01:17.100266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '37.19'
+2026-05-30T12:01:17.110259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '38.19'
+2026-05-30T12:01:17.120261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '39.19'
+2026-05-30T12:01:17.130287 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '40.19'
+2026-05-30T12:01:17.140288 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '41.19'
+2026-05-30T12:01:17.150253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '42.19'
+2026-05-30T12:01:17.160259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '43.19'
+2026-05-30T12:01:17.170261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '44.19'
+2026-05-30T12:01:17.180269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '45.19'
+2026-05-30T12:01:17.190271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '46.19'
+2026-05-30T12:01:17.200256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '47.19'
+2026-05-30T12:01:17.210282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '48.19'
+2026-05-30T12:01:17.220268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '49.19'
+2026-05-30T12:01:17.230295 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '50.19'
+2026-05-30T12:01:17.240274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '51.19'
+2026-05-30T12:01:17.250274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '52.19'
+2026-05-30T12:01:17.260267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '53.19'
+2026-05-30T12:01:17.270282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '54.19'
+2026-05-30T12:01:17.280266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '55.19'
+2026-05-30T12:01:17.290287 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '56.19'
+2026-05-30T12:01:17.300259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '57.19'
+2026-05-30T12:01:17.310254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '58.19'
+2026-05-30T12:01:17.320276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '59.19'
+2026-05-30T12:01:17.330257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '60.19'
+2026-05-30T12:01:17.340259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '61.19'
+2026-05-30T12:01:17.350287 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '62.19'
+2026-05-30T12:01:17.360261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '63.19'
+2026-05-30T12:01:17.370278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '64.19'
+2026-05-30T12:01:17.380280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '65.19'
+2026-05-30T12:01:17.390276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '66.19'
+2026-05-30T12:01:17.400281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '67.19'
+2026-05-30T12:01:17.410289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '68.19'
+2026-05-30T12:01:17.420252 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '69.19'
+2026-05-30T12:01:17.430254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '70.19'
+2026-05-30T12:01:17.440284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '71.19'
+2026-05-30T12:01:17.450296 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '72.19'
+2026-05-30T12:01:17.460265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '73.19'
+2026-05-30T12:01:17.470257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '74.19'
+2026-05-30T12:01:17.480265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '75.19'
+2026-05-30T12:01:17.490264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '76.19'
+2026-05-30T12:01:17.500274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '77.19'
+2026-05-30T12:01:17.510278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '78.19'
+2026-05-30T12:01:17.520269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '79.19'
+2026-05-30T12:01:17.530260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '80.19'
+2026-05-30T12:01:17.540280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '81.19'
+2026-05-30T12:01:17.550276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '82.19'
+2026-05-30T12:01:17.560275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '83.19'
+2026-05-30T12:01:17.570259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '84.19'
+2026-05-30T12:01:17.580260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '85.19'
+2026-05-30T12:01:17.590256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '86.19'
+2026-05-30T12:01:17.600259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '87.19'
+2026-05-30T12:01:17.610277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '88.19'
+2026-05-30T12:01:17.620283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '89.19'
+2026-05-30T12:01:17.630276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '90.19'
+2026-05-30T12:01:17.640284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '91.19'
+2026-05-30T12:01:17.650264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '92.19'
+2026-05-30T12:01:17.660258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '93.19'
+2026-05-30T12:01:17.670263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '94.19'
+2026-05-30T12:01:17.680273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '95.19'
+2026-05-30T12:01:17.690277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '96.19'
+2026-05-30T12:01:17.700260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '97.19'
+2026-05-30T12:01:17.710274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '98.19'
+2026-05-30T12:01:17.720256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '99.19'
+2026-05-30T12:01:17.730283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '100.19'
+2026-05-30T12:01:17.740274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '101.19'
+2026-05-30T12:01:17.750281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '102.19'
+2026-05-30T12:01:17.760257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '103.19'
+2026-05-30T12:01:17.770256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '104.19'
+2026-05-30T12:01:17.780257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '105.19'
+2026-05-30T12:01:17.790272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '106.19'
+2026-05-30T12:01:17.800260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '107.19'
+2026-05-30T12:01:17.810283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '108.19'
+2026-05-30T12:01:17.820255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '109.19'
+2026-05-30T12:01:17.830289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '110.19'
+2026-05-30T12:01:17.840264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '111.19'
+2026-05-30T12:01:17.844571 [METRICS ] MAC cell pci=1 metrics: slots=[12.0, 112.0) nof_slots=2000 slot_duration=500usec nof_voluntary_context_switches=0 nof_involuntary_context_switches=0 wall_clock_latency=[avg=6usec max=22usec max_slot=64.1] sched_latency=[avg=3usec max=9usec max_slot=95.6] dl_tti_req_latency=[avg=3usec max=17usec max_slot=64.1] tx_data_req_latency=[avg=3usec max=4usec max_slot=16.1] ul_tti_req_latency=[avg=2usec max=4usec max_slot=42.19] slot_ind_dequeue_latency=[avg=17usec max=52usec max_slot=104.13] slot_ind_msg_time_diff=[avg=500usec max=504usec max_slot=25.4]
+2026-05-30T12:01:17.844591 [METRICS ] Scheduler cell pci=1 metrics: total_dl_brate= 0.0bps total_ul_brate= 0.0bps nof_prbs=273 nof_dl_slots=1600 nof_ul_slots=800 nof_prach_preambles=0 error_indications=0 pdsch_rbs_per_slot=0 pusch_rbs_per_slot=0 pdschs_per_slot=0 puschs_per_slot=0 failed_pdcch=0 failed_uci=0 nof_ues=0 mean_latency=1usec max_latency=7usec max_latency_slot=15.6 latency_hist=[2000, 0, 0, 0, 0, 0, 0, 0, 0, 0] msg3_ok=0 msg3_nok=0 late_dl_harqs=0 late_ul_harqs=0 pucch_tot_rb_usage_avg=0 pusch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] pdsch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] avg_prach_delay=n/a
+2026-05-30T12:01:17.844613 [METRICS ] PHY metrics: dl_processing_max_latency=80.5us dl_processing_max_slot=1008.1 ul_processing_max_latency=0.0us ul_processing_max_slot=0.0 ldpc_encoder_avg_latency=3.8us ldpc_encoder_max_latency=4.8us ldpc_decoder_avg_latency=0.0us ldpc_decoder_max_latency=0.0us ldpc_decoder_avg_nof_iter=0.0
+  DL processing:          max_latency=80.51 us in slot=1008.1
+  LDPC Encoder:           avg_cb_size=960.00 bits, avg_latency=3.78 us, max_latency=4.82 us, encode_rate=253.73 Mbps
+  LDPC Rate matcher:      avg_latency=7.01 us, proc_rate=339.03 Mbps
+  LDPC Decoder:           avg_cb_size=0.00 bits, avg_latency=0.00 us, max_latency=0.00 us, avg_nof_iter=0.00, decode_rate=0.00 Mbps
+  LDPC Rate dematcher:    avg_latency=0.00 us, max_latency=0.00 us, proc_rate=0.00 Mbps
+  PUSCH chan. estimator:  avg_latency=0.00 us, proc_rate=0.00 MPRBps
+  PUSCH chan. equalizer:  proc_rate_per_nof_layers=[0.00, 0.00, 0.00, 0.00] MREps
+  PUSCH scrambling:       avg_init_time=0.00 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=0.00 Mbps
+  PDSCH scrambling:       avg_init_time=0.49 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=2659.80 Mbps
+  Transform precoding:    proc_rate=0.00 MREps, avg_latency=0.00 us/symbol
+  Modulation rates:       QPSK=2430.19 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  Demodulation rates:     QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  EVM calc. rates:        QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  UL-SCH demux:           avg_init_time=0.00 us, avg_finish_time=0.00 us, proc_rate=0.00 Mbps
+  PUSCH Processor:        avg_data_latency=0.00 us, avg_uci_latency=0.00 us, proc_rate=0.00 Mbps, decoder_time=0.00% (asynchronous)
+  PDSCH precoding:        proc_rate_per_nof_layers=[217.60, 0.00, 0.00, 0.00] MREps
+  PDSCH Processor:        avg_latency=43.95 us, max_latency=51.46 us at slot=992.1, proc_rate=20.21 Mbps
+  PDSCH DM-RS:            avg_generation_latency=5.61 us
+  PDSCH CRC calculator {avg_latency, avg_rate}: crc16={1.58 us, 563.70 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH CRC calculator {avg_latency, avg_rate}: crc16={0.00 us, 0.00 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH Processor breakdown:
+     |-> Channel estimator: 0.00 %
+       |-> Ch. estimator: 0.00 %
+         |-> TA estimator: 0.00 %
+     |-> Demodulation: 0.00 %
+       |---> Channel equalizer: 0.00 %
+       |-> Demodulation mapper: 0.00 %
+       |-----> EVM calculation: 0.00 %
+       |----------> Scrambling: 0.00 %
+       |-> Transform precoding: 0.00 %
+     |-> UL-SCH Demux: 0.00 %
+     |------> Decoder: 0.00 % (multi-threaded)
+  CPU usage over 999.995 ms:
+    DL: upper_phy_dl=0.06%, fec=0.01%, ldpc_enc=0.00%, ldpc_rm=0.01%, pdsch_scrambling=0.00%, mod_mapper=0.00%, dl_layer_map=0.01%
+    UL: upper_phy_ul=0.00%, ul_fec=0.00%, ldpc_dec=0.00%, ldpc_rdm=0.00%, pusch_scrambling=0.00%, demod_mapper=0.00%, ul_precoding=0.00%
+2026-05-30T12:01:17.850258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '112.19'
+2026-05-30T12:01:17.860256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '113.19'
+2026-05-30T12:01:17.870300 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '114.19'
+2026-05-30T12:01:17.880284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '115.19'
+2026-05-30T12:01:17.890270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '116.19'
+2026-05-30T12:01:17.900258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '117.19'
+2026-05-30T12:01:17.910303 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '118.19'
+2026-05-30T12:01:17.920267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '119.19'
+2026-05-30T12:01:17.930258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '120.19'
+2026-05-30T12:01:17.940278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '121.19'
+2026-05-30T12:01:17.950257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '122.19'
+2026-05-30T12:01:17.960280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '123.19'
+2026-05-30T12:01:17.970277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '124.19'
+2026-05-30T12:01:17.980261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '125.19'
+2026-05-30T12:01:17.990260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '126.19'
+2026-05-30T12:01:18.000282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '127.19'
+2026-05-30T12:01:18.010282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '128.19'
+2026-05-30T12:01:18.020265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '129.19'
+2026-05-30T12:01:18.030276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '130.19'
+2026-05-30T12:01:18.040271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '131.19'
+2026-05-30T12:01:18.050267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '132.19'
+2026-05-30T12:01:18.060272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '133.19'
+2026-05-30T12:01:18.070281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '134.19'
+2026-05-30T12:01:18.080268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '135.19'
+2026-05-30T12:01:18.090293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '136.19'
+2026-05-30T12:01:18.100264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '137.19'
+2026-05-30T12:01:18.110257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '138.19'
+2026-05-30T12:01:18.120260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '139.19'
+2026-05-30T12:01:18.130253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '140.19'
+2026-05-30T12:01:18.140270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '141.19'
+2026-05-30T12:01:18.150277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '142.19'
+2026-05-30T12:01:18.160255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '143.19'
+2026-05-30T12:01:18.170256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '144.19'
+2026-05-30T12:01:18.180256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '145.19'
+2026-05-30T12:01:18.190276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '146.19'
+2026-05-30T12:01:18.200273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '147.19'
+2026-05-30T12:01:18.210261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '148.19'
+2026-05-30T12:01:18.220281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '149.19'
+2026-05-30T12:01:18.230291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '150.19'
+2026-05-30T12:01:18.240259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '151.19'
+2026-05-30T12:01:18.250259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '152.19'
+2026-05-30T12:01:18.260258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '153.19'
+2026-05-30T12:01:18.270274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '154.19'
+2026-05-30T12:01:18.280272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '155.19'
+2026-05-30T12:01:18.290264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '156.19'
+2026-05-30T12:01:18.300273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '157.19'
+2026-05-30T12:01:18.310271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '158.19'
+2026-05-30T12:01:18.320272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '159.19'
+2026-05-30T12:01:18.330263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '160.19'
+2026-05-30T12:01:18.340265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '161.19'
+2026-05-30T12:01:18.350294 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '162.19'
+2026-05-30T12:01:18.360270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '163.19'
+2026-05-30T12:01:18.370278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '164.19'
+2026-05-30T12:01:18.380263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '165.19'
+2026-05-30T12:01:18.390265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '166.19'
+2026-05-30T12:01:18.400272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '167.19'
+2026-05-30T12:01:18.410276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '168.19'
+2026-05-30T12:01:18.420274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '169.19'
+2026-05-30T12:01:18.430288 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '170.19'
+2026-05-30T12:01:18.440281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '171.19'
+2026-05-30T12:01:18.450254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '172.19'
+2026-05-30T12:01:18.460279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '173.19'
+2026-05-30T12:01:18.470277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '174.19'
+2026-05-30T12:01:18.480276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '175.19'
+2026-05-30T12:01:18.490286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '176.19'
+2026-05-30T12:01:18.500268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '177.19'
+2026-05-30T12:01:18.510264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '178.19'
+2026-05-30T12:01:18.520262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '179.19'
+2026-05-30T12:01:18.530258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '180.19'
+2026-05-30T12:01:18.532226 [OFH     ] [I] Real-time timing worker woke up late, skipped '14' symbols, current symbol is '6'
+2026-05-30T12:01:18.532226 [OFH     ] [W] Real-time timing worker woke up late, skipped '14' symbols. Current symbol is '6'. Equivalent realtime clock sleep time has been '500us', wall clock sleep time has been '510us'
+2026-05-30T12:01:18.532227 [OFH     ] [W] Real-time timing worker woke up late, sleep time has been '500us', or equivalently, '14' symbols
+2026-05-30T12:01:18.540288 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '181.19'
+2026-05-30T12:01:18.550260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '182.19'
+2026-05-30T12:01:18.560284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '183.19'
+2026-05-30T12:01:18.570258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '184.19'
+2026-05-30T12:01:18.580255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '185.19'
+2026-05-30T12:01:18.590263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '186.19'
+2026-05-30T12:01:18.600263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '187.19'
+2026-05-30T12:01:18.610255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '188.19'
+2026-05-30T12:01:18.620265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '189.19'
+2026-05-30T12:01:18.630254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '190.19'
+2026-05-30T12:01:18.640263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '191.19'
+2026-05-30T12:01:18.650257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '192.19'
+2026-05-30T12:01:18.660259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '193.19'
+2026-05-30T12:01:18.670279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '194.19'
+2026-05-30T12:01:18.680262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '195.19'
+2026-05-30T12:01:18.690270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '196.19'
+2026-05-30T12:01:18.700260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '197.19'
+2026-05-30T12:01:18.710278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '198.19'
+2026-05-30T12:01:18.720259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '199.19'
+2026-05-30T12:01:18.730280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '200.19'
+2026-05-30T12:01:18.740278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '201.19'
+2026-05-30T12:01:18.750276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '202.19'
+2026-05-30T12:01:18.760267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '203.19'
+2026-05-30T12:01:18.770255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '204.19'
+2026-05-30T12:01:18.780262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '205.19'
+2026-05-30T12:01:18.790274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '206.19'
+2026-05-30T12:01:18.800271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '207.19'
+2026-05-30T12:01:18.810277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '208.19'
+2026-05-30T12:01:18.820292 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '209.19'
+2026-05-30T12:01:18.830260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '210.19'
+2026-05-30T12:01:18.840279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '211.19'
+2026-05-30T12:01:18.844578 [METRICS ] MAC cell pci=1 metrics: slots=[112.0, 212.0) nof_slots=2000 slot_duration=500usec nof_voluntary_context_switches=0 nof_involuntary_context_switches=0 wall_clock_latency=[avg=6usec max=26usec max_slot=160.1] sched_latency=[avg=3usec max=9usec max_slot=127.6] dl_tti_req_latency=[avg=3usec max=19usec max_slot=176.1] tx_data_req_latency=[avg=4usec max=6usec max_slot=160.1] ul_tti_req_latency=[avg=2usec max=4usec max_slot=145.19] slot_ind_dequeue_latency=[avg=17usec max=50usec max_slot=128.13] slot_ind_msg_time_diff=[avg=500usec max=727usec max_slot=181.9]
+2026-05-30T12:01:18.844599 [METRICS ] Scheduler cell pci=1 metrics: total_dl_brate= 0.0bps total_ul_brate= 0.0bps nof_prbs=273 nof_dl_slots=1600 nof_ul_slots=800 nof_prach_preambles=0 error_indications=0 pdsch_rbs_per_slot=0 pusch_rbs_per_slot=0 pdschs_per_slot=0 puschs_per_slot=0 failed_pdcch=0 failed_uci=0 nof_ues=0 mean_latency=1usec max_latency=8usec max_latency_slot=127.6 latency_hist=[2000, 0, 0, 0, 0, 0, 0, 0, 0, 0] msg3_ok=0 msg3_nok=0 late_dl_harqs=0 late_ul_harqs=0 pucch_tot_rb_usage_avg=0 pusch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] pdsch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] avg_prach_delay=n/a
+2026-05-30T12:01:18.844621 [METRICS ] PHY metrics: dl_processing_max_latency=76.6us dl_processing_max_slot=208.1 ul_processing_max_latency=0.0us ul_processing_max_slot=0.0 ldpc_encoder_avg_latency=4.2us ldpc_encoder_max_latency=4.5us ldpc_decoder_avg_latency=0.0us ldpc_decoder_max_latency=0.0us ldpc_decoder_avg_nof_iter=0.0
+  DL processing:          max_latency=76.59 us in slot=208.1
+  LDPC Encoder:           avg_cb_size=960.00 bits, avg_latency=4.18 us, max_latency=4.52 us, encode_rate=229.80 Mbps
+  LDPC Rate matcher:      avg_latency=7.23 us, proc_rate=328.64 Mbps
+  LDPC Decoder:           avg_cb_size=0.00 bits, avg_latency=0.00 us, max_latency=0.00 us, avg_nof_iter=0.00, decode_rate=0.00 Mbps
+  LDPC Rate dematcher:    avg_latency=0.00 us, max_latency=0.00 us, proc_rate=0.00 Mbps
+  PUSCH chan. estimator:  avg_latency=0.00 us, proc_rate=0.00 MPRBps
+  PUSCH chan. equalizer:  proc_rate_per_nof_layers=[0.00, 0.00, 0.00, 0.00] MREps
+  PUSCH scrambling:       avg_init_time=0.00 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=0.00 Mbps
+  PDSCH scrambling:       avg_init_time=0.34 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=2586.36 Mbps
+  Transform precoding:    proc_rate=0.00 MREps, avg_latency=0.00 us/symbol
+  Modulation rates:       QPSK=2274.41 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  Demodulation rates:     QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  EVM calc. rates:        QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  UL-SCH demux:           avg_init_time=0.00 us, avg_finish_time=0.00 us, proc_rate=0.00 Mbps
+  PUSCH Processor:        avg_data_latency=0.00 us, avg_uci_latency=0.00 us, proc_rate=0.00 Mbps, decoder_time=0.00% (asynchronous)
+  PDSCH precoding:        proc_rate_per_nof_layers=[221.74, 0.00, 0.00, 0.00] MREps
+  PDSCH Processor:        avg_latency=43.08 us, max_latency=48.44 us at slot=160.1, proc_rate=20.61 Mbps
+  PDSCH DM-RS:            avg_generation_latency=5.03 us
+  PDSCH CRC calculator {avg_latency, avg_rate}: crc16={1.49 us, 595.11 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH CRC calculator {avg_latency, avg_rate}: crc16={0.00 us, 0.00 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH Processor breakdown:
+     |-> Channel estimator: 0.00 %
+       |-> Ch. estimator: 0.00 %
+         |-> TA estimator: 0.00 %
+     |-> Demodulation: 0.00 %
+       |---> Channel equalizer: 0.00 %
+       |-> Demodulation mapper: 0.00 %
+       |-----> EVM calculation: 0.00 %
+       |----------> Scrambling: 0.00 %
+       |-> Transform precoding: 0.00 %
+     |-> UL-SCH Demux: 0.00 %
+     |------> Decoder: 0.00 % (multi-threaded)
+  CPU usage over 1000.021 ms:
+    DL: upper_phy_dl=0.04%, fec=0.01%, ldpc_enc=0.00%, ldpc_rm=0.00%, pdsch_scrambling=0.00%, mod_mapper=0.00%, dl_layer_map=0.00%
+    UL: upper_phy_ul=0.00%, ul_fec=0.00%, ldpc_dec=0.00%, ldpc_rdm=0.00%, pusch_scrambling=0.00%, demod_mapper=0.00%, ul_precoding=0.00%
+2026-05-30T12:01:18.850278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '212.19'
+2026-05-30T12:01:18.860259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '213.19'
+2026-05-30T12:01:18.870267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '214.19'
+2026-05-30T12:01:18.880262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '215.19'
+2026-05-30T12:01:18.890286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '216.19'
+2026-05-30T12:01:18.900272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '217.19'
+2026-05-30T12:01:18.910271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '218.19'
+2026-05-30T12:01:18.920266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '219.19'
+2026-05-30T12:01:18.930260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '220.19'
+2026-05-30T12:01:18.940274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '221.19'
+2026-05-30T12:01:18.950272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '222.19'
+2026-05-30T12:01:18.960283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '223.19'
+2026-05-30T12:01:18.970256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '224.19'
+2026-05-30T12:01:18.980271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '225.19'
+2026-05-30T12:01:18.990264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '226.19'
+2026-05-30T12:01:19.000268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '227.19'
+2026-05-30T12:01:19.010288 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '228.19'
+2026-05-30T12:01:19.020283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '229.19'
+2026-05-30T12:01:19.030254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '230.19'
+2026-05-30T12:01:19.040254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '231.19'
+2026-05-30T12:01:19.050272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '232.19'
+2026-05-30T12:01:19.060268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '233.19'
+2026-05-30T12:01:19.070253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '234.19'
+2026-05-30T12:01:19.080260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '235.19'
+2026-05-30T12:01:19.090288 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '236.19'
+2026-05-30T12:01:19.100259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '237.19'
+2026-05-30T12:01:19.110293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '238.19'
+2026-05-30T12:01:19.120282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '239.19'
+2026-05-30T12:01:19.130284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '240.19'
+2026-05-30T12:01:19.140265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '241.19'
+2026-05-30T12:01:19.150281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '242.19'
+2026-05-30T12:01:19.160264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '243.19'
+2026-05-30T12:01:19.170281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '244.19'
+2026-05-30T12:01:19.180255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '245.19'
+2026-05-30T12:01:19.190266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '246.19'
+2026-05-30T12:01:19.200259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '247.19'
+2026-05-30T12:01:19.210252 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '248.19'
+2026-05-30T12:01:19.220287 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '249.19'
+2026-05-30T12:01:19.230273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '250.19'
+2026-05-30T12:01:19.240257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '251.19'
+2026-05-30T12:01:19.250282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '252.19'
+2026-05-30T12:01:19.260256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '253.19'
+2026-05-30T12:01:19.270283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '254.19'
+2026-05-30T12:01:19.280269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '255.19'
+2026-05-30T12:01:19.290259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '256.19'
+2026-05-30T12:01:19.300284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '257.19'
+2026-05-30T12:01:19.310290 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '258.19'
+2026-05-30T12:01:19.320255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '259.19'
+2026-05-30T12:01:19.330271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '260.19'
+2026-05-30T12:01:19.340259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '261.19'
+2026-05-30T12:01:19.350256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '262.19'
+2026-05-30T12:01:19.360269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '263.19'
+2026-05-30T12:01:19.370297 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '264.19'
+2026-05-30T12:01:19.380256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '265.19'
+2026-05-30T12:01:19.390276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '266.19'
+2026-05-30T12:01:19.400264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '267.19'
+2026-05-30T12:01:19.410291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '268.19'
+2026-05-30T12:01:19.420282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '269.19'
+2026-05-30T12:01:19.430261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '270.19'
+2026-05-30T12:01:19.440258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '271.19'
+2026-05-30T12:01:19.450257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '272.19'
+2026-05-30T12:01:19.460265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '273.19'
+2026-05-30T12:01:19.470276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '274.19'
+2026-05-30T12:01:19.480260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '275.19'
+2026-05-30T12:01:19.490289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '276.19'
+2026-05-30T12:01:19.500278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '277.19'
+2026-05-30T12:01:19.510290 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '278.19'
+2026-05-30T12:01:19.520265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '279.19'
+2026-05-30T12:01:19.530287 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '280.19'
+2026-05-30T12:01:19.540261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '281.19'
+2026-05-30T12:01:19.550260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '282.19'
+2026-05-30T12:01:19.560257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '283.19'
+2026-05-30T12:01:19.570258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '284.19'
+2026-05-30T12:01:19.580256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '285.19'
+2026-05-30T12:01:19.590295 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '286.19'
+2026-05-30T12:01:19.600280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '287.19'
+2026-05-30T12:01:19.610261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '288.19'
+2026-05-30T12:01:19.620254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '289.19'
+2026-05-30T12:01:19.630295 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '290.19'
+2026-05-30T12:01:19.640271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '291.19'
+2026-05-30T12:01:19.650296 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '292.19'
+2026-05-30T12:01:19.660266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '293.19'
+2026-05-30T12:01:19.670262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '294.19'
+2026-05-30T12:01:19.680258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '295.19'
+2026-05-30T12:01:19.690279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '296.19'
+2026-05-30T12:01:19.700288 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '297.19'
+2026-05-30T12:01:19.710256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '298.19'
+2026-05-30T12:01:19.720265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '299.19'
+2026-05-30T12:01:19.730285 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '300.19'
+2026-05-30T12:01:19.740262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '301.19'
+2026-05-30T12:01:19.750283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '302.19'
+2026-05-30T12:01:19.760261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '303.19'
+2026-05-30T12:01:19.770261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '304.19'
+2026-05-30T12:01:19.780256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '305.19'
+2026-05-30T12:01:19.790294 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '306.19'
+2026-05-30T12:01:19.800268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '307.19'
+2026-05-30T12:01:19.810286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '308.19'
+2026-05-30T12:01:19.820269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '309.19'
+2026-05-30T12:01:19.830291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '310.19'
+2026-05-30T12:01:19.840256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '311.19'
+2026-05-30T12:01:19.844552 [METRICS ] MAC cell pci=1 metrics: slots=[212.0, 312.0) nof_slots=2000 slot_duration=500usec nof_voluntary_context_switches=0 nof_involuntary_context_switches=0 wall_clock_latency=[avg=6usec max=25usec max_slot=240.1] sched_latency=[avg=3usec max=8usec max_slot=239.6] dl_tti_req_latency=[avg=3usec max=19usec max_slot=240.1] tx_data_req_latency=[avg=3usec max=4usec max_slot=240.1] ul_tti_req_latency=[avg=2usec max=4usec max_slot=223.19] slot_ind_dequeue_latency=[avg=17usec max=52usec max_slot=279.11] slot_ind_msg_time_diff=[avg=500usec max=504usec max_slot=223.8]
+2026-05-30T12:01:19.844572 [METRICS ] Scheduler cell pci=1 metrics: total_dl_brate= 0.0bps total_ul_brate= 0.0bps nof_prbs=273 nof_dl_slots=1600 nof_ul_slots=800 nof_prach_preambles=0 error_indications=0 pdsch_rbs_per_slot=0 pusch_rbs_per_slot=0 pdschs_per_slot=0 puschs_per_slot=0 failed_pdcch=0 failed_uci=0 nof_ues=0 mean_latency=1usec max_latency=7usec max_latency_slot=223.6 latency_hist=[2000, 0, 0, 0, 0, 0, 0, 0, 0, 0] msg3_ok=0 msg3_nok=0 late_dl_harqs=0 late_ul_harqs=0 pucch_tot_rb_usage_avg=0 pusch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] pdsch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] avg_prach_delay=n/a
+2026-05-30T12:01:19.844594 [METRICS ] PHY metrics: dl_processing_max_latency=71.4us dl_processing_max_slot=272.1 ul_processing_max_latency=0.0us ul_processing_max_slot=0.0 ldpc_encoder_avg_latency=3.4us ldpc_encoder_max_latency=4.0us ldpc_decoder_avg_latency=0.0us ldpc_decoder_max_latency=0.0us ldpc_decoder_avg_nof_iter=0.0
+  DL processing:          max_latency=71.37 us in slot=272.1
+  LDPC Encoder:           avg_cb_size=960.00 bits, avg_latency=3.37 us, max_latency=3.96 us, encode_rate=284.92 Mbps
+  LDPC Rate matcher:      avg_latency=6.55 us, proc_rate=362.83 Mbps
+  LDPC Decoder:           avg_cb_size=0.00 bits, avg_latency=0.00 us, max_latency=0.00 us, avg_nof_iter=0.00, decode_rate=0.00 Mbps
+  LDPC Rate dematcher:    avg_latency=0.00 us, max_latency=0.00 us, proc_rate=0.00 Mbps
+  PUSCH chan. estimator:  avg_latency=0.00 us, proc_rate=0.00 MPRBps
+  PUSCH chan. equalizer:  proc_rate_per_nof_layers=[0.00, 0.00, 0.00, 0.00] MREps
+  PUSCH scrambling:       avg_init_time=0.00 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=0.00 Mbps
+  PDSCH scrambling:       avg_init_time=0.32 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=2863.80 Mbps
+  Transform precoding:    proc_rate=0.00 MREps, avg_latency=0.00 us/symbol
+  Modulation rates:       QPSK=2277.68 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  Demodulation rates:     QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  EVM calc. rates:        QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  UL-SCH demux:           avg_init_time=0.00 us, avg_finish_time=0.00 us, proc_rate=0.00 Mbps
+  PUSCH Processor:        avg_data_latency=0.00 us, avg_uci_latency=0.00 us, proc_rate=0.00 Mbps, decoder_time=0.00% (asynchronous)
+  PDSCH precoding:        proc_rate_per_nof_layers=[248.25, 0.00, 0.00, 0.00] MREps
+  PDSCH Processor:        avg_latency=40.75 us, max_latency=42.31 us at slot=224.1, proc_rate=21.79 Mbps
+  PDSCH DM-RS:            avg_generation_latency=5.21 us
+  PDSCH CRC calculator {avg_latency, avg_rate}: crc16={1.59 us, 558.67 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH CRC calculator {avg_latency, avg_rate}: crc16={0.00 us, 0.00 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH Processor breakdown:
+     |-> Channel estimator: 0.00 %
+       |-> Ch. estimator: 0.00 %
+         |-> TA estimator: 0.00 %
+     |-> Demodulation: 0.00 %
+       |---> Channel equalizer: 0.00 %
+       |-> Demodulation mapper: 0.00 %
+       |-----> EVM calculation: 0.00 %
+       |----------> Scrambling: 0.00 %
+       |-> Transform precoding: 0.00 %
+     |-> UL-SCH Demux: 0.00 %
+     |------> Decoder: 0.00 % (multi-threaded)
+  CPU usage over 999.967 ms:
+    DL: upper_phy_dl=0.04%, fec=0.01%, ldpc_enc=0.00%, ldpc_rm=0.00%, pdsch_scrambling=0.00%, mod_mapper=0.00%, dl_layer_map=0.00%
+    UL: upper_phy_ul=0.00%, ul_fec=0.00%, ldpc_dec=0.00%, ldpc_rdm=0.00%, pusch_scrambling=0.00%, demod_mapper=0.00%, ul_precoding=0.00%
+2026-05-30T12:01:19.850281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '312.19'
+2026-05-30T12:01:19.860253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '313.19'
+2026-05-30T12:01:19.870253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '314.19'
+2026-05-30T12:01:19.880269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '315.19'
+2026-05-30T12:01:19.890284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '316.19'
+2026-05-30T12:01:19.900255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '317.19'
+2026-05-30T12:01:19.910296 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '318.19'
+2026-05-30T12:01:19.920255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '319.19'
+2026-05-30T12:01:19.930257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '320.19'
+2026-05-30T12:01:19.940261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '321.19'
+2026-05-30T12:01:19.950280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '322.19'
+2026-05-30T12:01:19.960267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '323.19'
+2026-05-30T12:01:19.970257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '324.19'
+2026-05-30T12:01:19.980264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '325.19'
+2026-05-30T12:01:19.990274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '326.19'
+2026-05-30T12:01:20.000264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '327.19'
+2026-05-30T12:01:20.010289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '328.19'
+2026-05-30T12:01:20.020256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '329.19'
+2026-05-30T12:01:20.030272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '330.19'
+2026-05-30T12:01:20.040264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '331.19'
+2026-05-30T12:01:20.050288 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '332.19'
+2026-05-30T12:01:20.060260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '333.19'
+2026-05-30T12:01:20.070273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '334.19'
+2026-05-30T12:01:20.080258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '335.19'
+2026-05-30T12:01:20.090292 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '336.19'
+2026-05-30T12:01:20.100271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '337.19'
+2026-05-30T12:01:20.110279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '338.19'
+2026-05-30T12:01:20.120262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '339.19'
+2026-05-30T12:01:20.130256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '340.19'
+2026-05-30T12:01:20.140259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '341.19'
+2026-05-30T12:01:20.150292 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '342.19'
+2026-05-30T12:01:20.160261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '343.19'
+2026-05-30T12:01:20.170256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '344.19'
+2026-05-30T12:01:20.180257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '345.19'
+2026-05-30T12:01:20.190282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '346.19'
+2026-05-30T12:01:20.200262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '347.19'
+2026-05-30T12:01:20.210259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '348.19'
+2026-05-30T12:01:20.220254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '349.19'
+2026-05-30T12:01:20.230291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '350.19'
+2026-05-30T12:01:20.240283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '351.19'
+2026-05-30T12:01:20.250266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '352.19'
+2026-05-30T12:01:20.260269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '353.19'
+2026-05-30T12:01:20.270265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '354.19'
+2026-05-30T12:01:20.280277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '355.19'
+2026-05-30T12:01:20.290255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '356.19'
+2026-05-30T12:01:20.300270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '357.19'
+2026-05-30T12:01:20.310258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '358.19'
+2026-05-30T12:01:20.320265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '359.19'
+2026-05-30T12:01:20.330258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '360.19'
+2026-05-30T12:01:20.340262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '361.19'
+2026-05-30T12:01:20.350260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '362.19'
+2026-05-30T12:01:20.360259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '363.19'
+2026-05-30T12:01:20.370286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '364.19'
+2026-05-30T12:01:20.380269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '365.19'
+2026-05-30T12:01:20.390283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '366.19'
+2026-05-30T12:01:20.400266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '367.19'
+2026-05-30T12:01:20.410276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '368.19'
+2026-05-30T12:01:20.420256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '369.19'
+2026-05-30T12:01:20.430280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '370.19'
+2026-05-30T12:01:20.440276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '371.19'
+2026-05-30T12:01:20.450284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '372.19'
+2026-05-30T12:01:20.460260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '373.19'
+2026-05-30T12:01:20.470257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '374.19'
+2026-05-30T12:01:20.480272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '375.19'
+2026-05-30T12:01:20.490278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '376.19'
+2026-05-30T12:01:20.500274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '377.19'
+2026-05-30T12:01:20.510257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '378.19'
+2026-05-30T12:01:20.520255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '379.19'
+2026-05-30T12:01:20.530291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '380.19'
+2026-05-30T12:01:20.540270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '381.19'
+2026-05-30T12:01:20.550278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '382.19'
+2026-05-30T12:01:20.560256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '383.19'
+2026-05-30T12:01:20.570258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '384.19'
+2026-05-30T12:01:20.580260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '385.19'
+2026-05-30T12:01:20.590271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '386.19'
+2026-05-30T12:01:20.600267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '387.19'
+2026-05-30T12:01:20.610257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '388.19'
+2026-05-30T12:01:20.620275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '389.19'
+2026-05-30T12:01:20.630262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '390.19'
+2026-05-30T12:01:20.640256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '391.19'
+2026-05-30T12:01:20.650283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '392.19'
+2026-05-30T12:01:20.660267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '393.19'
+2026-05-30T12:01:20.670291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '394.19'
+2026-05-30T12:01:20.680264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '395.19'
+2026-05-30T12:01:20.690292 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '396.19'
+2026-05-30T12:01:20.700272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '397.19'
+2026-05-30T12:01:20.710297 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '398.19'
+2026-05-30T12:01:20.720264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '399.19'
+2026-05-30T12:01:20.730258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '400.19'
+2026-05-30T12:01:20.740258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '401.19'
+2026-05-30T12:01:20.750255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '402.19'
+2026-05-30T12:01:20.760263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '403.19'
+2026-05-30T12:01:20.770291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '404.19'
+2026-05-30T12:01:20.780278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '405.19'
+2026-05-30T12:01:20.790262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '406.19'
+2026-05-30T12:01:20.800288 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '407.19'
+2026-05-30T12:01:20.810278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '408.19'
+2026-05-30T12:01:20.820261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '409.19'
+2026-05-30T12:01:20.830292 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '410.19'
+2026-05-30T12:01:20.840269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '411.19'
+2026-05-30T12:01:20.844539 [METRICS ] MAC cell pci=1 metrics: slots=[312.0, 412.0) nof_slots=2000 slot_duration=500usec nof_voluntary_context_switches=0 nof_involuntary_context_switches=0 wall_clock_latency=[avg=6usec max=17usec max_slot=368.1] sched_latency=[avg=3usec max=8usec max_slot=399.6] dl_tti_req_latency=[avg=3usec max=12usec max_slot=368.1] tx_data_req_latency=[avg=2usec max=2usec max_slot=368.1] ul_tti_req_latency=[avg=2usec max=4usec max_slot=401.19] slot_ind_dequeue_latency=[avg=17usec max=52usec max_slot=327.11] slot_ind_msg_time_diff=[avg=500usec max=505usec max_slot=409.19]
+2026-05-30T12:01:20.844558 [METRICS ] Scheduler cell pci=1 metrics: total_dl_brate= 0.0bps total_ul_brate= 0.0bps nof_prbs=273 nof_dl_slots=1600 nof_ul_slots=800 nof_prach_preambles=0 error_indications=0 pdsch_rbs_per_slot=0 pusch_rbs_per_slot=0 pdschs_per_slot=0 puschs_per_slot=0 failed_pdcch=0 failed_uci=0 nof_ues=0 mean_latency=1usec max_latency=7usec max_latency_slot=399.6 latency_hist=[2000, 0, 0, 0, 0, 0, 0, 0, 0, 0] msg3_ok=0 msg3_nok=0 late_dl_harqs=0 late_ul_harqs=0 pucch_tot_rb_usage_avg=0 pusch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] pdsch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] avg_prach_delay=n/a
+2026-05-30T12:01:20.844577 [METRICS ] PHY metrics: dl_processing_max_latency=69.6us dl_processing_max_slot=320.1 ul_processing_max_latency=0.0us ul_processing_max_slot=0.0 ldpc_encoder_avg_latency=3.0us ldpc_encoder_max_latency=3.2us ldpc_decoder_avg_latency=0.0us ldpc_decoder_max_latency=0.0us ldpc_decoder_avg_nof_iter=0.0
+  DL processing:          max_latency=69.58 us in slot=320.1
+  LDPC Encoder:           avg_cb_size=960.00 bits, avg_latency=3.05 us, max_latency=3.21 us, encode_rate=314.79 Mbps
+  LDPC Rate matcher:      avg_latency=6.42 us, proc_rate=369.86 Mbps
+  LDPC Decoder:           avg_cb_size=0.00 bits, avg_latency=0.00 us, max_latency=0.00 us, avg_nof_iter=0.00, decode_rate=0.00 Mbps
+  LDPC Rate dematcher:    avg_latency=0.00 us, max_latency=0.00 us, proc_rate=0.00 Mbps
+  PUSCH chan. estimator:  avg_latency=0.00 us, proc_rate=0.00 MPRBps
+  PUSCH chan. equalizer:  proc_rate_per_nof_layers=[0.00, 0.00, 0.00, 0.00] MREps
+  PUSCH scrambling:       avg_init_time=0.00 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=0.00 Mbps
+  PDSCH scrambling:       avg_init_time=0.31 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=2789.28 Mbps
+  Transform precoding:    proc_rate=0.00 MREps, avg_latency=0.00 us/symbol
+  Modulation rates:       QPSK=2813.50 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  Demodulation rates:     QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  EVM calc. rates:        QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  UL-SCH demux:           avg_init_time=0.00 us, avg_finish_time=0.00 us, proc_rate=0.00 Mbps
+  PUSCH Processor:        avg_data_latency=0.00 us, avg_uci_latency=0.00 us, proc_rate=0.00 Mbps, decoder_time=0.00% (asynchronous)
+  PDSCH precoding:        proc_rate_per_nof_layers=[245.98, 0.00, 0.00, 0.00] MREps
+  PDSCH Processor:        avg_latency=39.28 us, max_latency=40.12 us at slot=384.1, proc_rate=22.61 Mbps
+  PDSCH DM-RS:            avg_generation_latency=5.09 us
+  PDSCH CRC calculator {avg_latency, avg_rate}: crc16={1.25 us, 708.13 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH CRC calculator {avg_latency, avg_rate}: crc16={0.00 us, 0.00 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH Processor breakdown:
+     |-> Channel estimator: 0.00 %
+       |-> Ch. estimator: 0.00 %
+         |-> TA estimator: 0.00 %
+     |-> Demodulation: 0.00 %
+       |---> Channel equalizer: 0.00 %
+       |-> Demodulation mapper: 0.00 %
+       |-----> EVM calculation: 0.00 %
+       |----------> Scrambling: 0.00 %
+       |-> Transform precoding: 0.00 %
+     |-> UL-SCH Demux: 0.00 %
+     |------> Decoder: 0.00 % (multi-threaded)
+  CPU usage over 999.996 ms:
+    DL: upper_phy_dl=0.03%, fec=0.01%, ldpc_enc=0.00%, ldpc_rm=0.00%, pdsch_scrambling=0.00%, mod_mapper=0.00%, dl_layer_map=0.00%
+    UL: upper_phy_ul=0.00%, ul_fec=0.00%, ldpc_dec=0.00%, ldpc_rdm=0.00%, pusch_scrambling=0.00%, demod_mapper=0.00%, ul_precoding=0.00%
+2026-05-30T12:01:20.850276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '412.19'
+2026-05-30T12:01:20.860260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '413.19'
+2026-05-30T12:01:20.870296 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '414.19'
+2026-05-30T12:01:20.880258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '415.19'
+2026-05-30T12:01:20.890259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '416.19'
+2026-05-30T12:01:20.900255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '417.19'
+2026-05-30T12:01:20.910255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '418.19'
+2026-05-30T12:01:20.920258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '419.19'
+2026-05-30T12:01:20.930257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '420.19'
+2026-05-30T12:01:20.940270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '421.19'
+2026-05-30T12:01:20.950288 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '422.19'
+2026-05-30T12:01:20.960262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '423.19'
+2026-05-30T12:01:20.970259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '424.19'
+2026-05-30T12:01:20.980268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '425.19'
+2026-05-30T12:01:20.990263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '426.19'
+2026-05-30T12:01:21.000253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '427.19'
+2026-05-30T12:01:21.010275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '428.19'
+2026-05-30T12:01:21.020287 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '429.19'
+2026-05-30T12:01:21.030254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '430.19'
+2026-05-30T12:01:21.040280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '431.19'
+2026-05-30T12:01:21.050278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '432.19'
+2026-05-30T12:01:21.060267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '433.19'
+2026-05-30T12:01:21.070275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '434.19'
+2026-05-30T12:01:21.080255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '435.19'
+2026-05-30T12:01:21.090263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '436.19'
+2026-05-30T12:01:21.100257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '437.19'
+2026-05-30T12:01:21.110274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '438.19'
+2026-05-30T12:01:21.120263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '439.19'
+2026-05-30T12:01:21.130259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '440.19'
+2026-05-30T12:01:21.140275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '441.19'
+2026-05-30T12:01:21.150280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '442.19'
+2026-05-30T12:01:21.160263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '443.19'
+2026-05-30T12:01:21.170280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '444.19'
+2026-05-30T12:01:21.180260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '445.19'
+2026-05-30T12:01:21.190278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '446.19'
+2026-05-30T12:01:21.200270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '447.19'
+2026-05-30T12:01:21.210258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '448.19'
+2026-05-30T12:01:21.220256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '449.19'
+2026-05-30T12:01:21.230256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '450.19'
+2026-05-30T12:01:21.240256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '451.19'
+2026-05-30T12:01:21.250292 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '452.19'
+2026-05-30T12:01:21.260267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '453.19'
+2026-05-30T12:01:21.270262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '454.19'
+2026-05-30T12:01:21.280257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '455.19'
+2026-05-30T12:01:21.290259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '456.19'
+2026-05-30T12:01:21.300279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '457.19'
+2026-05-30T12:01:21.310291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '458.19'
+2026-05-30T12:01:21.320264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '459.19'
+2026-05-30T12:01:21.330289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '460.19'
+2026-05-30T12:01:21.340256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '461.19'
+2026-05-30T12:01:21.350270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '462.19'
+2026-05-30T12:01:21.360253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '463.19'
+2026-05-30T12:01:21.370261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '464.19'
+2026-05-30T12:01:21.380272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '465.19'
+2026-05-30T12:01:21.390296 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '466.19'
+2026-05-30T12:01:21.400254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '467.19'
+2026-05-30T12:01:21.410253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '468.19'
+2026-05-30T12:01:21.420263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '469.19'
+2026-05-30T12:01:21.430291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '470.19'
+2026-05-30T12:01:21.440262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '471.19'
+2026-05-30T12:01:21.450295 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '472.19'
+2026-05-30T12:01:21.460260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '473.19'
+2026-05-30T12:01:21.470289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '474.19'
+2026-05-30T12:01:21.480269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '475.19'
+2026-05-30T12:01:21.490284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '476.19'
+2026-05-30T12:01:21.500268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '477.19'
+2026-05-30T12:01:21.510258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '478.19'
+2026-05-30T12:01:21.520286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '479.19'
+2026-05-30T12:01:21.530258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '480.19'
+2026-05-30T12:01:21.540256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '481.19'
+2026-05-30T12:01:21.550292 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '482.19'
+2026-05-30T12:01:21.560259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '483.19'
+2026-05-30T12:01:21.570287 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '484.19'
+2026-05-30T12:01:21.580274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '485.19'
+2026-05-30T12:01:21.590273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '486.19'
+2026-05-30T12:01:21.600266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '487.19'
+2026-05-30T12:01:21.610273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '488.19'
+2026-05-30T12:01:21.620255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '489.19'
+2026-05-30T12:01:21.630253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '490.19'
+2026-05-30T12:01:21.640275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '491.19'
+2026-05-30T12:01:21.650281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '492.19'
+2026-05-30T12:01:21.660274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '493.19'
+2026-05-30T12:01:21.670293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '494.19'
+2026-05-30T12:01:21.680282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '495.19'
+2026-05-30T12:01:21.690279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '496.19'
+2026-05-30T12:01:21.700256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '497.19'
+2026-05-30T12:01:21.710299 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '498.19'
+2026-05-30T12:01:21.720254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '499.19'
+2026-05-30T12:01:21.730261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '500.19'
+2026-05-30T12:01:21.740254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '501.19'
+2026-05-30T12:01:21.750293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '502.19'
+2026-05-30T12:01:21.760265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '503.19'
+2026-05-30T12:01:21.770262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '504.19'
+2026-05-30T12:01:21.780259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '505.19'
+2026-05-30T12:01:21.790280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '506.19'
+2026-05-30T12:01:21.800265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '507.19'
+2026-05-30T12:01:21.810277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '508.19'
+2026-05-30T12:01:21.820261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '509.19'
+2026-05-30T12:01:21.830258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '510.19'
+2026-05-30T12:01:21.840254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '511.19'
+2026-05-30T12:01:21.844561 [METRICS ] MAC cell pci=1 metrics: slots=[412.0, 512.0) nof_slots=2000 slot_duration=500usec nof_voluntary_context_switches=0 nof_involuntary_context_switches=0 wall_clock_latency=[avg=6usec max=17usec max_slot=432.1] sched_latency=[avg=3usec max=8usec max_slot=511.6] dl_tti_req_latency=[avg=3usec max=11usec max_slot=432.1] tx_data_req_latency=[avg=2usec max=3usec max_slot=480.1] ul_tti_req_latency=[avg=2usec max=4usec max_slot=449.19] slot_ind_dequeue_latency=[avg=16usec max=52usec max_slot=446.18] slot_ind_msg_time_diff=[avg=500usec max=504usec max_slot=488.9]
+2026-05-30T12:01:21.844581 [METRICS ] Scheduler cell pci=1 metrics: total_dl_brate= 0.0bps total_ul_brate= 0.0bps nof_prbs=273 nof_dl_slots=1600 nof_ul_slots=800 nof_prach_preambles=0 error_indications=0 pdsch_rbs_per_slot=0 pusch_rbs_per_slot=0 pdschs_per_slot=0 puschs_per_slot=0 failed_pdcch=0 failed_uci=0 nof_ues=0 mean_latency=1usec max_latency=7usec max_latency_slot=511.6 latency_hist=[2000, 0, 0, 0, 0, 0, 0, 0, 0, 0] msg3_ok=0 msg3_nok=0 late_dl_harqs=0 late_ul_harqs=0 pucch_tot_rb_usage_avg=0 pusch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] pdsch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] avg_prach_delay=n/a
+2026-05-30T12:01:21.844604 [METRICS ] PHY metrics: dl_processing_max_latency=67.9us dl_processing_max_slot=496.1 ul_processing_max_latency=0.0us ul_processing_max_slot=0.0 ldpc_encoder_avg_latency=3.7us ldpc_encoder_max_latency=4.5us ldpc_decoder_avg_latency=0.0us ldpc_decoder_max_latency=0.0us ldpc_decoder_avg_nof_iter=0.0
+  DL processing:          max_latency=67.85 us in slot=496.1
+  LDPC Encoder:           avg_cb_size=960.00 bits, avg_latency=3.69 us, max_latency=4.50 us, encode_rate=259.88 Mbps
+  LDPC Rate matcher:      avg_latency=7.02 us, proc_rate=338.70 Mbps
+  LDPC Decoder:           avg_cb_size=0.00 bits, avg_latency=0.00 us, max_latency=0.00 us, avg_nof_iter=0.00, decode_rate=0.00 Mbps
+  LDPC Rate dematcher:    avg_latency=0.00 us, max_latency=0.00 us, proc_rate=0.00 Mbps
+  PUSCH chan. estimator:  avg_latency=0.00 us, proc_rate=0.00 MPRBps
+  PUSCH chan. equalizer:  proc_rate_per_nof_layers=[0.00, 0.00, 0.00, 0.00] MREps
+  PUSCH scrambling:       avg_init_time=0.00 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=0.00 Mbps
+  PDSCH scrambling:       avg_init_time=0.41 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=2663.68 Mbps
+  Transform precoding:    proc_rate=0.00 MREps, avg_latency=0.00 us/symbol
+  Modulation rates:       QPSK=2646.72 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  Demodulation rates:     QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  EVM calc. rates:        QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  UL-SCH demux:           avg_init_time=0.00 us, avg_finish_time=0.00 us, proc_rate=0.00 Mbps
+  PUSCH Processor:        avg_data_latency=0.00 us, avg_uci_latency=0.00 us, proc_rate=0.00 Mbps, decoder_time=0.00% (asynchronous)
+  PDSCH precoding:        proc_rate_per_nof_layers=[226.61, 0.00, 0.00, 0.00] MREps
+  PDSCH Processor:        avg_latency=42.14 us, max_latency=46.91 us at slot=432.1, proc_rate=21.07 Mbps
+  PDSCH DM-RS:            avg_generation_latency=5.36 us
+  PDSCH CRC calculator {avg_latency, avg_rate}: crc16={1.59 us, 559.09 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH CRC calculator {avg_latency, avg_rate}: crc16={0.00 us, 0.00 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH Processor breakdown:
+     |-> Channel estimator: 0.00 %
+       |-> Ch. estimator: 0.00 %
+         |-> TA estimator: 0.00 %
+     |-> Demodulation: 0.00 %
+       |---> Channel equalizer: 0.00 %
+       |-> Demodulation mapper: 0.00 %
+       |-----> EVM calculation: 0.00 %
+       |----------> Scrambling: 0.00 %
+       |-> Transform precoding: 0.00 %
+     |-> UL-SCH Demux: 0.00 %
+     |------> Decoder: 0.00 % (multi-threaded)
+  CPU usage over 1000.012 ms:
+    DL: upper_phy_dl=0.04%, fec=0.01%, ldpc_enc=0.00%, ldpc_rm=0.00%, pdsch_scrambling=0.00%, mod_mapper=0.00%, dl_layer_map=0.00%
+    UL: upper_phy_ul=0.00%, ul_fec=0.00%, ldpc_dec=0.00%, ldpc_rdm=0.00%, pusch_scrambling=0.00%, demod_mapper=0.00%, ul_precoding=0.00%
+2026-05-30T12:01:21.850257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '512.19'
+2026-05-30T12:01:21.860265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '513.19'
+2026-05-30T12:01:21.870293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '514.19'
+2026-05-30T12:01:21.880273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '515.19'
+2026-05-30T12:01:21.890287 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '516.19'
+2026-05-30T12:01:21.900260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '517.19'
+2026-05-30T12:01:21.910292 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '518.19'
+2026-05-30T12:01:21.920283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '519.19'
+2026-05-30T12:01:21.930272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '520.19'
+2026-05-30T12:01:21.940259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '521.19'
+2026-05-30T12:01:21.950262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '522.19'
+2026-05-30T12:01:21.960255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '523.19'
+2026-05-30T12:01:21.970288 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '524.19'
+2026-05-30T12:01:21.980264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '525.19'
+2026-05-30T12:01:21.990260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '526.19'
+2026-05-30T12:01:22.000267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '527.19'
+2026-05-30T12:01:22.010259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '528.19'
+2026-05-30T12:01:22.020294 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '529.19'
+2026-05-30T12:01:22.030291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '530.19'
+2026-05-30T12:01:22.040277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '531.19'
+2026-05-30T12:01:22.050298 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '532.19'
+2026-05-30T12:01:22.060258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '533.19'
+2026-05-30T12:01:22.070259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '534.19'
+2026-05-30T12:01:22.080261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '535.19'
+2026-05-30T12:01:22.090290 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '536.19'
+2026-05-30T12:01:22.100261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '537.19'
+2026-05-30T12:01:22.110293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '538.19'
+2026-05-30T12:01:22.120275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '539.19'
+2026-05-30T12:01:22.130280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '540.19'
+2026-05-30T12:01:22.140271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '541.19'
+2026-05-30T12:01:22.150275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '542.19'
+2026-05-30T12:01:22.160282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '543.19'
+2026-05-30T12:01:22.170274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '544.19'
+2026-05-30T12:01:22.180265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '545.19'
+2026-05-30T12:01:22.190294 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '546.19'
+2026-05-30T12:01:22.200269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '547.19'
+2026-05-30T12:01:22.210258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '548.19'
+2026-05-30T12:01:22.220259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '549.19'
+2026-05-30T12:01:22.230258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '550.19'
+2026-05-30T12:01:22.240258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '551.19'
+2026-05-30T12:01:22.250290 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '552.19'
+2026-05-30T12:01:22.260265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '553.19'
+2026-05-30T12:01:22.270268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '554.19'
+2026-05-30T12:01:22.280257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '555.19'
+2026-05-30T12:01:22.290289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '556.19'
+2026-05-30T12:01:22.300256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '557.19'
+2026-05-30T12:01:22.310271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '558.19'
+2026-05-30T12:01:22.320260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '559.19'
+2026-05-30T12:01:22.330276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '560.19'
+2026-05-30T12:01:22.340289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '561.19'
+2026-05-30T12:01:22.350264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '562.19'
+2026-05-30T12:01:22.360275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '563.19'
+2026-05-30T12:01:22.370257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '564.19'
+2026-05-30T12:01:22.380295 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '565.19'
+2026-05-30T12:01:22.390276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '566.19'
+2026-05-30T12:01:22.400260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '567.19'
+2026-05-30T12:01:22.410295 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '568.19'
+2026-05-30T12:01:22.420255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '569.19'
+2026-05-30T12:01:22.430275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '570.19'
+2026-05-30T12:01:22.440264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '571.19'
+2026-05-30T12:01:22.450262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '572.19'
+2026-05-30T12:01:22.460255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '573.19'
+2026-05-30T12:01:22.470280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '574.19'
+2026-05-30T12:01:22.480259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '575.19'
+2026-05-30T12:01:22.490258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '576.19'
+2026-05-30T12:01:22.500257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '577.19'
+2026-05-30T12:01:22.510257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '578.19'
+2026-05-30T12:01:22.520265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '579.19'
+2026-05-30T12:01:22.530283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '580.19'
+2026-05-30T12:01:22.540257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '581.19'
+2026-05-30T12:01:22.550298 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '582.19'
+2026-05-30T12:01:22.560260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '583.19'
+2026-05-30T12:01:22.570258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '584.19'
+2026-05-30T12:01:22.580262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '585.19'
+2026-05-30T12:01:22.590259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '586.19'
+2026-05-30T12:01:22.600283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '587.19'
+2026-05-30T12:01:22.610278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '588.19'
+2026-05-30T12:01:22.620258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '589.19'
+2026-05-30T12:01:22.630258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '590.19'
+2026-05-30T12:01:22.640259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '591.19'
+2026-05-30T12:01:22.650293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '592.19'
+2026-05-30T12:01:22.660258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '593.19'
+2026-05-30T12:01:22.670277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '594.19'
+2026-05-30T12:01:22.680257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '595.19'
+2026-05-30T12:01:22.690256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '596.19'
+2026-05-30T12:01:22.700257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '597.19'
+2026-05-30T12:01:22.710282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '598.19'
+2026-05-30T12:01:22.720268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '599.19'
+2026-05-30T12:01:22.730287 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '600.19'
+2026-05-30T12:01:22.740276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '601.19'
+2026-05-30T12:01:22.750286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '602.19'
+2026-05-30T12:01:22.760260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '603.19'
+2026-05-30T12:01:22.770255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '604.19'
+2026-05-30T12:01:22.780256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '605.19'
+2026-05-30T12:01:22.790291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '606.19'
+2026-05-30T12:01:22.800263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '607.19'
+2026-05-30T12:01:22.810256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '608.19'
+2026-05-30T12:01:22.820265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '609.19'
+2026-05-30T12:01:22.830289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '610.19'
+2026-05-30T12:01:22.840258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '611.19'
+2026-05-30T12:01:22.844544 [METRICS ] MAC cell pci=1 metrics: slots=[512.0, 612.0) nof_slots=2000 slot_duration=500usec nof_voluntary_context_switches=0 nof_involuntary_context_switches=0 wall_clock_latency=[avg=6usec max=18usec max_slot=512.1] sched_latency=[avg=3usec max=8usec max_slot=591.6] dl_tti_req_latency=[avg=3usec max=12usec max_slot=560.1] tx_data_req_latency=[avg=2usec max=3usec max_slot=512.1] ul_tti_req_latency=[avg=2usec max=4usec max_slot=525.19] slot_ind_dequeue_latency=[avg=17usec max=51usec max_slot=531.16] slot_ind_msg_time_diff=[avg=500usec max=504usec max_slot=543.18]
+2026-05-30T12:01:22.844563 [METRICS ] Scheduler cell pci=1 metrics: total_dl_brate= 0.0bps total_ul_brate= 0.0bps nof_prbs=273 nof_dl_slots=1600 nof_ul_slots=800 nof_prach_preambles=0 error_indications=0 pdsch_rbs_per_slot=0 pusch_rbs_per_slot=0 pdschs_per_slot=0 puschs_per_slot=0 failed_pdcch=0 failed_uci=0 nof_ues=0 mean_latency=1usec max_latency=7usec max_latency_slot=591.6 latency_hist=[2000, 0, 0, 0, 0, 0, 0, 0, 0, 0] msg3_ok=0 msg3_nok=0 late_dl_harqs=0 late_ul_harqs=0 pucch_tot_rb_usage_avg=0 pusch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] pdsch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] avg_prach_delay=n/a
+2026-05-30T12:01:22.844598 [METRICS ] PHY metrics: dl_processing_max_latency=57.8us dl_processing_max_slot=592.1 ul_processing_max_latency=0.0us ul_processing_max_slot=0.0 ldpc_encoder_avg_latency=3.2us ldpc_encoder_max_latency=3.8us ldpc_decoder_avg_latency=0.0us ldpc_decoder_max_latency=0.0us ldpc_decoder_avg_nof_iter=0.0
+  DL processing:          max_latency=57.82 us in slot=592.1
+  LDPC Encoder:           avg_cb_size=960.00 bits, avg_latency=3.19 us, max_latency=3.81 us, encode_rate=300.88 Mbps
+  LDPC Rate matcher:      avg_latency=6.73 us, proc_rate=353.14 Mbps
+  LDPC Decoder:           avg_cb_size=0.00 bits, avg_latency=0.00 us, max_latency=0.00 us, avg_nof_iter=0.00, decode_rate=0.00 Mbps
+  LDPC Rate dematcher:    avg_latency=0.00 us, max_latency=0.00 us, proc_rate=0.00 Mbps
+  PUSCH chan. estimator:  avg_latency=0.00 us, proc_rate=0.00 MPRBps
+  PUSCH chan. equalizer:  proc_rate_per_nof_layers=[0.00, 0.00, 0.00, 0.00] MREps
+  PUSCH scrambling:       avg_init_time=0.00 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=0.00 Mbps
+  PDSCH scrambling:       avg_init_time=0.35 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=2863.23 Mbps
+  Transform precoding:    proc_rate=0.00 MREps, avg_latency=0.00 us/symbol
+  Modulation rates:       QPSK=2493.18 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  Demodulation rates:     QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  EVM calc. rates:        QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  UL-SCH demux:           avg_init_time=0.00 us, avg_finish_time=0.00 us, proc_rate=0.00 Mbps
+  PUSCH Processor:        avg_data_latency=0.00 us, avg_uci_latency=0.00 us, proc_rate=0.00 Mbps, decoder_time=0.00% (asynchronous)
+  PDSCH precoding:        proc_rate_per_nof_layers=[211.34, 0.00, 0.00, 0.00] MREps
+  PDSCH Processor:        avg_latency=41.36 us, max_latency=45.76 us at slot=608.1, proc_rate=21.47 Mbps
+  PDSCH DM-RS:            avg_generation_latency=5.23 us
+  PDSCH CRC calculator {avg_latency, avg_rate}: crc16={1.62 us, 547.30 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH CRC calculator {avg_latency, avg_rate}: crc16={0.00 us, 0.00 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH Processor breakdown:
+     |-> Channel estimator: 0.00 %
+       |-> Ch. estimator: 0.00 %
+         |-> TA estimator: 0.00 %
+     |-> Demodulation: 0.00 %
+       |---> Channel equalizer: 0.00 %
+       |-> Demodulation mapper: 0.00 %
+       |-----> EVM calculation: 0.00 %
+       |----------> Scrambling: 0.00 %
+       |-> Transform precoding: 0.00 %
+     |-> UL-SCH Demux: 0.00 %
+     |------> Decoder: 0.00 % (multi-threaded)
+  CPU usage over 999.992 ms:
+    DL: upper_phy_dl=0.04%, fec=0.01%, ldpc_enc=0.00%, ldpc_rm=0.00%, pdsch_scrambling=0.00%, mod_mapper=0.00%, dl_layer_map=0.00%
+    UL: upper_phy_ul=0.00%, ul_fec=0.00%, ldpc_dec=0.00%, ldpc_rdm=0.00%, pusch_scrambling=0.00%, demod_mapper=0.00%, ul_precoding=0.00%
+2026-05-30T12:01:22.850265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '612.19'
+2026-05-30T12:01:22.860264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '613.19'
+2026-05-30T12:01:22.870284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '614.19'
+2026-05-30T12:01:22.880267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '615.19'
+2026-05-30T12:01:22.890280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '616.19'
+2026-05-30T12:01:22.900264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '617.19'
+2026-05-30T12:01:22.910253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '618.19'
+2026-05-30T12:01:22.920260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '619.19'
+2026-05-30T12:01:22.930257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '620.19'
+2026-05-30T12:01:22.940257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '621.19'
+2026-05-30T12:01:22.950260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '622.19'
+2026-05-30T12:01:22.960263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '623.19'
+2026-05-30T12:01:22.970271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '624.19'
+2026-05-30T12:01:22.980262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '625.19'
+2026-05-30T12:01:22.990281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '626.19'
+2026-05-30T12:01:23.000279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '627.19'
+2026-05-30T12:01:23.010286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '628.19'
+2026-05-30T12:01:23.020271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '629.19'
+2026-05-30T12:01:23.030280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '630.19'
+2026-05-30T12:01:23.040256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '631.19'
+2026-05-30T12:01:23.050276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '632.19'
+2026-05-30T12:01:23.060262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '633.19'
+2026-05-30T12:01:23.070253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '634.19'
+2026-05-30T12:01:23.080261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '635.19'
+2026-05-30T12:01:23.090256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '636.19'
+2026-05-30T12:01:23.100264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '637.19'
+2026-05-30T12:01:23.110290 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '638.19'
+2026-05-30T12:01:23.120266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '639.19'
+2026-05-30T12:01:23.130268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '640.19'
+2026-05-30T12:01:23.140257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '641.19'
+2026-05-30T12:01:23.150253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '642.19'
+2026-05-30T12:01:23.160273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '643.19'
+2026-05-30T12:01:23.170293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '644.19'
+2026-05-30T12:01:23.180260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '645.19'
+2026-05-30T12:01:23.190281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '646.19'
+2026-05-30T12:01:23.200284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '647.19'
+2026-05-30T12:01:23.210283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '648.19'
+2026-05-30T12:01:23.220272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '649.19'
+2026-05-30T12:01:23.230274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '650.19'
+2026-05-30T12:01:23.240255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '651.19'
+2026-05-30T12:01:23.250259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '652.19'
+2026-05-30T12:01:23.260258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '653.19'
+2026-05-30T12:01:23.270280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '654.19'
+2026-05-30T12:01:23.280263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '655.19'
+2026-05-30T12:01:23.290283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '656.19'
+2026-05-30T12:01:23.300261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '657.19'
+2026-05-30T12:01:23.310256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '658.19'
+2026-05-30T12:01:23.320257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '659.19'
+2026-05-30T12:01:23.330255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '660.19'
+2026-05-30T12:01:23.340256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '661.19'
+2026-05-30T12:01:23.350261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '662.19'
+2026-05-30T12:01:23.360283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '663.19'
+2026-05-30T12:01:23.370259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '664.19'
+2026-05-30T12:01:23.380255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '665.19'
+2026-05-30T12:01:23.390296 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '666.19'
+2026-05-30T12:01:23.400260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '667.19'
+2026-05-30T12:01:23.410293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '668.19'
+2026-05-30T12:01:23.420276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '669.19'
+2026-05-30T12:01:23.430298 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '670.19'
+2026-05-30T12:01:23.440263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '671.19'
+2026-05-30T12:01:23.450270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '672.19'
+2026-05-30T12:01:23.460259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '673.19'
+2026-05-30T12:01:23.470281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '674.19'
+2026-05-30T12:01:23.480257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '675.19'
+2026-05-30T12:01:23.490253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '676.19'
+2026-05-30T12:01:23.500278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '677.19'
+2026-05-30T12:01:23.510262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '678.19'
+2026-05-30T12:01:23.520266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '679.19'
+2026-05-30T12:01:23.530291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '680.19'
+2026-05-30T12:01:23.540272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '681.19'
+2026-05-30T12:01:23.550271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '682.19'
+2026-05-30T12:01:23.560255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '683.19'
+2026-05-30T12:01:23.570281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '684.19'
+2026-05-30T12:01:23.580264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '685.19'
+2026-05-30T12:01:23.590261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '686.19'
+2026-05-30T12:01:23.600258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '687.19'
+2026-05-30T12:01:23.610283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '688.19'
+2026-05-30T12:01:23.620257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '689.19'
+2026-05-30T12:01:23.630283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '690.19'
+2026-05-30T12:01:23.640269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '691.19'
+2026-05-30T12:01:23.650277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '692.19'
+2026-05-30T12:01:23.660265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '693.19'
+2026-05-30T12:01:23.670290 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '694.19'
+2026-05-30T12:01:23.680259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '695.19'
+2026-05-30T12:01:23.690294 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '696.19'
+2026-05-30T12:01:23.700262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '697.19'
+2026-05-30T12:01:23.710283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '698.19'
+2026-05-30T12:01:23.720277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '699.19'
+2026-05-30T12:01:23.730276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '700.19'
+2026-05-30T12:01:23.740274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '701.19'
+2026-05-30T12:01:23.750259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '702.19'
+2026-05-30T12:01:23.760255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '703.19'
+2026-05-30T12:01:23.770280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '704.19'
+2026-05-30T12:01:23.780273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '705.19'
+2026-05-30T12:01:23.790288 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '706.19'
+2026-05-30T12:01:23.800278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '707.19'
+2026-05-30T12:01:23.810286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '708.19'
+2026-05-30T12:01:23.820256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '709.19'
+2026-05-30T12:01:23.830263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '710.19'
+2026-05-30T12:01:23.840280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '711.19'
+2026-05-30T12:01:23.844548 [METRICS ] MAC cell pci=1 metrics: slots=[612.0, 712.0) nof_slots=2000 slot_duration=500usec nof_voluntary_context_switches=0 nof_involuntary_context_switches=0 wall_clock_latency=[avg=6usec max=18usec max_slot=672.1] sched_latency=[avg=3usec max=9usec max_slot=623.6] dl_tti_req_latency=[avg=3usec max=12usec max_slot=624.1] tx_data_req_latency=[avg=2usec max=3usec max_slot=688.1] ul_tti_req_latency=[avg=2usec max=4usec max_slot=615.19] slot_ind_dequeue_latency=[avg=17usec max=52usec max_slot=667.16] slot_ind_msg_time_diff=[avg=500usec max=504usec max_slot=687.17]
+2026-05-30T12:01:23.844568 [METRICS ] Scheduler cell pci=1 metrics: total_dl_brate= 0.0bps total_ul_brate= 0.0bps nof_prbs=273 nof_dl_slots=1600 nof_ul_slots=800 nof_prach_preambles=0 error_indications=0 pdsch_rbs_per_slot=0 pusch_rbs_per_slot=0 pdschs_per_slot=0 puschs_per_slot=0 failed_pdcch=0 failed_uci=0 nof_ues=0 mean_latency=1usec max_latency=7usec max_latency_slot=623.6 latency_hist=[2000, 0, 0, 0, 0, 0, 0, 0, 0, 0] msg3_ok=0 msg3_nok=0 late_dl_harqs=0 late_ul_harqs=0 pucch_tot_rb_usage_avg=0 pusch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] pdsch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] avg_prach_delay=n/a
+2026-05-30T12:01:23.844589 [METRICS ] PHY metrics: dl_processing_max_latency=71.9us dl_processing_max_slot=656.1 ul_processing_max_latency=0.0us ul_processing_max_slot=0.0 ldpc_encoder_avg_latency=3.5us ldpc_encoder_max_latency=3.9us ldpc_decoder_avg_latency=0.0us ldpc_decoder_max_latency=0.0us ldpc_decoder_avg_nof_iter=0.0
+  DL processing:          max_latency=71.94 us in slot=656.1
+  LDPC Encoder:           avg_cb_size=960.00 bits, avg_latency=3.55 us, max_latency=3.93 us, encode_rate=270.59 Mbps
+  LDPC Rate matcher:      avg_latency=6.70 us, proc_rate=354.62 Mbps
+  LDPC Decoder:           avg_cb_size=0.00 bits, avg_latency=0.00 us, max_latency=0.00 us, avg_nof_iter=0.00, decode_rate=0.00 Mbps
+  LDPC Rate dematcher:    avg_latency=0.00 us, max_latency=0.00 us, proc_rate=0.00 Mbps
+  PUSCH chan. estimator:  avg_latency=0.00 us, proc_rate=0.00 MPRBps
+  PUSCH chan. equalizer:  proc_rate_per_nof_layers=[0.00, 0.00, 0.00, 0.00] MREps
+  PUSCH scrambling:       avg_init_time=0.00 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=0.00 Mbps
+  PDSCH scrambling:       avg_init_time=0.40 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=2762.79 Mbps
+  Transform precoding:    proc_rate=0.00 MREps, avg_latency=0.00 us/symbol
+  Modulation rates:       QPSK=2761.72 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  Demodulation rates:     QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  EVM calc. rates:        QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  UL-SCH demux:           avg_init_time=0.00 us, avg_finish_time=0.00 us, proc_rate=0.00 Mbps
+  PUSCH Processor:        avg_data_latency=0.00 us, avg_uci_latency=0.00 us, proc_rate=0.00 Mbps, decoder_time=0.00% (asynchronous)
+  PDSCH precoding:        proc_rate_per_nof_layers=[254.14, 0.00, 0.00, 0.00] MREps
+  PDSCH Processor:        avg_latency=41.76 us, max_latency=47.76 us at slot=640.1, proc_rate=21.26 Mbps
+  PDSCH DM-RS:            avg_generation_latency=4.79 us
+  PDSCH CRC calculator {avg_latency, avg_rate}: crc16={1.72 us, 516.23 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH CRC calculator {avg_latency, avg_rate}: crc16={0.00 us, 0.00 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH Processor breakdown:
+     |-> Channel estimator: 0.00 %
+       |-> Ch. estimator: 0.00 %
+         |-> TA estimator: 0.00 %
+     |-> Demodulation: 0.00 %
+       |---> Channel equalizer: 0.00 %
+       |-> Demodulation mapper: 0.00 %
+       |-----> EVM calculation: 0.00 %
+       |----------> Scrambling: 0.00 %
+       |-> Transform precoding: 0.00 %
+     |-> UL-SCH Demux: 0.00 %
+     |------> Decoder: 0.00 % (multi-threaded)
+  CPU usage over 1000.004 ms:
+    DL: upper_phy_dl=0.04%, fec=0.01%, ldpc_enc=0.00%, ldpc_rm=0.00%, pdsch_scrambling=0.00%, mod_mapper=0.00%, dl_layer_map=0.00%
+    UL: upper_phy_ul=0.00%, ul_fec=0.00%, ldpc_dec=0.00%, ldpc_rdm=0.00%, pusch_scrambling=0.00%, demod_mapper=0.00%, ul_precoding=0.00%
+2026-05-30T12:01:23.850260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '712.19'
+2026-05-30T12:01:23.860254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '713.19'
+2026-05-30T12:01:23.870293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '714.19'
+2026-05-30T12:01:23.880260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '715.19'
+2026-05-30T12:01:23.890253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '716.19'
+2026-05-30T12:01:23.900271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '717.19'
+2026-05-30T12:01:23.910278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '718.19'
+2026-05-30T12:01:23.920258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '719.19'
+2026-05-30T12:01:23.930261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '720.19'
+2026-05-30T12:01:23.940261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '721.19'
+2026-05-30T12:01:23.950294 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '722.19'
+2026-05-30T12:01:23.960264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '723.19'
+2026-05-30T12:01:23.970279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '724.19'
+2026-05-30T12:01:23.980264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '725.19'
+2026-05-30T12:01:23.990297 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '726.19'
+2026-05-30T12:01:24.000255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '727.19'
+2026-05-30T12:01:24.010253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '728.19'
+2026-05-30T12:01:24.020260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '729.19'
+2026-05-30T12:01:24.030261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '730.19'
+2026-05-30T12:01:24.040266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '731.19'
+2026-05-30T12:01:24.050291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '732.19'
+2026-05-30T12:01:24.060264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '733.19'
+2026-05-30T12:01:24.070290 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '734.19'
+2026-05-30T12:01:24.080271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '735.19'
+2026-05-30T12:01:24.090273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '736.19'
+2026-05-30T12:01:24.100258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '737.19'
+2026-05-30T12:01:24.110255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '738.19'
+2026-05-30T12:01:24.120263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '739.19'
+2026-05-30T12:01:24.130258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '740.19'
+2026-05-30T12:01:24.140273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '741.19'
+2026-05-30T12:01:24.150292 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '742.19'
+2026-05-30T12:01:24.160263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '743.19'
+2026-05-30T12:01:24.170277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '744.19'
+2026-05-30T12:01:24.180259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '745.19'
+2026-05-30T12:01:24.190260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '746.19'
+2026-05-30T12:01:24.200255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '747.19'
+2026-05-30T12:01:24.210264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '748.19'
+2026-05-30T12:01:24.220279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '749.19'
+2026-05-30T12:01:24.230272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '750.19'
+2026-05-30T12:01:24.240261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '751.19'
+2026-05-30T12:01:24.250258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '752.19'
+2026-05-30T12:01:24.260255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '753.19'
+2026-05-30T12:01:24.270274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '754.19'
+2026-05-30T12:01:24.280264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '755.19'
+2026-05-30T12:01:24.290254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '756.19'
+2026-05-30T12:01:24.300270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '757.19'
+2026-05-30T12:01:24.310278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '758.19'
+2026-05-30T12:01:24.320261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '759.19'
+2026-05-30T12:01:24.330282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '760.19'
+2026-05-30T12:01:24.340258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '761.19'
+2026-05-30T12:01:24.350253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '762.19'
+2026-05-30T12:01:24.360257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '763.19'
+2026-05-30T12:01:24.370283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '764.19'
+2026-05-30T12:01:24.380257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '765.19'
+2026-05-30T12:01:24.390259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '766.19'
+2026-05-30T12:01:24.400266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '767.19'
+2026-05-30T12:01:24.410284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '768.19'
+2026-05-30T12:01:24.420273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '769.19'
+2026-05-30T12:01:24.430254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '770.19'
+2026-05-30T12:01:24.440269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '771.19'
+2026-05-30T12:01:24.450264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '772.19'
+2026-05-30T12:01:24.460269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '773.19'
+2026-05-30T12:01:24.470265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '774.19'
+2026-05-30T12:01:24.480259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '775.19'
+2026-05-30T12:01:24.490298 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '776.19'
+2026-05-30T12:01:24.500260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '777.19'
+2026-05-30T12:01:24.510256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '778.19'
+2026-05-30T12:01:24.520276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '779.19'
+2026-05-30T12:01:24.530257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '780.19'
+2026-05-30T12:01:24.540254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '781.19'
+2026-05-30T12:01:24.550298 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '782.19'
+2026-05-30T12:01:24.560267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '783.19'
+2026-05-30T12:01:24.570260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '784.19'
+2026-05-30T12:01:24.580265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '785.19'
+2026-05-30T12:01:24.590271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '786.19'
+2026-05-30T12:01:24.600262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '787.19'
+2026-05-30T12:01:24.610274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '788.19'
+2026-05-30T12:01:24.620262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '789.19'
+2026-05-30T12:01:24.630282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '790.19'
+2026-05-30T12:01:24.640259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '791.19'
+2026-05-30T12:01:24.650261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '792.19'
+2026-05-30T12:01:24.660253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '793.19'
+2026-05-30T12:01:24.670293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '794.19'
+2026-05-30T12:01:24.680272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '795.19'
+2026-05-30T12:01:24.690279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '796.19'
+2026-05-30T12:01:24.700258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '797.19'
+2026-05-30T12:01:24.710283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '798.19'
+2026-05-30T12:01:24.720289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '799.19'
+2026-05-30T12:01:24.730278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '800.19'
+2026-05-30T12:01:24.740263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '801.19'
+2026-05-30T12:01:24.750263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '802.19'
+2026-05-30T12:01:24.760262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '803.19'
+2026-05-30T12:01:24.770264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '804.19'
+2026-05-30T12:01:24.780260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '805.19'
+2026-05-30T12:01:24.790261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '806.19'
+2026-05-30T12:01:24.800270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '807.19'
+2026-05-30T12:01:24.810270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '808.19'
+2026-05-30T12:01:24.820264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '809.19'
+2026-05-30T12:01:24.830279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '810.19'
+2026-05-30T12:01:24.840286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '811.19'
+2026-05-30T12:01:24.844539 [METRICS ] MAC cell pci=1 metrics: slots=[712.0, 812.0) nof_slots=2000 slot_duration=500usec nof_voluntary_context_switches=0 nof_involuntary_context_switches=0 wall_clock_latency=[avg=6usec max=19usec max_slot=736.1] sched_latency=[avg=3usec max=8usec max_slot=719.6] dl_tti_req_latency=[avg=3usec max=12usec max_slot=736.1] tx_data_req_latency=[avg=2usec max=3usec max_slot=736.1] ul_tti_req_latency=[avg=2usec max=4usec max_slot=712.19] slot_ind_dequeue_latency=[avg=17usec max=51usec max_slot=763.13] slot_ind_msg_time_diff=[avg=500usec max=504usec max_slot=774.6]
+2026-05-30T12:01:24.844559 [METRICS ] Scheduler cell pci=1 metrics: total_dl_brate= 0.0bps total_ul_brate= 0.0bps nof_prbs=273 nof_dl_slots=1600 nof_ul_slots=800 nof_prach_preambles=0 error_indications=0 pdsch_rbs_per_slot=0 pusch_rbs_per_slot=0 pdschs_per_slot=0 puschs_per_slot=0 failed_pdcch=0 failed_uci=0 nof_ues=0 mean_latency=1usec max_latency=6usec max_latency_slot=719.6 latency_hist=[2000, 0, 0, 0, 0, 0, 0, 0, 0, 0] msg3_ok=0 msg3_nok=0 late_dl_harqs=0 late_ul_harqs=0 pucch_tot_rb_usage_avg=0 pusch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] pdsch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] avg_prach_delay=n/a
+2026-05-30T12:01:24.844579 [METRICS ] PHY metrics: dl_processing_max_latency=58.7us dl_processing_max_slot=784.1 ul_processing_max_latency=0.0us ul_processing_max_slot=0.0 ldpc_encoder_avg_latency=3.4us ldpc_encoder_max_latency=4.6us ldpc_decoder_avg_latency=0.0us ldpc_decoder_max_latency=0.0us ldpc_decoder_avg_nof_iter=0.0
+  DL processing:          max_latency=58.65 us in slot=784.1
+  LDPC Encoder:           avg_cb_size=960.00 bits, avg_latency=3.39 us, max_latency=4.60 us, encode_rate=283.30 Mbps
+  LDPC Rate matcher:      avg_latency=6.50 us, proc_rate=365.73 Mbps
+  LDPC Decoder:           avg_cb_size=0.00 bits, avg_latency=0.00 us, max_latency=0.00 us, avg_nof_iter=0.00, decode_rate=0.00 Mbps
+  LDPC Rate dematcher:    avg_latency=0.00 us, max_latency=0.00 us, proc_rate=0.00 Mbps
+  PUSCH chan. estimator:  avg_latency=0.00 us, proc_rate=0.00 MPRBps
+  PUSCH chan. equalizer:  proc_rate_per_nof_layers=[0.00, 0.00, 0.00, 0.00] MREps
+  PUSCH scrambling:       avg_init_time=0.00 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=0.00 Mbps
+  PDSCH scrambling:       avg_init_time=0.42 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=2831.38 Mbps
+  Transform precoding:    proc_rate=0.00 MREps, avg_latency=0.00 us/symbol
+  Modulation rates:       QPSK=2933.33 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  Demodulation rates:     QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  EVM calc. rates:        QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  UL-SCH demux:           avg_init_time=0.00 us, avg_finish_time=0.00 us, proc_rate=0.00 Mbps
+  PUSCH Processor:        avg_data_latency=0.00 us, avg_uci_latency=0.00 us, proc_rate=0.00 Mbps, decoder_time=0.00% (asynchronous)
+  PDSCH precoding:        proc_rate_per_nof_layers=[222.88, 0.00, 0.00, 0.00] MREps
+  PDSCH Processor:        avg_latency=41.02 us, max_latency=45.82 us at slot=752.1, proc_rate=21.65 Mbps
+  PDSCH DM-RS:            avg_generation_latency=5.25 us
+  PDSCH CRC calculator {avg_latency, avg_rate}: crc16={1.43 us, 622.14 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH CRC calculator {avg_latency, avg_rate}: crc16={0.00 us, 0.00 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH Processor breakdown:
+     |-> Channel estimator: 0.00 %
+       |-> Ch. estimator: 0.00 %
+         |-> TA estimator: 0.00 %
+     |-> Demodulation: 0.00 %
+       |---> Channel equalizer: 0.00 %
+       |-> Demodulation mapper: 0.00 %
+       |-----> EVM calculation: 0.00 %
+       |----------> Scrambling: 0.00 %
+       |-> Transform precoding: 0.00 %
+     |-> UL-SCH Demux: 0.00 %
+     |------> Decoder: 0.00 % (multi-threaded)
+  CPU usage over 999.990 ms:
+    DL: upper_phy_dl=0.04%, fec=0.01%, ldpc_enc=0.00%, ldpc_rm=0.00%, pdsch_scrambling=0.00%, mod_mapper=0.00%, dl_layer_map=0.00%
+    UL: upper_phy_ul=0.00%, ul_fec=0.00%, ldpc_dec=0.00%, ldpc_rdm=0.00%, pusch_scrambling=0.00%, demod_mapper=0.00%, ul_precoding=0.00%
+2026-05-30T12:01:24.850263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '812.19'
+2026-05-30T12:01:24.860264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '813.19'
+2026-05-30T12:01:24.870289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '814.19'
+2026-05-30T12:01:24.880259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '815.19'
+2026-05-30T12:01:24.890274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '816.19'
+2026-05-30T12:01:24.900258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '817.19'
+2026-05-30T12:01:24.910286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '818.19'
+2026-05-30T12:01:24.920254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '819.19'
+2026-05-30T12:01:24.930286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '820.19'
+2026-05-30T12:01:24.940254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '821.19'
+2026-05-30T12:01:24.950278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '822.19'
+2026-05-30T12:01:24.960269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '823.19'
+2026-05-30T12:01:24.970273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '824.19'
+2026-05-30T12:01:24.980267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '825.19'
+2026-05-30T12:01:24.990275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '826.19'
+2026-05-30T12:01:25.000266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '827.19'
+2026-05-30T12:01:25.010261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '828.19'
+2026-05-30T12:01:25.020267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '829.19'
+2026-05-30T12:01:25.030291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '830.19'
+2026-05-30T12:01:25.040273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '831.19'
+2026-05-30T12:01:25.050259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '832.19'
+2026-05-30T12:01:25.060266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '833.19'
+2026-05-30T12:01:25.070253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '834.19'
+2026-05-30T12:01:25.080268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '835.19'
+2026-05-30T12:01:25.090270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '836.19'
+2026-05-30T12:01:25.100277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '837.19'
+2026-05-30T12:01:25.110255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '838.19'
+2026-05-30T12:01:25.120255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '839.19'
+2026-05-30T12:01:25.130282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '840.19'
+2026-05-30T12:01:25.140259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '841.19'
+2026-05-30T12:01:25.150293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '842.19'
+2026-05-30T12:01:25.160255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '843.19'
+2026-05-30T12:01:25.170259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '844.19'
+2026-05-30T12:01:25.180269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '845.19'
+2026-05-30T12:01:25.190253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '846.19'
+2026-05-30T12:01:25.200275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '847.19'
+2026-05-30T12:01:25.210278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '848.19'
+2026-05-30T12:01:25.220268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '849.19'
+2026-05-30T12:01:25.230255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '850.19'
+2026-05-30T12:01:25.240275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '851.19'
+2026-05-30T12:01:25.250282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '852.19'
+2026-05-30T12:01:25.260263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '853.19'
+2026-05-30T12:01:25.270277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '854.19'
+2026-05-30T12:01:25.280278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '855.19'
+2026-05-30T12:01:25.290283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '856.19'
+2026-05-30T12:01:25.300278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '857.19'
+2026-05-30T12:01:25.310289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '858.19'
+2026-05-30T12:01:25.320262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '859.19'
+2026-05-30T12:01:25.330258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '860.19'
+2026-05-30T12:01:25.340262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '861.19'
+2026-05-30T12:01:25.350258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '862.19'
+2026-05-30T12:01:25.360265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '863.19'
+2026-05-30T12:01:25.370275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '864.19'
+2026-05-30T12:01:25.380274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '865.19'
+2026-05-30T12:01:25.390293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '866.19'
+2026-05-30T12:01:25.400264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '867.19'
+2026-05-30T12:01:25.410252 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '868.19'
+2026-05-30T12:01:25.420267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '869.19'
+2026-05-30T12:01:25.430257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '870.19'
+2026-05-30T12:01:25.440272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '871.19'
+2026-05-30T12:01:25.450252 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '872.19'
+2026-05-30T12:01:25.460257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '873.19'
+2026-05-30T12:01:25.470279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '874.19'
+2026-05-30T12:01:25.480258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '875.19'
+2026-05-30T12:01:25.490270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '876.19'
+2026-05-30T12:01:25.500271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '877.19'
+2026-05-30T12:01:25.510277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '878.19'
+2026-05-30T12:01:25.520267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '879.19'
+2026-05-30T12:01:25.530275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '880.19'
+2026-05-30T12:01:25.540270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '881.19'
+2026-05-30T12:01:25.550270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '882.19'
+2026-05-30T12:01:25.560259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '883.19'
+2026-05-30T12:01:25.570259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '884.19'
+2026-05-30T12:01:25.580264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '885.19'
+2026-05-30T12:01:25.590277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '886.19'
+2026-05-30T12:01:25.600271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '887.19'
+2026-05-30T12:01:25.610295 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '888.19'
+2026-05-30T12:01:25.620268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '889.19'
+2026-05-30T12:01:25.630278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '890.19'
+2026-05-30T12:01:25.640255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '891.19'
+2026-05-30T12:01:25.650291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '892.19'
+2026-05-30T12:01:25.660274 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '893.19'
+2026-05-30T12:01:25.670261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '894.19'
+2026-05-30T12:01:25.680267 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '895.19'
+2026-05-30T12:01:25.690291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '896.19'
+2026-05-30T12:01:25.700258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '897.19'
+2026-05-30T12:01:25.710295 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '898.19'
+2026-05-30T12:01:25.720260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '899.19'
+2026-05-30T12:01:25.730282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '900.19'
+2026-05-30T12:01:25.740259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '901.19'
+2026-05-30T12:01:25.750272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '902.19'
+2026-05-30T12:01:25.760264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '903.19'
+2026-05-30T12:01:25.770296 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '904.19'
+2026-05-30T12:01:25.780279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '905.19'
+2026-05-30T12:01:25.790283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '906.19'
+2026-05-30T12:01:25.800262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '907.19'
+2026-05-30T12:01:25.810256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '908.19'
+2026-05-30T12:01:25.820268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '909.19'
+2026-05-30T12:01:25.830263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '910.19'
+2026-05-30T12:01:25.840264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '911.19'
+2026-05-30T12:01:25.844559 [METRICS ] MAC cell pci=1 metrics: slots=[812.0, 912.0) nof_slots=2000 slot_duration=500usec nof_voluntary_context_switches=0 nof_involuntary_context_switches=0 wall_clock_latency=[avg=6usec max=18usec max_slot=880.1] sched_latency=[avg=3usec max=8usec max_slot=863.6] dl_tti_req_latency=[avg=3usec max=13usec max_slot=880.1] tx_data_req_latency=[avg=2usec max=3usec max_slot=864.1] ul_tti_req_latency=[avg=2usec max=4usec max_slot=887.19] slot_ind_dequeue_latency=[avg=17usec max=52usec max_slot=865.12] slot_ind_msg_time_diff=[avg=500usec max=504usec max_slot=874.6]
+2026-05-30T12:01:25.844578 [METRICS ] Scheduler cell pci=1 metrics: total_dl_brate= 0.0bps total_ul_brate= 0.0bps nof_prbs=273 nof_dl_slots=1600 nof_ul_slots=800 nof_prach_preambles=0 error_indications=0 pdsch_rbs_per_slot=0 pusch_rbs_per_slot=0 pdschs_per_slot=0 puschs_per_slot=0 failed_pdcch=0 failed_uci=0 nof_ues=0 mean_latency=1usec max_latency=7usec max_latency_slot=863.6 latency_hist=[2000, 0, 0, 0, 0, 0, 0, 0, 0, 0] msg3_ok=0 msg3_nok=0 late_dl_harqs=0 late_ul_harqs=0 pucch_tot_rb_usage_avg=0 pusch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] pdsch_rbs_per_tdd_slot_idx=[0, 0, 0, 0, 0] avg_prach_delay=n/a
+2026-05-30T12:01:25.844598 [METRICS ] PHY metrics: dl_processing_max_latency=72.2us dl_processing_max_slot=880.1 ul_processing_max_latency=0.0us ul_processing_max_slot=0.0 ldpc_encoder_avg_latency=3.4us ldpc_encoder_max_latency=4.1us ldpc_decoder_avg_latency=0.0us ldpc_decoder_max_latency=0.0us ldpc_decoder_avg_nof_iter=0.0
+  DL processing:          max_latency=72.16 us in slot=880.1
+  LDPC Encoder:           avg_cb_size=960.00 bits, avg_latency=3.40 us, max_latency=4.13 us, encode_rate=281.96 Mbps
+  LDPC Rate matcher:      avg_latency=6.62 us, proc_rate=359.02 Mbps
+  LDPC Decoder:           avg_cb_size=0.00 bits, avg_latency=0.00 us, max_latency=0.00 us, avg_nof_iter=0.00, decode_rate=0.00 Mbps
+  LDPC Rate dematcher:    avg_latency=0.00 us, max_latency=0.00 us, proc_rate=0.00 Mbps
+  PUSCH chan. estimator:  avg_latency=0.00 us, proc_rate=0.00 MPRBps
+  PUSCH chan. equalizer:  proc_rate_per_nof_layers=[0.00, 0.00, 0.00, 0.00] MREps
+  PUSCH scrambling:       avg_init_time=0.00 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=0.00 Mbps
+  PDSCH scrambling:       avg_init_time=0.39 us, avg_advance_rate=0.00 Mbps, avg_gen_rate=2611.81 Mbps
+  Transform precoding:    proc_rate=0.00 MREps, avg_latency=0.00 us/symbol
+  Modulation rates:       QPSK=2634.15 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  Demodulation rates:     QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  EVM calc. rates:        QPSK=0.00 Mbps, 16QAM=0.00 Mbps, 64QAM=0.00 Mbps, 256QAM=0.00 Mbps
+  UL-SCH demux:           avg_init_time=0.00 us, avg_finish_time=0.00 us, proc_rate=0.00 Mbps
+  PUSCH Processor:        avg_data_latency=0.00 us, avg_uci_latency=0.00 us, proc_rate=0.00 Mbps, decoder_time=0.00% (asynchronous)
+  PDSCH precoding:        proc_rate_per_nof_layers=[230.99, 0.00, 0.00, 0.00] MREps
+  PDSCH Processor:        avg_latency=40.75 us, max_latency=44.71 us at slot=832.1, proc_rate=21.79 Mbps
+  PDSCH DM-RS:            avg_generation_latency=5.03 us
+  PDSCH CRC calculator {avg_latency, avg_rate}: crc16={1.48 us, 598.61 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH CRC calculator {avg_latency, avg_rate}: crc16={0.00 us, 0.00 Mbps}, crc24a={0.00 us, 0.00 Mbps}, crc24b={0.00 us, 0.00 Mbps}
+  PUSCH Processor breakdown:
+     |-> Channel estimator: 0.00 %
+       |-> Ch. estimator: 0.00 %
+         |-> TA estimator: 0.00 %
+     |-> Demodulation: 0.00 %
+       |---> Channel equalizer: 0.00 %
+       |-> Demodulation mapper: 0.00 %
+       |-----> EVM calculation: 0.00 %
+       |----------> Scrambling: 0.00 %
+       |-> Transform precoding: 0.00 %
+     |-> UL-SCH Demux: 0.00 %
+     |------> Decoder: 0.00 % (multi-threaded)
+  CPU usage over 1000.017 ms:
+    DL: upper_phy_dl=0.04%, fec=0.01%, ldpc_enc=0.00%, ldpc_rm=0.00%, pdsch_scrambling=0.00%, mod_mapper=0.00%, dl_layer_map=0.00%
+    UL: upper_phy_ul=0.00%, ul_fec=0.00%, ldpc_dec=0.00%, ldpc_rdm=0.00%, pusch_scrambling=0.00%, demod_mapper=0.00%, ul_precoding=0.00%
+2026-05-30T12:01:25.850293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '912.19'
+2026-05-30T12:01:25.860254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '913.19'
+2026-05-30T12:01:25.870286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '914.19'
+2026-05-30T12:01:25.880254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '915.19'
+2026-05-30T12:01:25.890259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '916.19'
+2026-05-30T12:01:25.900266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '917.19'
+2026-05-30T12:01:25.910276 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '918.19'
+2026-05-30T12:01:25.920255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '919.19'
+2026-05-30T12:01:25.930259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '920.19'
+2026-05-30T12:01:25.940279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '921.19'
+2026-05-30T12:01:25.950293 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '922.19'
+2026-05-30T12:01:25.960256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '923.19'
+2026-05-30T12:01:25.970289 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '924.19'
+2026-05-30T12:01:25.980263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '925.19'
+2026-05-30T12:01:25.990254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '926.19'
+2026-05-30T12:01:26.000273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '927.19'
+2026-05-30T12:01:26.010285 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '928.19'
+2026-05-30T12:01:26.020270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '929.19'
+2026-05-30T12:01:26.030264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '930.19'
+2026-05-30T12:01:26.040258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '931.19'
+2026-05-30T12:01:26.050301 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '932.19'
+2026-05-30T12:01:26.060268 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '933.19'
+2026-05-30T12:01:26.070256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '934.19'
+2026-05-30T12:01:26.080258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '935.19'
+2026-05-30T12:01:26.090261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '936.19'
+2026-05-30T12:01:26.100262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '937.19'
+2026-05-30T12:01:26.110260 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '938.19'
+2026-05-30T12:01:26.120266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '939.19'
+2026-05-30T12:01:26.130270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '940.19'
+2026-05-30T12:01:26.140262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '941.19'
+2026-05-30T12:01:26.150254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '942.19'
+2026-05-30T12:01:26.160265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '943.19'
+2026-05-30T12:01:26.170257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '944.19'
+2026-05-30T12:01:26.180262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '945.19'
+2026-05-30T12:01:26.190286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '946.19'
+2026-05-30T12:01:26.200259 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '947.19'
+2026-05-30T12:01:26.210258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '948.19'
+2026-05-30T12:01:26.220287 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '949.19'
+2026-05-30T12:01:26.230264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '950.19'
+2026-05-30T12:01:26.240270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '951.19'
+2026-05-30T12:01:26.250286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '952.19'
+2026-05-30T12:01:26.260255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '953.19'
+2026-05-30T12:01:26.270281 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '954.19'
+2026-05-30T12:01:26.280263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '955.19'
+2026-05-30T12:01:26.290291 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '956.19'
+2026-05-30T12:01:26.300256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '957.19'
+2026-05-30T12:01:26.310284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '958.19'
+2026-05-30T12:01:26.320257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '959.19'
+2026-05-30T12:01:26.330279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '960.19'
+2026-05-30T12:01:26.340257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '961.19'
+2026-05-30T12:01:26.350292 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '962.19'
+2026-05-30T12:01:26.360262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '963.19'
+2026-05-30T12:01:26.370288 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '964.19'
+2026-05-30T12:01:26.380265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '965.19'
+2026-05-30T12:01:26.390283 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '966.19'
+2026-05-30T12:01:26.400265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '967.19'
+2026-05-30T12:01:26.410294 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '968.19'
+2026-05-30T12:01:26.420265 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '969.19'
+2026-05-30T12:01:26.430286 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '970.19'
+2026-05-30T12:01:26.440279 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '971.19'
+2026-05-30T12:01:26.450253 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '972.19'
+2026-05-30T12:01:26.460263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '973.19'
+2026-05-30T12:01:26.470294 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '974.19'
+2026-05-30T12:01:26.480264 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '975.19'
+2026-05-30T12:01:26.490258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '976.19'
+2026-05-30T12:01:26.500269 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '977.19'
+2026-05-30T12:01:26.510255 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '978.19'
+2026-05-30T12:01:26.520270 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '979.19'
+2026-05-30T12:01:26.530262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '980.19'
+2026-05-30T12:01:26.540254 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '981.19'
+2026-05-30T12:01:26.550266 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '982.19'
+2026-05-30T12:01:26.560252 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '983.19'
+2026-05-30T12:01:26.570282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '984.19'
+2026-05-30T12:01:26.580256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '985.19'
+2026-05-30T12:01:26.590278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '986.19'
+2026-05-30T12:01:26.600256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '987.19'
+2026-05-30T12:01:26.610280 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '988.19'
+2026-05-30T12:01:26.620256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '989.19'
+2026-05-30T12:01:26.630288 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '990.19'
+2026-05-30T12:01:26.640272 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '991.19'
+2026-05-30T12:01:26.650257 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '992.19'
+2026-05-30T12:01:26.660258 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '993.19'
+2026-05-30T12:01:26.670277 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '994.19'
+2026-05-30T12:01:26.680273 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '995.19'
+2026-05-30T12:01:26.690278 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '996.19'
+2026-05-30T12:01:26.700263 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '997.19'
+2026-05-30T12:01:26.710275 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '998.19'
+2026-05-30T12:01:26.720256 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '999.19'
+2026-05-30T12:01:26.730284 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1000.19'
+2026-05-30T12:01:26.740261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1001.19'
+2026-05-30T12:01:26.750261 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1002.19'
+2026-05-30T12:01:26.760282 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1003.19'
+2026-05-30T12:01:26.770262 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1004.19'
+2026-05-30T12:01:26.780271 [OFH     ] [W] Sector#0: missed incoming User-Plane PRACH messages for slot '1005.19'
+2026-05-30T12:01:26.788969 [OFH     ] [I] Stopping the operation of the Open Fronthaul interface
+2026-05-30T12:01:26.788972 [OFH     ] [I] Requesting stop of the realtime timing worker
+2026-05-30T12:01:26.790025 [OFH     ] [I] Stopped the realtime timing worker
+2026-05-30T12:01:26.790029 [OFH     ] [I] Requesting stop of the DPDK ethernet frame receiver on port '0000:53:00.1'
+2026-05-30T12:01:26.791081 [OFH     ] [I] Stopped the DPDK ethernet frame receiver on port '0000:53:00.1'
+2026-05-30T12:01:26.791101 [OFH     ] [I] Stopped the operation of the Open Fronthaul interface
+2026-05-30T12:01:26.791118 [DU      ] [I] Stopping DU...
+2026-05-30T12:01:26.791119 [DU      ] [I] Stopping DU-High...
+2026-05-30T12:01:26.791160 [SCHED   ] [I] [  1007.2] cell=0: Cell scheduling was deactivated.
+2026-05-30T12:01:26.791403 [MAC     ] [I] [  1007.2] cell=0: Cell was stopped.
+2026-05-30T12:01:26.791426 [DU-F1   ] [I] Tx PDU du=0 tid=1: F1RemovalRequest
+2026-05-30T12:01:26.791436 [CU-CP-F1] [I] Rx PDU du=0 tid=1: F1RemovalRequest
+2026-05-30T12:01:26.791443 [CU-CP-F1] [I] Tx PDU du=0 tid=1: F1RemovalResponse
+2026-05-30T12:01:26.791447 [DU-F1   ] [I] Rx PDU du=0 tid=1: F1RemovalResponse
+2026-05-30T12:01:26.791460 [CU-CP   ] [I] Removed DU 0
+2026-05-30T12:01:26.791462 [DU-F1   ] [I] F1 Removal: F1 TNL association shut down
+2026-05-30T12:01:26.791478 [DU      ] [I] DU-High stopped successfully
+2026-05-30T12:01:26.791478 [DU      ] [I] DU stopped successfully
+2026-05-30T12:01:26.791500 [CU-UP-E1] [I] Tx PDU tid=1: E1ReleaseRequest
+2026-05-30T12:01:26.791506 [CU-CP-E1] [I] Rx PDU tid=1: E1ReleaseRequest
+2026-05-30T12:01:26.791511 [CU-CP-E1] [I] Tx PDU tid=1: E1ReleaseResponse
+2026-05-30T12:01:26.791514 [CU-CP-E1] [I] "E1 Release Procedure" finished successfully
+2026-05-30T12:01:26.791516 [CU-UP-E1] [I] Rx PDU tid=1: E1ReleaseResponse
+2026-05-30T12:01:26.791523 [CU-CP   ] [I] Removed CU-UP 0
+2026-05-30T12:01:26.791524 [CU-UP-E1] [I] E1AP CU-UP Release Procedure: E1 TNL association shut down
+2026-05-30T12:01:26.791600 [CU-UP   ] [I] CU-UP stopped successfully
+2026-05-30T12:01:26.791604 [CU-CP   ] [I] Stopping CU-CP...
+2026-05-30T12:01:26.791789 [CU-CP   ] [I] CU-CP stopped successfully
+2026-05-30T12:01:26.793504 [OFH     ] [I] Requesting stop of the DPDK ethernet frame receiver on port '0000:53:00.1'
+2026-05-30T12:01:26.793505 [OFH     ] [I] Stopped the DPDK ethernet frame receiver on port '0000:53:00.1'
+2026-05-30T12:01:27.474864 [GNB     ] [I] Closing PCAP files...
+2026-05-30T12:01:27.474871 [GNB     ] [I] PCAP files successfully closed.
+(END)

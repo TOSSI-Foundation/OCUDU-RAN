@@ -59,6 +59,11 @@ struct ru_emulator_ofh_appconfig {
   unsigned prach_preamble_index = 0;
   bool prach_round_robin = false;
   unsigned prach_start_prb = 0;
+
+  std::string srs_replay_file;
+  unsigned    srs_start_symbol = 13;
+  unsigned    srs_subframe     = 1;
+  unsigned    srs_subslot      = 1;
 };
 
 /// RU emulator logging parameters.
