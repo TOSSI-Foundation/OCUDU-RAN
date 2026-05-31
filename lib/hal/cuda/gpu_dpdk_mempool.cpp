@@ -47,6 +47,32 @@ std::unique_ptr<gpu_dpdk_mempool> gpu_dpdk_mempool::create(const gpu_dpdk_mempoo
     return nullptr;
   }
 
+  static bool s_banner_printed = false;
+  if (!s_banner_printed) {
+    s_banner_printed = true;
+    int driver_v = 0, runtime_v = 0;
+    cudaDriverGetVersion(&driver_v);
+    cudaRuntimeGetVersion(&runtime_v);
+    cudaDeviceProp prop{};
+    if (cudaGetDeviceProperties(&prop, 0) == cudaSuccess) {
+      const std::size_t vram_mb = static_cast<std::size_t>(prop.totalGlobalMem) / (1024UL * 1024UL);
+      int clock_khz = 0;
+      cudaDeviceGetAttribute(&clock_khz, cudaDevAttrClockRate, 0);
+      std::fprintf(stderr,
+                   "[gpu_init] CUDA driver=%d.%d runtime=%d.%d device='%s' sm_%d%d "
+                   "sm_count=%d vram=%zu MiB l2=%d KiB clock=%d MHz\n",
+                   driver_v / 1000, (driver_v % 100) / 10,
+                   runtime_v / 1000, (runtime_v % 100) / 10,
+                   prop.name, prop.major, prop.minor,
+                   prop.multiProcessorCount, vram_mb,
+                   prop.l2CacheSize / 1024,
+                   clock_khz / 1000);
+    }
+    std::fprintf(stderr,
+                 "[gpu_init] DPDK gpudev backend devs=%u (using dev_id=%d) total_mbufs=%u data_room=%u B\n",
+                 rte_gpu_count_avail(), cfg.gpu_dev_id, cfg.nb_mbufs, cfg.data_room_size);
+  }
+
   const uint16_t nof_gpus = rte_gpu_count_avail();
   if (cfg.gpu_dev_id < 0 || cfg.gpu_dev_id >= static_cast<int16_t>(nof_gpus)) {
     std::fprintf(stderr,

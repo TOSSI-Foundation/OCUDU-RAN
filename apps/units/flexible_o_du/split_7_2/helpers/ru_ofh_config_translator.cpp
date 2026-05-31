@@ -5,6 +5,8 @@
 #include "ru_ofh_config_translator.h"
 #include "apps/services/worker_manager/worker_manager_config.h"
 #include "ru_ofh_config.h"
+#include "ocudu/ran/duplex_mode.h"
+#include "ocudu/ran/prach/prach_configuration.h"
 
 using namespace ocudu;
 
@@ -100,6 +102,13 @@ static void generate_config(ru_ofh_configuration&                            out
     sector_cfg.nof_antennas_ul     = cell.nof_rx_antennas;
     sector_cfg.nof_prach_rx_ports        = cell.nof_prach_rx_ports;
     sector_cfg.detection_threshold_margin = cell.detection_threshold_margin;
+
+    const duplex_mode dm = cell.tdd_config.has_value() ? duplex_mode::TDD : duplex_mode::FDD;
+    const prach_configuration pc = prach_configuration_get(cell.freq_range, dm, cell.prach_config_index);
+    sector_cfg.prach_format                 = pc.format;
+    sector_cfg.prach_zero_correlation_zone  = static_cast<uint8_t>(cell.zero_correlation_zone);
+    sector_cfg.prach_root_sequence_index    = cell.prach_root_sequence_index;
+    sector_cfg.prach_restricted_set         = cell.prach_restricted_set;
     sector_cfg.ru_operating_bw =
         ofh_cell_cfg.cell.ru_operating_bw ? ofh_cell_cfg.cell.ru_operating_bw.value() : sector_cfg.bw;
     sector_cfg.is_uplink_static_compr_hdr_enabled   = ofh_cell_cfg.cell.is_uplink_static_comp_hdr_enabled;

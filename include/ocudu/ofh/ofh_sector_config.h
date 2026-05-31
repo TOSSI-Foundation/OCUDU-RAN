@@ -15,6 +15,8 @@
 #include "ocudu/ofh/transmitter/ofh_transmitter_configuration.h"
 #include "ocudu/ran/bs_channel_bandwidth.h"
 #include "ocudu/ran/cyclic_prefix.h"
+#include "ocudu/ran/prach/prach_format_type.h"
+#include "ocudu/ran/prach/restricted_set_config.h"
 #include <string>
 
 namespace ocudu {
@@ -111,6 +113,10 @@ struct sector_configuration {
   unsigned nof_antennas_ul;
   unsigned nof_prach_rx_ports = 1;
   float detection_threshold_margin = 1.0F;
+  prach_format_type     prach_format                = prach_format_type::invalid;
+  uint8_t               prach_zero_correlation_zone = 0;
+  unsigned              prach_root_sequence_index   = 0;
+  restricted_set_config prach_restricted_set        = restricted_set_config::UNRESTRICTED;
 
   /// Indicates if DPDK should be used by the underlying implementation.
   bool uses_dpdk;

@@ -7,6 +7,7 @@
 #include "apps/units/flexible_o_du/o_du_high/o_du_high_unit_config.h"
 #include "apps/units/flexible_o_du/o_du_low/du_low_config.h"
 #include "ocudu/ran/cyclic_prefix.h"
+#include "ocudu/ran/prach/restricted_set_config.h"
 #include "ocudu/ran/tdd/tdd_ul_dl_config.h"
 
 namespace ocudu {
@@ -50,6 +51,10 @@ struct flexible_o_du_ru_config {
     frequency_range                        freq_range;
     unsigned nof_prach_rx_ports = 1;
     float detection_threshold_margin = 1.0F;
+    uint8_t  prach_config_index = 0;
+    uint16_t zero_correlation_zone = 0;
+    unsigned prach_root_sequence_index = 0;
+    restricted_set_config prach_restricted_set = restricted_set_config::UNRESTRICTED;
   };
 
   std::vector<cell_config> cells;

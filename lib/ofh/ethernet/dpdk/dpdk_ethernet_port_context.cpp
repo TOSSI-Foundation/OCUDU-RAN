@@ -539,6 +539,23 @@ bool init_port_with_gpu(dpdk_port_context& ctx, const dpdk_port_config& config, 
     return false;
   }
 
+  ::rte_ether_addr mac{};
+  ::rte_eth_macaddr_get(port_id, &mac);
+  fmt::print("DPDK GPU - port {} driver='{}' socket={} max_rx_queues={} max_tx_queues={} "
+             "mac={:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}\n",
+             port_id,
+             dev_info.driver_name ? dev_info.driver_name : "?",
+             ::rte_eth_dev_socket_id(port_id),
+             dev_info.max_rx_queues, dev_info.max_tx_queues,
+             mac.addr_bytes[0], mac.addr_bytes[1], mac.addr_bytes[2],
+             mac.addr_bytes[3], mac.addr_bytes[4], mac.addr_bytes[5]);
+  fmt::print("DPDK GPU - port {} mtu={} B nb_rxd={} nb_txd={} burst_size={} mbuf_pool_size={} "
+             "huge_iova_mode={}\n",
+             port_id,
+             config.mtu_size.value(), RX_RING_SIZE, TX_RING_SIZE,
+             MAX_BURST_SIZE, NUM_MBUFS,
+             rte_eal_iova_mode() == RTE_IOVA_PA ? "PA" : "VA");
+
   ::rte_eth_conf port_conf = {};
   port_conf.rxmode.mq_mode = RTE_ETH_MQ_RX_NONE;
   if (dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) {
@@ -595,6 +612,17 @@ bool init_port_with_gpu(dpdk_port_context& ctx, const dpdk_port_config& config, 
   }
   if (config.is_promiscuous_mode_enabled) {
     ::rte_eth_promiscuous_enable(port_id);
+  }
+
+  ::rte_eth_link link{};
+  if (::rte_eth_link_get_nowait(port_id, &link) == 0) {
+    fmt::print("DPDK GPU - port {} link={} speed={} Mbps duplex={} autoneg={}{}\n",
+               port_id,
+               link.link_status == RTE_ETH_LINK_UP ? "UP" : "DOWN",
+               link.link_speed,
+               link.link_duplex == RTE_ETH_LINK_FULL_DUPLEX ? "full" : "half",
+               link.link_autoneg == RTE_ETH_LINK_AUTONEG ? "yes" : "no",
+               config.is_promiscuous_mode_enabled ? " promisc=on" : "");
   }
 
   bool                     used_per_eaxc = false;

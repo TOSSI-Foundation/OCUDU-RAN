@@ -124,6 +124,11 @@ generate_o_du_ru_config(span<const odu::du_cell_config> cells, unsigned max_proc
     out_cell.nof_prach_rx_ports         = prach_nof_ports;
     out_cell.detection_threshold_margin =
         cell.ran.ul_cfg_common.init_ul_bwp.rach_cfg_common->detection_threshold_margin;
+    const auto& rach = *cell.ran.ul_cfg_common.init_ul_bwp.rach_cfg_common;
+    out_cell.prach_config_index        = rach.rach_cfg_generic.prach_config_index;
+    out_cell.zero_correlation_zone     = rach.rach_cfg_generic.zero_correlation_zone_config;
+    out_cell.prach_root_sequence_index = rach.prach_root_seq_index;
+    out_cell.prach_restricted_set      = rach.restricted_set;
   }
 
   return out_cfg;

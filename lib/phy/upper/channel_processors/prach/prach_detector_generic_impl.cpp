@@ -69,10 +69,12 @@ prach_detector_generic_impl::prach_detector_generic_impl(std::unique_ptr<dft_pro
                idft_short->get_size(),
                idft_long_sz_range);
 
-  fmt::print(stderr,
-             "[prach_detector_cpu] constructed: idft_long={} idft_short={}\n",
-             idft_long->get_size(),
-             idft_short->get_size());
+  if (prach_bench_logs()) {
+    fmt::print(stderr,
+               "[prach_detector_cpu] constructed: idft_long={} idft_short={}\n",
+               idft_long->get_size(),
+               idft_short->get_size());
+  }
 }
 
 static void record_cpu_detect_stats(unsigned long long&                   total_detects,

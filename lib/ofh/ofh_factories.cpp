@@ -26,7 +26,9 @@
 #include "ocudu/ofh/compression/compression_params.h"
 #include "ocudu/support/srs_result_tap.h"
 #include "fmt/format.h"
+#include <cstdio>
 #include <cstdlib>
+#include <unistd.h>
 #endif
 
 using namespace ocudu;
@@ -38,6 +40,16 @@ bool prach_bench_logs()
 {
   static const bool on = std::getenv("OCUDU_PRACH_BENCH") != nullptr;
   return on;
+}
+const char* ansi_green()
+{
+  static const char* s = ::isatty(::fileno(stderr)) ? "\033[1;32m" : "";
+  return s;
+}
+const char* ansi_reset()
+{
+  static const char* s = ::isatty(::fileno(stderr)) ? "\033[0m" : "";
+  return s;
 }
 } // namespace
 #endif
@@ -165,10 +177,10 @@ create_dpdk_txrx(const sector_configuration& sector_cfg, task_executor& rx_execu
     pcfg.nof_prach_eaxc      = sector_cfg.prach_eaxc.size();
     pcfg.nof_prach_symbols   = 12;
     pcfg.detector_inline_cfg = {};
-    pcfg.detector_cfg.root_sequence_index   = 1;
-    pcfg.detector_cfg.format                = prach_format_type::B4;
-    pcfg.detector_cfg.restricted_set        = restricted_set_config::UNRESTRICTED;
-    pcfg.detector_cfg.zero_correlation_zone = 14;
+    pcfg.detector_cfg.root_sequence_index   = sector_cfg.prach_root_sequence_index;
+    pcfg.detector_cfg.format                = sector_cfg.prach_format;
+    pcfg.detector_cfg.restricted_set        = sector_cfg.prach_restricted_set;
+    pcfg.detector_cfg.zero_correlation_zone = sector_cfg.prach_zero_correlation_zone;
     pcfg.detector_cfg.start_preamble_index  = 0;
     pcfg.detector_cfg.nof_preamble_indices  = 64;
     pcfg.detector_cfg.ra_scs                = prach_subcarrier_spacing::kHz30;
@@ -197,13 +209,15 @@ create_dpdk_txrx(const sector_configuration& sector_cfg, task_executor& rx_execu
                  "prach_rx_to_gpu will run in Phase-5-only mode (classify + counter, no detect)\n");
     } else {
       fmt::print(stderr,
-                 "[ofh_factories] Sector#{} inline GPU PRACH pipeline active "
-                 "(nof_prach_eaxc={} nof_rx_ports={} prach_compr=BFP{} iq_offset={})\n",
+                 "{}[ofh_factories] Sector#{} inline GPU PRACH pipeline active "
+                 "(nof_prach_eaxc={} nof_rx_ports={} prach_compr=BFP{} iq_offset={}){}\n",
+                 ansi_green(),
                  sector_cfg.sector_id,
                  pcfg.nof_prach_eaxc,
                  pcfg.detector_cfg.nof_rx_ports,
                  pcfg.data_width,
-                 eth_cfg.gpu_iq_payload_offset_bytes);
+                 eth_cfg.gpu_iq_payload_offset_bytes,
+                 ansi_reset());
     }
 
     if (sector_cfg.srs_rx_to_gpu) {
@@ -240,14 +254,16 @@ create_dpdk_txrx(const sector_configuration& sector_cfg, task_executor& rx_execu
                    "will run in Phase-3a mode (classify + counter, no estimate)\n");
       } else {
         fmt::print(stderr,
-                   "[ofh_factories] Sector#{} inline GPU SRS pipeline active "
-                   "(nof_rx_ports={} ul_eaxcs={} cell_prbs={} max_seq={} ul_compr=BFP{})\n",
+                   "{}[ofh_factories] Sector#{} inline GPU SRS pipeline active "
+                   "(nof_rx_ports={} ul_eaxcs={} cell_prbs={} max_seq={} ul_compr=BFP{}){}\n",
+                   ansi_green(),
                    sector_cfg.sector_id,
                    nof_srs_rx_ports,
                    eth_cfg.gpu_ul_eaxcs.size(),
                    cell_nof_prbs,
                    max_seq_len,
-                   srs_pcfg.data_width);
+                   srs_pcfg.data_width,
+                   ansi_reset());
       }
     }
 #endif
