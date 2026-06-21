@@ -1,0 +1,88 @@
+# FAPI Split — O-DU High (L2) — XFAPI bridge, OAI L1 variant.
+# Use with: ./odu_high -c configs/ocudu_xfapi_oai.yaml
+
+f1ap:
+  cu_cp_addr: 127.0.10.1
+  bind_addr: 127.0.1.2
+
+f1u:
+  socket:
+    - bind_addr: 127.0.1.2
+
+cell_cfg:
+  dl_arfcn: 630048
+  band: 78
+  channel_bandwidth_MHz: 100
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+  nof_antennas_dl: 4
+  nof_antennas_ul: 4
+  ssb:
+    ssb_block_power_dbm: 0
+    offset_to_point_a: 252
+    k_ssb: 12
+  pdcch:
+    common:
+      coreset0_index: 11
+  pucch:
+    formats: f0_and_f2
+    nof_cell_csi_res: 8
+    f2_max_nof_rbs: 4
+  prach:
+    prach_config_index: 159
+    prach_root_sequence_index: 1
+    zero_correlation_zone: 14
+    prach_frequency_start: 22
+    preamble_rx_target_pw: -120
+    preamble_trans_max: 20
+    ra_resp_window: 10
+  tdd_ul_dl_cfg:
+    dl_ul_tx_period: 5
+    nof_dl_slots: 3
+    nof_dl_symbols: 6
+    nof_ul_slots: 1
+    nof_ul_symbols: 4
+
+  pusch:
+    p0_nominal_with_grant: -96
+    msg3_delta_preamble: 2
+
+
+  pdsch:
+    min_ue_mcs: 10
+
+  csi:
+    csi_rs_enabled: true
+
+
+log:
+  filename: odu_high.log
+  all_level: debug
+
+metrics:
+  enable_verbose: true
+  autostart_stdout_metrics: true
+
+
+pcap:
+  mac_enable: false
+  f1ap_enable: false
+  f1u_enable: false
+
+expert_execution:
+  affinities:
+    main_pool_cpus: "7"
+    main_pool_pinning: "mask"
+  threads:
+    main_pool:
+      nof_threads: 1
+
+fapi_split_l2:
+  rx_cpu: 30
+  rx_priority: 85
+  xsm_device_name: xsm_bridge
+  xsm_pair_index: 1
+  xsm_file_prefix: gnb0
+  dpdk_proc_type: secondary

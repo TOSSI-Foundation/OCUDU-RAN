@@ -1736,19 +1736,23 @@ void pucch_allocator_impl::fill_ded_pdu(pucch_info&                  pucch_pdu,
   pucch_pdu.resources.prbs.set(pucch_res.starting_prb, pucch_res.starting_prb + nof_prbs);
   if (pucch_res.second_hop_prb.has_value()) {
     pucch_pdu.resources.second_hop_prbs.set(*pucch_res.second_hop_prb, *pucch_res.second_hop_prb + nof_prbs);
+  } else {
+    pucch_pdu.resources.second_hop_prbs.set(0, 0);
   }
   pucch_pdu.resources.symbols.set(pucch_res.starting_sym_idx, pucch_res.starting_sym_idx + pucch_res.nof_symbols);
 
   if (pucch_res.format == pucch_format::FORMAT_0 or pucch_res.format == pucch_format::FORMAT_1) {
-    ocudu_assert(pucch_pdu.uci_bits.harq_ack_nof_bits <= 2, "PUCCH F0/1 can carry 2 HARQ-ACK bits at most");
-    ocudu_assert(pucch_pdu.uci_bits.sr_bits == sr_nof_bits::no_sr or pucch_pdu.uci_bits.sr_bits == sr_nof_bits::one,
+    ocudu_assert(uci_bits.harq_ack_nof_bits <= 2, "PUCCH F0/1 can carry 2 HARQ-ACK bits at most");
+    ocudu_assert(uci_bits.sr_bits == sr_nof_bits::no_sr or uci_bits.sr_bits == sr_nof_bits::one,
                  "PUCCH F0/1 can carry 1 SR bit at most");
-    ocudu_assert(pucch_pdu.uci_bits.csi_part1_nof_bits == 0, "PUCCH F0/1 can't carry CSI bits");
+    ocudu_assert(uci_bits.csi_part1_nof_bits == 0, "PUCCH F0/1 can't carry CSI bits");
   }
   pucch_pdu.uci_bits = uci_bits;
   // Generate CSI report configuration if there are CSI bits in UCI.
   if (pucch_pdu.uci_bits.csi_part1_nof_bits > 0) {
     pucch_pdu.csi_rep_cfg = create_csi_report_configuration(*ue_cell_cfg.csi_meas_cfg());
+  } else {
+    pucch_pdu.csi_rep_cfg.reset();
   }
 
   switch (pucch_res.format) {

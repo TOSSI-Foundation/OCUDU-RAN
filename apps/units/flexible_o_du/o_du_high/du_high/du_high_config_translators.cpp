@@ -840,9 +840,9 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
 
     switch (pucch_f2f3f4_format(user_pucch_cfg.formats)) {
       case pucch_format::FORMAT_2: {
-        // The number of symbols per PUCCH resource F2 is not exposed to the DU user interface and set by default to 2.
-        constexpr unsigned pucch_f2_nof_symbols = 2U;
+        constexpr unsigned pucch_f2_nof_symbols = 1U;
         auto&              f2_params            = du_pucch_cfg.f2_or_f3_or_f4_params.emplace<pucch_f2_params>();
+        f2_params.nof_symbols                   = pucch_f2_nof_symbols;
         f2_params.max_code_rate                 = user_pucch_cfg.f2_max_code_rate;
         f2_params.max_nof_rbs =
             user_pucch_cfg.f2_max_payload_bits.has_value()

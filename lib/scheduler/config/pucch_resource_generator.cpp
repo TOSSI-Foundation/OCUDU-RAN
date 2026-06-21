@@ -783,14 +783,14 @@ merge_f0_f1_f2_f3_f4_resource_lists(const std::vector<pucch_grant>& pucch_f0_f1_
         pucch_resource res{.res_id = {res_id, 0}};
         // Shift F2 RBs depending on previously allocated F0/F1 resources.
         if (res_f2.prbs.start() < bwp_size_rbs / 2 - res_f2.prbs.length()) {
-          res.starting_prb = res_f2.prbs.start() + f0_f1_rbs_occupancy_low_freq;
+          res.starting_prb = ((res_f2.prbs.start() + f0_f1_rbs_occupancy_low_freq) + 3U) & ~3U;
           if (res_f2.freq_hop_grant.has_value()) {
-            res.second_hop_prb.emplace(res_f2.freq_hop_grant.value().start() - f0_f1_rbs_occupancy_hi_freq);
+            res.second_hop_prb.emplace((res_f2.freq_hop_grant.value().start() - f0_f1_rbs_occupancy_hi_freq) & ~3U);
           }
         } else if (res_f2.prbs.start() > bwp_size_rbs / 2) {
-          res.starting_prb = res_f2.prbs.start() - f0_f1_rbs_occupancy_hi_freq;
+          res.starting_prb = (res_f2.prbs.start() - f0_f1_rbs_occupancy_hi_freq) & ~3U;
           if (res_f2.freq_hop_grant.has_value()) {
-            res.second_hop_prb.emplace(res_f2.freq_hop_grant.value().start() + f0_f1_rbs_occupancy_low_freq);
+            res.second_hop_prb.emplace(((res_f2.freq_hop_grant.value().start() + f0_f1_rbs_occupancy_low_freq) + 3U) & ~3U);
           }
         } else {
           ocudu_assert(false, "PUCCH resources are not expected to be allocated at the centre of the BWP");

@@ -553,8 +553,7 @@ static bool validate_pucch_cell_unit_config(const du_high_unit_base_cell_config&
   unsigned f2_f3_f4_max_payload = 0U;
   switch (pucch_f2f3f4_format(pucch_cfg.formats)) {
     case pucch_format::FORMAT_2: {
-      // The number of symbols per PUCCH resource F2 is not exposed to the DU user interface and set by default to 2.
-      constexpr unsigned pucch_f2_nof_symbols = 2U;
+      constexpr unsigned pucch_f2_nof_symbols = 1U;
       const unsigned     f2_max_rbs =
           pucch_cfg.f2_max_payload_bits.has_value()
                   ? get_pucch_format2_max_nof_prbs(pucch_cfg.f2_max_payload_bits.value(),

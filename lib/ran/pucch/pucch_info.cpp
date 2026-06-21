@@ -44,7 +44,11 @@ unsigned ocudu::get_pucch_format2_nof_prbs(unsigned nof_payload_bits,
 
   const unsigned estimated_nof_prbs = get_pucch_format2_max_nof_prbs(nof_payload_bits, nof_symbols, max_code_rate);
 
-  return std::min(estimated_nof_prbs, max_nof_prbs);
+  unsigned nof_prbs = std::min(estimated_nof_prbs, max_nof_prbs);
+  if (nof_symbols == 1 && nof_prbs < 2) {
+    nof_prbs = std::min(2U, max_nof_prbs);
+  }
+  return nof_prbs;
 }
 
 unsigned ocudu::get_pucch_format2_max_payload(unsigned max_nof_prbs, unsigned nof_symbols, float max_code_rate)
