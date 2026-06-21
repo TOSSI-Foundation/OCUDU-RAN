@@ -59,6 +59,31 @@ L1 and L2 run on different servers connected by a dedicated DPDK-Ethernet link b
    └────────────────────────────────┘              └────────────────────────────────┘
 ```
 
+### 3. OAI L1 over the bridge (disaggregated, two-host)
+
+The L1 endpoint is an **OAI L1** instead of OCUDU's `odu_low`, and the deployment is disaggregated across two hosts:
+
+- **Host A — OAI L1 alone**: OAI `nr-softmodem` (openair1 PHY) driving the Liteon RU over fronthaul, exposed as an **nFAPI PNF** (`NFAPI_MODE=PNF`). It speaks **open-nFAPI** over the Linux kernel net stack — **P5 over SCTP** (client) and **P7 over UDP** (bidirectional, big-endian TLV).
+- **Host B — xFAPI + OCUDU DU-High co-located**: xFAPI runs in **OAI_OCUDU mode** as the nFAPI **VNF** (P5 SCTP listener + P7 UDP listener), translating nFAPI ↔ FAPI and bridging it onto **xSM shared memory** for `odu_high`. OCUDU DU-High is the xSM **master on pair 1** (DPDK secondary).
+
+So the wire is **nFAPI (SCTP/UDP) between Host A and Host B**, and **xSM (shared memory) between xFAPI and OCUDU inside Host B**.
+
+```text
+        Host A: OAI L1                          Host B: xFAPI + OCUDU DU-High
+   ┌───────────────────────┐                ┌──────────────────────────────────────────┐
+   │  ┌─────────────────┐  │    nFAPI       │  ┌─────────┐  xSM pair 1   ┌────────────┐ │
+   │  │     OAI L1      │  │  P5 SCTP +     │  │  xFAPI  │ ◄───────────► │  OCUDU     │ │
+   │  │ nr-softmodem    │◄─┼──P7 UDP────────┼─►│OAI_OCUDU│  shared mem   │  DU-High   │ │   F1AP
+   │  │ nFAPI PNF       │  │ (kernel stack) │  │  mode   │  "xsm_bridge" │ (odu_high) │ │ ◄──────► CU
+   │  │ + Liteon RU     │  │  big-endian    │  │ nFAPI   │   m2s / s2m   │ xSM MASTER │ │
+   │  └─────────────────┘  │     TLV        │  │  VNF    │   zero-copy   │ pair 1     │ │
+   └───────────────────────┘                │  └─────────┘               └────────────┘ │
+                                            │   DPDK secondary · file-prefix gnb0_l2     │
+                                            └──────────────────────────────────────────┘
+```
+
+`odu_high` runs with [`configs/ocudu_xfapi_oai.yaml`](configs/ocudu_xfapi_oai.yaml) (OAI-tuned `cell_cfg`, same `fapi_split_l2` transport). See [OAI L1 interop](#oai-l1-interop) below for the run steps.
+
 Full topology details, startup order, and DPDK role tables are in [`docs/fapi_split_topologies.md`](docs/fapi_split_topologies.md).
 
 ---
@@ -114,12 +139,34 @@ Two YAML configs cover both topologies. Only the XFAPI config file and a few L2-
 |---|---|
 | [`configs/odu_low_xfapi.yaml`](configs/odu_low_xfapi.yaml) | L1/PHY. DPDK primary, xSM slave on pair 0. Owns the radio (HAL, expert_phy, ru_ofh). |
 | [`configs/odu_high_xfapi.yaml`](configs/odu_high_xfapi.yaml) | L2/MAC. DPDK secondary, xSM master. Owns F1AP, F1U, scheduler, cell_cfg. |
+| [`configs/ocudu_xfapi_oai.yaml`](configs/ocudu_xfapi_oai.yaml) | L2/MAC variant tuned to pair `odu_high` with an **OAI L1** over the bridge. Same `fapi_split_l2` transport as above, OAI-friendly `cell_cfg`. |
 
 Key knobs:
 
 - `fapi_split_l1` (odu_low): `xsm_device_name`, `dpdk_proc_type`, `xsm_pair_index`, `xsm_num_pairs`, `rx_cpu`, `rx_priority`
 - `fapi_split_l2` (odu_high): `xsm_device_name`, `xsm_pair_index`, `xsm_file_prefix`, `dpdk_proc_type`, `rx_cpu`, `rx_priority`
 - `fapi_stats` (both): optional in-memory FAPI message recorder, dumped as JSON at shutdown
+
+---
+
+## OAI L1 interop
+
+The same `odu_high` (L2) can drive an **OAI L1** instead of OCUDU's own `odu_low`. OAI L1 speaks **nFAPI** (open-nFAPI: P5 over SCTP, P7 over UDP) as an nFAPI **PNF**; xFAPI runs in **OAI_OCUDU mode** as the nFAPI **VNF** and translates nFAPI ↔ FAPI onto **xSM** for `odu_high`. Use [`configs/ocudu_xfapi_oai.yaml`](configs/ocudu_xfapi_oai.yaml): it carries the standard `fapi_split_l2` transport block plus a `cell_cfg` tuned for OAI's L1 (n78, 100 MHz, TDD), so a UE attaches end-to-end.
+
+See the [disaggregated OAI L1 topology](#3-oai-l1-over-the-bridge-disaggregated-two-host) above for the host layout.
+
+```bash
+# Host A: OAI L1 as nFAPI PNF (P5 SCTP client -> xFAPI :50001, P7 UDP 50010<->50011)
+NFAPI_MODE=PNF nr-softmodem -O <oai-gnb.conf> --rfsim   # or live RU
+
+# Host B, Terminal 1: xFAPI bridge in OAI_OCUDU mode (nFAPI VNF <-> xSM master/slave)
+xfapi_main --cfgfile <path-to-xfapi>/conf/oai_ocudu_config.yaml
+
+# Host B, Terminal 2: OCUDU L2, OAI-tuned config (xSM master on pair 1)
+./build/apps/du/odu -c configs/ocudu_xfapi_oai.yaml
+```
+
+The Host-B L2-side transport knobs (`xsm_pair_index`, `xsm_file_prefix`, `dpdk_proc_type`) must match xFAPI's xSM side (`file-prefix = gnb0_l2`, pair 1). On Host A, the OAI nFAPI P5/P7 socket endpoints must match xFAPI's nFAPI VNF listeners.
 
 ---
 
