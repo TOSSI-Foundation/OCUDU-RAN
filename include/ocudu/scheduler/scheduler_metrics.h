@@ -100,6 +100,20 @@ struct scheduler_ue_metrics {
   sample_statistics<unsigned> ul_ri_stats;
 };
 
+struct scheduler_slice_metrics {
+  uint8_t sst = 0;
+  uint32_t sd = 0xFFFFFFU;
+  unsigned nof_ues = 0;
+  unsigned min_prbs = 0;
+  unsigned max_prbs = 0;
+  unsigned ded_prbs = 0;
+  unsigned min_prbs_ul = 0;
+  unsigned max_prbs_ul = 0;
+  unsigned ded_prbs_ul = 0;
+  float avg_dl_rbs_per_slot = 0.0f;
+  float avg_ul_rbs_per_slot = 0.0f;
+};
+
 /// \brief Event that occurred in the cell of the scheduler.
 struct scheduler_cell_event {
   enum class event_type { ue_add, ue_reconf, ue_rem };
@@ -169,6 +183,7 @@ struct scheduler_cell_metrics {
   std::vector<unsigned>             pdsch_prbs_used_per_tdd_slot_idx;
   std::vector<scheduler_cell_event> events;
   std::vector<scheduler_ue_metrics> ue_metrics;
+  std::vector<scheduler_slice_metrics> slice_metrics;
 };
 
 /// Scheduler metrics report for all active cells of the DU.

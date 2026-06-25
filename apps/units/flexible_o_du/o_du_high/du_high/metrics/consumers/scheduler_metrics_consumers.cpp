@@ -272,6 +272,31 @@ void scheduler_cell_metrics_consumer_log::handle_metric(const std::optional<sche
     log_chan("{}", to_c_str(buffer));
     buffer.clear();
 
+    for (const auto& sl : cell.slice_metrics) {
+      const unsigned nof_prbs = cell.nof_prbs > 0 ? cell.nof_prbs : 1;
+      fmt::format_to(std::back_inserter(buffer),
+                     "Scheduler slice pci={} sst={}{} metrics:"
+                     " nof_ues={} dl[min_prbs={} max_prbs={} ded_prbs={}] ul[min_prbs={} max_prbs={} ded_prbs={}]"
+                     " avg_dl_rbs_per_slot={:.2f} avg_ul_rbs_per_slot={:.2f}"
+                     " dl_prb_ratio={:.1f}% ul_prb_ratio={:.1f}%",
+                     cell.pci,
+                     sl.sst,
+                     (sl.sd != 0xFFFFFFU ? fmt::format(" sd={:#x}", sl.sd) : std::string{}),
+                     sl.nof_ues,
+                     sl.min_prbs,
+                     sl.max_prbs,
+                     sl.ded_prbs,
+                     sl.min_prbs_ul,
+                     sl.max_prbs_ul,
+                     sl.ded_prbs_ul,
+                     sl.avg_dl_rbs_per_slot,
+                     sl.avg_ul_rbs_per_slot,
+                     nof_prbs > 0 ? 100.0f * sl.avg_dl_rbs_per_slot / static_cast<float>(nof_prbs) : 0.0f,
+                     nof_prbs > 0 ? 100.0f * sl.avg_ul_rbs_per_slot / static_cast<float>(nof_prbs) : 0.0f);
+      log_chan("{}", to_c_str(buffer));
+      buffer.clear();
+    }
+
     // log ue-specific metrics
     for (const auto& ue : cell.ue_metrics) {
       fmt::format_to(std::back_inserter(buffer),

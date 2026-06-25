@@ -338,6 +338,13 @@ static void configure_cli11_ncell_args(CLI::App& app, cu_cp_unit_neighbor_cell_c
       app, "--report_configs", config.report_cfg_ids, "Report configurations to configure for this neighbor cell");
 }
 
+// TS 23.003; TS 23.501
+static void configure_cli11_supported_slice_args(CLI::App& app, cu_cp_unit_supported_slice_t& config)
+{
+  add_option(app, "--sst", config.sst, "Slice Service Type")->capture_default_str()->check(CLI::Range(0, 255));
+  add_option(app, "--sd", config.sd, "Service Differentiator")->capture_default_str()->check(CLI::Range(0, 0xffffff));
+}
+
 static void configure_cli11_cells_args(CLI::App& app, cu_cp_unit_cell_config_item& config)
 {
   add_option(app, "--nr_cell_id", config.nr_cell_id, "Cell id to be configured")
@@ -363,6 +370,22 @@ static void configure_cli11_cells_args(CLI::App& app, cu_cp_unit_cell_config_ite
       ->check(CLI::IsMember({5, 10, 20, 40, 80, 160}));
   add_option(app, "--ssb_offset", config.ssb_offset, "SSB offset");
   add_option(app, "--ssb_duration", config.ssb_duration, "SSB duration")->check(CLI::IsMember({1, 2, 3, 4, 5}));
+
+  app.add_option_function<std::vector<std::string>>(
+      "--supported_slices",
+      [&config](const std::vector<std::string>& values) {
+        config.supported_slices.resize(values.size());
+
+        for (unsigned i = 0, e = values.size(); i != e; ++i) {
+          CLI::App subapp("Cell supported slices list");
+          subapp.config_formatter(create_yaml_config_parser());
+          subapp.allow_config_extras(CLI::config_extras_mode::error);
+          configure_cli11_supported_slice_args(subapp, config.supported_slices[i]);
+          std::istringstream ss(values[i]);
+          subapp.parse_from_stream(ss);
+        }
+      },
+      "Sets the list of S-NSSAIs supported by this cell (used for slice-aware handover target selection)");
 
   // report configuration parameters.
   app.add_option_function<std::vector<std::string>>(

@@ -14,3 +14,8 @@ add_executable(cell_meas_manager_test ${SOURCES})
 target_include_directories(cell_meas_manager_test PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(cell_meas_manager_test cell_meas_manager_helpers cu_cp_test_helpers)
 gtest_discover_tests(cell_meas_manager_test PROPERTIES "LABELS;cell_meas_manager")
+
+add_executable(slice_aware_matching_test slice_aware_matching_test.cpp)
+target_include_directories(slice_aware_matching_test PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(slice_aware_matching_test ocudu_support ocudulog GTest::gtest gtest_main)
+gtest_discover_tests(slice_aware_matching_test PROPERTIES "LABELS;cell_meas_manager")

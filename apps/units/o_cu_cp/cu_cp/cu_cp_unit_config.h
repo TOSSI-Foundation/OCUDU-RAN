@@ -105,11 +105,18 @@ struct cu_cp_unit_neighbor_cell_config_item {
   std::vector<uint64_t> report_cfg_ids;
 };
 
+/// TS 23.003; TS 23.501
+struct cu_cp_unit_supported_slice_t {
+  uint8_t  sst = 0;
+  uint32_t sd  = 0xffffffU; ///< TS 23.003
+};
+
 /// Each item describes the relationship between one cell to all other cells.
 struct cu_cp_unit_cell_config_item {
   /// Cell id.
   uint64_t                nr_cell_id;
   std::optional<unsigned> periodic_report_cfg_id;
+  std::vector<cu_cp_unit_supported_slice_t> supported_slices;
 
   // These parameters must only be set for external cells
   /// gNodeB identifier bit length.

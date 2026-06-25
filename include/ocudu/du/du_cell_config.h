@@ -45,6 +45,8 @@ struct du_cell_config {
 
   /// List of RAN slices to support in the scheduler.
   std::vector<slice_rrm_policy_config> rrm_policy_members;
+
+  bool strict_slice_admission = false;
 };
 
 } // namespace odu

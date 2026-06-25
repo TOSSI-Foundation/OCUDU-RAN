@@ -243,6 +243,13 @@ public:
   /// \brief Called when the cell is stopped. This will trigger a cell stop report.
   void handle_cell_deactivation();
 
+  void update_slice_snapshot(std::vector<scheduler_slice_metrics> snapshot)
+  {
+    last_slice_snapshot = std::move(snapshot);
+  }
+
+  bool is_report_required(slot_point_extended sl_tx) const { return notifier.is_sched_report_required(sl_tx); }
+
 private:
   void handle_pucch_sinr(ue_metric_context& u, float sinr);
   void handle_csi_report(ue_metric_context& u, const csi_report_data& csi);
@@ -251,7 +258,8 @@ private:
                           const sched_result&       slot_result,
                           std::chrono::microseconds slot_decision_latency);
 
-  std::vector<scheduler_cell_event> pending_events;
+  std::vector<scheduler_cell_event>  pending_events;
+  std::vector<scheduler_slice_metrics> last_slice_snapshot;
 };
 
 /// Handler of metrics for all the UEs and cells of the scheduler.

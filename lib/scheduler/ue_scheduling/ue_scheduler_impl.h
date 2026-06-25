@@ -91,6 +91,11 @@ private:
 
     void stop() override { parent.do_stop_cell(cell_res_alloc->cfg.cell_index); }
 
+    void collect_slice_metrics(std::vector<scheduler_slice_metrics>& out) const override
+    {
+      slice_sched.collect_slice_metrics(out);
+    }
+
     void on_timeout(slot_point sl_rx, rnti_t crnti, const uci_action& action) override
     {
       ev_mng->handle_uci_indication_timeout(sl_rx, crnti, action);

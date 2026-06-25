@@ -1,0 +1,93 @@
+# O-DU (monolithic L1+L2) — ZMQ radio, 40 MHz, 4-SLICE / 8-UE variant.
+# ----------------------------------------------------------------------------
+# Clean dedicated config for: 4 network slices (sst1/sd1..sd4), 2 UEs per slice
+# = 8 UEs total. 40 MHz / 30 kHz SCS -> 106 PRB -> srate 61.44 Msps.
+# UE side: nr-uesoftmodem -r 106 --numerology 1 --band 78 -C 3489420000 --ssb 42.
+# ----------------------------------------------------------------------------
+
+# ── F1 toward the CU ─────────────────────────────────────────────────────────
+f1ap:
+  cu_cp_addr: 127.0.10.1
+  bind_addr: 127.0.1.2
+
+f1u:
+  socket:
+    -
+      bind_addr: 127.0.1.2
+
+expert_phy:
+  allow_request_on_empty_uplink_slot: true
+
+# ── Radio: ZMQ. srate MUST match the 40 MHz cell: 40 MHz/30 kHz -> 61.44 Msps ─
+ru_sdr:
+  device_driver: zmq
+  device_args: tx_port=tcp://127.0.0.1:4556,rx_port=tcp://127.0.0.1:4557
+  srate: 61.44
+  tx_gain: 80
+  rx_gain: 40
+
+# ── Cell: 40 MHz / 1x1, center 3489.42 MHz (n78) ─────────────────────────────
+cell_cfg:
+  dl_arfcn: 632628                 # center 3489.42 MHz (matches UE -C 3489420000)
+  band: 78
+  channel_bandwidth_MHz: 40        # 106 PRB
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+  nof_antennas_dl: 1
+  nof_antennas_ul: 1
+
+  prach:
+    # Allow many RACH retries (slow ZMQ UEs need it) and the full 64 contention
+    # preambles so UEs rarely pick the same one. msg1-FDM (freq RACH occasions)
+    # is DERIVED from the PRACH config in this codebase — it is NOT a settable
+    # key, and nof_ssb_per_ro is locked to 1 — so UEs RACH sequentially in time
+    # (different RO frames), which is correct for the ZMQ mixing-proxy setup.
+    preamble_trans_max: 200
+    total_nof_ra_preambles: 64
+
+  # ── PDCCH: widen the COMMON search space so the gNB can address several UEs ──
+  # per slot during the RRC-setup burst. Default ss1_n_candidates {0,0,1,0,0} =
+  # ONE AL4 candidate -> only 1 UE gets RAR/Msg4 per slot. {0,0,2,1,0} = 2xAL4 +
+  # 1xAL8 = 3 common-SS candidates -> 3x the RA/Msg4 addressing capacity.
+  # Order is [AL1, AL2, AL4, AL8, AL16]; allowed values {0,1,2,3,4,5,6,8}.
+  pdcch:
+    common:
+      ss1_n_candidates: [0, 0, 2, 1, 0]
+
+  # ── Network slicing: 4 RAN slices (sst1/sd1..sd4), 2 UEs each ────────────────
+  # 3GPP TS 28.541 RRMPolicyRatio. EVERY slice's `sd` MUST match a UE's S-NSSAI
+  # sst1/sd<n> EXACTLY, or that UE's DRB falls to the default slice (nof_ues=0)
+  # and the UE registers but never gets an IP.
+  #
+  # Equal split: each of the 4 slices guaranteed 25% of PRBs (4*25 = 100%, fully
+  # partitioned/fair) and may burst to 100% when the others are idle. With only
+  # 2 UEs per slice this is ample (a single UE rarely needs >25% of 106 PRB for
+  # control-plane bring-up; data bursts to 100% when neighbors idle).
+  slicing:
+    - sst: 1
+      sd: 1
+      sched_cfg: { min_prb_policy_ratio: 25, max_prb_policy_ratio: 100 }
+    - sst: 1
+      sd: 2
+      sched_cfg: { min_prb_policy_ratio: 25, max_prb_policy_ratio: 100 }
+    - sst: 1
+      sd: 3
+      sched_cfg: { min_prb_policy_ratio: 25, max_prb_policy_ratio: 100 }
+    - sst: 1
+      sd: 4
+      sched_cfg: { min_prb_policy_ratio: 25, max_prb_policy_ratio: 100 }
+
+log:
+  filename: du.log
+  all_level: info
+  phy_level: warning
+  fapi_level: warning
+
+metrics:
+  enable_log: true
+  periodicity:
+    du_report_period: 1000
+  layers:
+    enable_sched: true

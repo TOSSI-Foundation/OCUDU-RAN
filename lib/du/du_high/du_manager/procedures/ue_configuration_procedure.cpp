@@ -152,6 +152,23 @@ void ue_configuration_procedure::update_ue_context()
     // Find the configurations for this DRB.
     const du_ue_drb_config& drb_cfg = ue->resources->drbs[drbtoadd.drb_id];
 
+    const du_cell_config& pcell_cfg = cell_mng.get_cell_cfg(ue->pcell_index);
+    if (pcell_cfg.strict_slice_admission) {
+      const bool slice_configured =
+          std::any_of(pcell_cfg.rrm_policy_members.begin(),
+                      pcell_cfg.rrm_policy_members.end(),
+                      [&drb_cfg](const slice_rrm_policy_config& s) { return s.rrc_member.s_nssai == drb_cfg.s_nssai; });
+      if (not slice_configured) {
+        proc_logger.log_proc_warning("Refused {} on unauthorised slice (sst={} sd={:#x}). Cause: strict_slice_admission "
+                                     "is enabled and no RRM policy is configured for this S-NSSAI on the cell.",
+                                     drbtoadd.drb_id,
+                                     drb_cfg.s_nssai.sst.value(),
+                                     drb_cfg.s_nssai.sd.value());
+        failed_drbs.push_back(drbtoadd.drb_id);
+        continue;
+      }
+    }
+
     // Create DU DRB instance.
     std::unique_ptr<du_ue_drb> drb = create_drb(drb_creation_info{ue->ue_index,
                                                                   ue->pcell_index,

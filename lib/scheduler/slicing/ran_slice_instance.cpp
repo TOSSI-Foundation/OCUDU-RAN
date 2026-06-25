@@ -35,13 +35,18 @@ void ran_slice_instance::slot_indication(slot_point slot_tx)
 
   // Recompute rate of DL allocation for slice and clear PDSCH RB count in previous slot.
   avg_pdsch_rbs_per_slot += exp_avg_coeff * (pdsch_rb_count - avg_pdsch_rbs_per_slot);
+  // TS 28.552
+  metric_pdsch_rb_sum += pdsch_rb_count;
   pdsch_rb_count = 0;
 
   // Recompute rate of UL allocation for slice and clear PUSCH RB count in previous slot.
   auto& pusch_slot_to_clear =
       pusch_rb_count_per_slot[(slot_tx + min_k2 - 1).to_uint() % pusch_rb_count_per_slot.size()];
   avg_pusch_rbs_per_slot += exp_avg_coeff * (pusch_slot_to_clear - avg_pusch_rbs_per_slot);
+  metric_pusch_rb_sum += pusch_slot_to_clear;
   pusch_slot_to_clear = 0;
+
+  ++metric_nof_slots;
 
   // Reset last alloc slot if the difference becomes too large, to avoid ambiguity.
   if (last_pdsch_alloc_slot.valid() and

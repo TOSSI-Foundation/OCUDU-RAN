@@ -656,7 +656,8 @@ void ngap_impl::handle_pdu_session_resource_setup_request(const asn1::ngap::pdu_
 
   // Start routine.
   ue->schedule_async_task(launch_async<ngap_pdu_session_resource_setup_procedure>(
-      msg, request, ue_ctxt.ue_ids, cu_cp_notifier, metrics_handler, tx_pdu_notifier, ue_ctxt.logger));
+      msg, request, context.get_supported_snssais(), ue_ctxt.ue_ids, cu_cp_notifier, metrics_handler, tx_pdu_notifier,
+      ue_ctxt.logger));
 }
 
 void ngap_impl::handle_pdu_session_resource_modify_request(const asn1::ngap::pdu_session_res_modify_request_s& request)

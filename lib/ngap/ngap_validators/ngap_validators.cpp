@@ -4,6 +4,7 @@
 
 #include "ngap_validators.h"
 #include "ocudu/ran/cause/common.h"
+#include <algorithm>
 #include <unordered_set>
 
 using namespace ocudu;
@@ -12,7 +13,8 @@ using namespace ocucp;
 pdu_session_resource_setup_validation_outcome
 ocudu::ocucp::verify_pdu_session_resource_setup_request(const cu_cp_pdu_session_resource_setup_request&    request,
                                                         const asn1::ngap::pdu_session_res_setup_request_s& asn1_request,
-                                                        const ngap_ue_logger&                              ue_logger)
+                                                        const std::vector<s_nssai_t>& supported_snssais,
+                                                        const ngap_ue_logger&         ue_logger)
 {
   pdu_session_resource_setup_validation_outcome verification_outcome;
 
@@ -45,6 +47,25 @@ ocudu::ocucp::verify_pdu_session_resource_setup_request(const cu_cp_pdu_session_
       failed_item.unsuccessful_transfer.cause = cause_protocol_t::unspecified;
       verification_outcome.response.pdu_session_res_failed_to_setup_items.emplace(pdu_session_item.pdu_session_id,
                                                                                   failed_item);
+    }
+  }
+
+  if (not supported_snssais.empty()) {
+    for (const auto& pdu_session_item : request.pdu_session_res_setup_items) {
+      if (std::find(supported_snssais.begin(), supported_snssais.end(), pdu_session_item.s_nssai) ==
+          supported_snssais.end()) {
+        ue_logger.log_warning("Rejecting PDU session {} on unsupported S-NSSAI (sst={} sd={:#x})",
+                              pdu_session_item.pdu_session_id,
+                              pdu_session_item.s_nssai.sst.value(),
+                              pdu_session_item.s_nssai.sd.value());
+        if (failed_psis.emplace(pdu_session_item.pdu_session_id).second) {
+          cu_cp_pdu_session_res_setup_failed_item failed_item;
+          failed_item.pdu_session_id              = pdu_session_item.pdu_session_id;
+          failed_item.unsuccessful_transfer.cause = ngap_cause_radio_network_t::slice_not_supported;
+          verification_outcome.response.pdu_session_res_failed_to_setup_items.emplace(pdu_session_item.pdu_session_id,
+                                                                                      failed_item);
+        }
+      }
     }
   }
 

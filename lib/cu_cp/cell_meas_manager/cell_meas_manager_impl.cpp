@@ -4,14 +4,39 @@
 
 #include "cell_meas_manager_impl.h"
 #include "cell_meas_manager_helpers.h"
+#include "slice_aware_matching.h"
 #include "ocudu/cu_cp/cell_meas_manager_config.h"
+#include "ocudu/cu_cp/up_context.h"
 #include "ocudu/rrc/meas_types.h"
 #include "ocudu/support/ocudu_assert.h"
+#include <algorithm>
 #include <unordered_set>
 #include <utility>
 
 using namespace ocudu;
 using namespace ocucp;
+
+namespace {
+
+// TS 23.501 clause 5.15.2
+std::vector<s_nssai_t> get_ue_active_snssais(ue_manager& ue_mng, ue_index_t ue_index)
+{
+  std::vector<s_nssai_t> snssais;
+  cu_cp_ue*              ue = ue_mng.find_ue(ue_index);
+  if (ue == nullptr) {
+    return snssais;
+  }
+  for (const auto& [psi, session] : ue->get_up_resource_manager().get_pdu_sessions_map()) {
+    for (const auto& [drb_id, drb] : session.drbs) {
+      if (std::none_of(snssais.begin(), snssais.end(), [&drb](const s_nssai_t& s) { return s == drb.s_nssai; })) {
+        snssais.push_back(drb.s_nssai);
+      }
+    }
+  }
+  return snssais;
+}
+
+} // namespace
 
 cell_meas_manager::cell_meas_manager(const cell_meas_manager_cfg&         cfg_,
                                      cell_meas_mobility_manager_notifier& mobility_mng_notifier_,
@@ -201,8 +226,12 @@ bool cell_meas_manager::update_cell_config(nr_cell_identity nci, const serving_c
   } else {
     logger.debug("Updating measurement configuration for nci={:#x}", nci);
 
-    // Update serving cell config.
-    cfg.cells.at(nci).serving_cell_cfg = serv_cell_cfg;
+    // TS 38.473
+    serving_cell_meas_config merged = serv_cell_cfg;
+    if (merged.supported_slices.empty()) {
+      merged.supported_slices = cfg.cells.at(nci).serving_cell_cfg.supported_slices;
+    }
+    cfg.cells.at(nci).serving_cell_cfg = merged;
   }
 
   if (!is_valid_configuration(cfg, ssb_freq_to_meas_object)) {
@@ -235,12 +264,28 @@ static std::optional<uint8_t> get_ssb_rsrp(const rrc_meas_result_nr& meas_result
   return rsrp;
 }
 
-static std::optional<pci_t> find_strongest_neighbor(ue_index_t              ue_index,
-                                                    const rrc_meas_results& meas_results,
-                                                    ocudulog::basic_logger& logger,
-                                                    std::optional<uint8_t>  periodic_ho_rsrp_offset = std::nullopt)
+static const std::vector<s_nssai_t>&
+cell_supported_slices_for_pci(const std::map<nr_cell_identity, cell_meas_config>& cells, pci_t pci)
+{
+  static const std::vector<s_nssai_t> empty;
+  for (const auto& [nci, ccfg] : cells) {
+    if (ccfg.serving_cell_cfg.pci.has_value() && ccfg.serving_cell_cfg.pci.value() == pci) {
+      return ccfg.serving_cell_cfg.supported_slices;
+    }
+  }
+  return empty;
+}
+
+// TS 23.501 clause 5.15.3
+static std::optional<pci_t> find_strongest_neighbor(ue_index_t                                          ue_index,
+                                                    const rrc_meas_results&                             meas_results,
+                                                    ocudulog::basic_logger&                             logger,
+                                                    const std::vector<s_nssai_t>&                       ue_slices,
+                                                    const std::map<nr_cell_identity, cell_meas_config>& cells,
+                                                    std::optional<uint8_t> periodic_ho_rsrp_offset = std::nullopt)
 {
   std::optional<pci_t> strongest_neighbor;
+  std::optional<pci_t> strongest_compatible_neighbor;
   // Find strongest neighbor cell.
   if (meas_results.meas_result_neigh_cells.has_value()) {
     // Find strongest neighbor here.
@@ -252,15 +297,22 @@ static std::optional<pci_t> find_strongest_neighbor(ue_index_t              ue_i
     }
 
     if (serv_cell_rsrp.has_value()) {
-      uint8_t max_rsrp = serv_cell_rsrp.value();
+      const uint8_t offset    = periodic_ho_rsrp_offset.value_or(0);
+      uint8_t       max_rsrp  = serv_cell_rsrp.value();
+      uint8_t       max_compat_rsrp = serv_cell_rsrp.value();
 
       for (const auto& report : meas_results.meas_result_neigh_cells.value().meas_result_list_nr) {
         std::optional<uint8_t> neighbor_rsrp = get_ssb_rsrp(report);
         if (neighbor_rsrp.has_value()) {
-          if (neighbor_rsrp.value() > max_rsrp + periodic_ho_rsrp_offset.value_or(0)) {
+          if (neighbor_rsrp.value() > max_rsrp + offset) {
             // Found stronger neighbor, take note of it's details.
             max_rsrp           = neighbor_rsrp.value();
             strongest_neighbor = report.pci;
+          }
+          if (report.pci.has_value() and neighbor_rsrp.value() > max_compat_rsrp + offset and
+              cell_supports_all_ue_slices(cell_supported_slices_for_pci(cells, report.pci.value()), ue_slices)) {
+            max_compat_rsrp               = neighbor_rsrp.value();
+            strongest_compatible_neighbor = report.pci;
           }
         }
       }
@@ -271,6 +323,16 @@ static std::optional<pci_t> find_strongest_neighbor(ue_index_t              ue_i
                     strongest_neighbor.value(),
                     max_rsrp,
                     serv_cell_rsrp.value());
+      }
+
+      if (strongest_compatible_neighbor.has_value() and
+          strongest_compatible_neighbor != strongest_neighbor) {
+        logger.info("ue={}: Slice-aware re-ranking: strongest neighbour PCI={} cannot serve all of the UE's active "
+                    "slices; selecting strongest slice-compatible neighbour PCI={}",
+                    ue_index,
+                    strongest_neighbor.has_value() ? static_cast<int>(strongest_neighbor.value()) : -1,
+                    strongest_compatible_neighbor.value());
+        return strongest_compatible_neighbor;
       }
     }
   }
@@ -296,6 +358,8 @@ void cell_meas_manager::report_measurement(ue_index_t ue_index, const rrc_meas_r
 
   auto& meas_ctxt = ue_meas_context.meas_id_to_meas_context.at(meas_results.meas_id);
 
+  const std::vector<s_nssai_t> ue_slices = get_ue_active_snssais(ue_mng, ue_index);
+
   // Handle periodic measurement results.
   if (cfg.cells.at(meas_ctxt.nci).periodic_report_cfg_id.has_value() &&
       cfg.cells.at(meas_ctxt.nci).periodic_report_cfg_id.value() == meas_ctxt.report_cfg_id) {
@@ -312,7 +376,7 @@ void cell_meas_manager::report_measurement(ue_index_t ue_index, const rrc_meas_r
 
     // Find strongest neighbor cell.
     std::optional<pci_t> strongest_neighbor =
-        find_strongest_neighbor(ue_index, meas_results, logger, periodic_ho_rsrp_offset);
+        find_strongest_neighbor(ue_index, meas_results, logger, ue_slices, cfg.cells, periodic_ho_rsrp_offset);
     if (strongest_neighbor.has_value()) {
       for (const auto& ncell : cfg.cells.at(meas_ctxt.nci).ncells) {
         const cell_meas_config& ncell_cfg = cfg.cells.at(ncell.nci);
@@ -347,7 +411,8 @@ void cell_meas_manager::report_measurement(ue_index_t ue_index, const rrc_meas_r
     }
 
     // Find strongest neighbor cell.
-    std::optional<pci_t> strongest_neighbor = find_strongest_neighbor(ue_index, meas_results, logger);
+    std::optional<pci_t> strongest_neighbor =
+        find_strongest_neighbor(ue_index, meas_results, logger, ue_slices, cfg.cells);
     if (strongest_neighbor.has_value()) {
       // Report cell.
       mobility_mng_notifier.on_neighbor_better_than_spcell(

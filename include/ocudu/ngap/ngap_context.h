@@ -8,8 +8,11 @@
 #include "ocudu/ran/gnb_id.h"
 #include "ocudu/ran/guami.h"
 #include "ocudu/ran/plmn_identity.h"
+#include "ocudu/ran/s_nssai.h"
+#include <algorithm>
 #include <chrono>
 #include <string>
+#include <vector>
 
 namespace ocudu {
 
@@ -37,6 +40,21 @@ struct ngap_context_t {
     }
 
     return supported_plmns;
+  }
+
+  std::vector<s_nssai_t> get_supported_snssais() const
+  {
+    std::vector<s_nssai_t> snssais;
+    for (const auto& ta : supported_tas) {
+      for (const auto& plmn : ta.plmn_list) {
+        for (const auto& snssai : plmn.slice_support_list) {
+          if (std::find(snssais.begin(), snssais.end(), snssai) == snssais.end()) {
+            snssais.push_back(snssai);
+          }
+        }
+      }
+    }
+    return snssais;
   }
 };
 

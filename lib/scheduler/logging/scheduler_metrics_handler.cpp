@@ -439,6 +439,9 @@ void cell_metrics_handler::report_metrics()
     rb_count = 0;
   }
 
+  next_report->slice_metrics = std::move(last_slice_snapshot);
+  last_slice_snapshot.clear();
+
   // Report all UE metrics in a batch.
   // Note: next_report will be reset afterwards. However, we prefer to first commit before fetching a new report.
   next_report.reset();

@@ -493,6 +493,12 @@ ocucp::cu_cp_configuration ocudu::generate_cu_cp_config(const cu_cp_unit_config&
           app_cfg_item.ssb_period.value(), app_cfg_item.ssb_offset.value(), app_cfg_item.ssb_duration.value());
     }
 
+    // TS 23.003; TS 23.501
+    for (const auto& slice : app_cfg_item.supported_slices) {
+      meas_cfg_item.serving_cell_cfg.supported_slices.push_back(
+          s_nssai_t{slice_service_type{slice.sst}, slice_differentiator::create(slice.sd).value()});
+    }
+
     for (const auto& ncell : app_cfg_item.ncells) {
       ocucp::neighbor_cell_meas_config ncell_meas_cfg;
       ncell_meas_cfg.nci = nr_cell_identity::create(ncell.nr_cell_id).value();

@@ -29,6 +29,11 @@ void mobility_manager_metrics_aggregator::aggregate_successful_handover_executio
   ++aggregated_mobility_manager_metrics.nof_successful_handover_executions;
 }
 
+void mobility_manager_metrics_aggregator::aggregate_suppressed_handover_slice_mismatch()
+{
+  ++aggregated_mobility_manager_metrics.nof_handovers_suppressed_slice_mismatch;
+}
+
 mobility_management_metrics mobility_manager_metrics_aggregator::request_metrics_report() const
 {
   return aggregated_mobility_manager_metrics;

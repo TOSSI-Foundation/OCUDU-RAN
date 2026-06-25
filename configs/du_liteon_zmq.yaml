@@ -1,0 +1,120 @@
+# O-DU (monolithic L1+L2) — ZMQ radio variant of du_liteon.yaml.
+# Derived from ue_release_issue_ocudu/ocudu_fresh_commit/configs/du_liteon.yaml:
+# same DU/CU split over F1 (this is a DU; pair it with ./ocu -c configs/cu.yml),
+# but the radio is the built-in ZMQ device instead of the LiteOn O-RAN fronthaul,
+# and the cell is retuned to the proven 20 MHz / 1x1 values from config.yaml that
+# already sync the OAI UEs.
+#
+# Run:
+#   ./ocu  -c configs/cu.yml                 # CU first (F1-C SCTP server)
+#   ./odu  -c configs/du_liteon_zmq.yaml     # then this DU
+#   sudo bash multi_ue_sim/run_nue.sh 1      # then UE(s) via the ZMQ proxy
+#
+# 20 MHz / 30 kHz / 51 RB -> 30.72 Msps, so the OAI UE runs -r 51 with NO -E
+# (TQ_SAMPLING=0, the default). This is the monolithic "fast" path — L1 and L2
+# are one process, so the blocking ZMQ radio paces the whole pipeline and there
+# is NO inter-process FAPI bridge (that is what made the FAPI split unusable
+# with ZMQ).
+
+# ── F1 toward the CU (unchanged from du_liteon.yaml) ─────────────────────────
+f1ap:
+  cu_cp_addr: 127.0.10.1            # CU-CP F1-C address (cu.yml f1ap.bind_addrs)
+  bind_addr: 127.0.1.2             # this DU's F1-C address
+
+f1u:
+  socket:
+    -
+      bind_addr: 127.0.1.2
+
+# ── L1 timing knob kept from du_liteon.yaml ──────────────────────────────────
+expert_phy:
+  allow_request_on_empty_uplink_slot: true
+
+# NOTE: expert_execution/affinities was removed — it forced the lower PHY out of
+# the ZMQ "blocking" mode and stalled the radio. To pin the DU on cores 21-31,
+# launch the whole process under taskset:  taskset -c 22-24 ./odu -c <this file>
+
+# ── Radio: ZMQ (replaces the ru_ofh / LiteOn O-RU block) ─────────────────────
+# Same ports the proxy and UEs use. No `hal:` / DPDK EAL — ZMQ is not a DPDK
+# radio. srate must match the cell bandwidth: 20 MHz -> 30.72 Msps.
+ru_sdr:
+  device_driver: zmq
+  device_args: tx_port=tcp://127.0.0.1:4556,rx_port=tcp://127.0.0.1:4557
+  srate: 30.72
+  tx_gain: 80
+  rx_gain: 40
+
+# ── Cell: 20 MHz / 1x1, proven values from config.yaml (was 100 MHz / 4x4) ───
+cell_cfg:
+  dl_arfcn: 632628                 # 20 MHz value (was 630048 @ 100 MHz)
+  band: 78
+  channel_bandwidth_MHz: 20        # was 100
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+  nof_antennas_dl: 1               # was 4 (ZMQ proxy/UE are single-channel)
+  nof_antennas_ul: 1               # was 4
+  # SSB offset/k_ssb, coreset0_index and the TDD pattern are intentionally left
+  # auto-derived (as in the working config.yaml) — the 100 MHz explicit values
+  # from du_liteon.yaml (offset_to_point_a 252, k_ssb 12, coreset0_index 11,
+  # prach_config_index 159, prach_frequency_start 22) do not fit a 20 MHz cell.
+  prach:
+    # Many UEs contend on PRACH; raise retry budget so stragglers keep trying.
+    # Do NOT set ra_resp_window (an explicit value closes the RAR window early).
+    preamble_trans_max: 200
+  sib:
+    # ZMQ sim fix (approximates PDF O7 sim_friendly scheduler):
+    # Default n310=1 means a SINGLE missed UL slot starts T310. Under 10-UE ZMQ
+    # CPU contention this fires constantly -> RLF -> gNB releases UE context ->
+    # UE stays stuck at RRC. Raise n310 to 10 consecutive OOS before T310 starts,
+    # and extend T310 to 2s so a burst of ZMQ jitter can't declare link failure.
+    n310: 10
+    t310: 2000
+    # Re-establishment window: default t311=1000ms is too tight for ZMQ sim where
+    # the RRC re-establishment handshake takes 300-800ms under 10-UE CPU load.
+    # Raise to 3s so a UE that loses sync mid-session can recover without being
+    # dropped. n311=1 (only 1 IS event to confirm back in sync) keeps recovery fast.
+    n311: 1
+    t311: 3000
+
+  # ── Network slicing: 2 RAN slices with different PRB guarantees ───────────────
+  # Slice 1 (SST=1) is guaranteed >=25% of the cell PRBs; Slice 2 (SST=2) >=50%.
+  # Under contention each slice gets at least its min share (the inter-slice
+  # scheduler enforces this). For this to work end-to-end, SST=2 must ALSO be:
+  #   - added to the 5GC (AMF/SMF/UPF) served S-NSSAIs,
+  #   - advertised in cu.yml tai_slice_support_list,
+  #   - the slice each UE/subscriber is bound to (provision_subscribers / run_nue).
+  slicing:
+    - sst: 1
+      sd: 1
+      sched_cfg:
+        min_prb_policy_ratio: 25
+        max_prb_policy_ratio: 100
+    - sst: 1
+      sd: 2
+      sched_cfg:
+        min_prb_policy_ratio: 50
+        max_prb_policy_ratio: 100
+
+log:
+  filename: du.log
+  all_level: warning
+  # Suppress the "[RF] Real-time failure: overflow" flood from the ZMQ radio unit.
+  # These fire continuously whenever the radio has no peer draining it (e.g. the gNB
+  # is started before the proxy/UE) and previously grew du.log to 241 GB overnight.
+  # error keeps genuine radio errors but drops the overflow spam.
+  radio_level: error
+  phy_level: warning
+  fapi_level: warning   # FAPI logger is a SEPARATE channel from all_level; needed so the
+                        # CONFIG.request line (ssb_offset_to_pointA / ssb_k / dl_bw) is logged,
+                        # which clean_start.sh parses to auto-derive the UE --ssb.
+
+# Emit scheduler metrics to the METRICS log channel. Without this block the
+# per-slice PRB metrics (Scheduler slice ... sst=N ...) and cell scheduler
+# metrics are silenced by all_level=warning. enable_sched turns on the
+# scheduler layer that feeds our inter_slice_scheduler::collect_slice_metrics().
+metrics:
+  enable_log: true
+  layers:
+    enable_sched: true

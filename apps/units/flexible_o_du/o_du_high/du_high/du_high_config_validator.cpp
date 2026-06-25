@@ -1169,25 +1169,36 @@ static bool validate_cell_sib_config(const du_high_unit_base_cell_config& cell_c
 }
 static bool validate_cell_slicing_config(const du_high_unit_cell_slice_config& slice_cfg)
 {
-  const auto& slice_sched_cfg = slice_cfg.sched_cfg;
+  const auto& sc = slice_cfg.sched_cfg;
 
-  if (slice_sched_cfg.min_prb_policy_ratio > slice_sched_cfg.max_prb_policy_ratio) {
-    fmt::print("Invalid parameters for slice sst={} sd={}: expected min_prb_policy_ratio <= max_prb_policy_ratio, but "
-               "this was found instead ({}>{})\n",
-               slice_cfg.sst,
-               slice_cfg.sd,
-               slice_sched_cfg.min_prb_policy_ratio,
-               slice_sched_cfg.max_prb_policy_ratio);
+  const auto validate_dir = [&slice_cfg](const char* dir, unsigned ded, unsigned min, unsigned max) {
+    if (min > max) {
+      fmt::print("Invalid parameters for slice sst={} sd={}: expected {} min_prb_policy_ratio <= max_prb_policy_ratio, "
+                 "but this was found instead ({}>{})\n",
+                 slice_cfg.sst,
+                 slice_cfg.sd,
+                 dir,
+                 min,
+                 max);
+      return false;
+    }
+    if (ded > min) {
+      fmt::print("Invalid parameters for slice sst={} sd={}: expected {} ded_prb_policy_ratio <= min_prb_policy_ratio, "
+                 "but this was found instead ({}>{})\n",
+                 slice_cfg.sst,
+                 slice_cfg.sd,
+                 dir,
+                 ded,
+                 min);
+      return false;
+    }
+    return true;
+  };
+
+  if (not validate_dir("DL", sc.ded_dl_ratio(), sc.min_dl_ratio(), sc.max_dl_ratio())) {
     return false;
   }
-
-  if (slice_sched_cfg.ded_prb_policy_ratio > slice_sched_cfg.min_prb_policy_ratio) {
-    fmt::print("Invalid parameters for slice sst={} sd={}: expected ded_prb_policy_ratio <= min_prb_policy_ratio, but "
-               "this was found instead ({}>{})\n",
-               slice_cfg.sst,
-               slice_cfg.sd,
-               slice_sched_cfg.ded_prb_policy_ratio,
-               slice_sched_cfg.min_prb_policy_ratio);
+  if (not validate_dir("UL", sc.ded_ul_ratio(), sc.min_ul_ratio(), sc.max_ul_ratio())) {
     return false;
   }
 
@@ -1304,6 +1315,46 @@ static bool validate_base_cell_unit_config(const du_high_unit_base_cell_config& 
 
   for (const auto& slice_cfg : config.slice_cfg) {
     if (not validate_cell_slicing_config(slice_cfg)) {
+      return false;
+    }
+  }
+
+  if (not config.slice_cfg.empty()) {
+    const auto check_sum = [&config](const char*                                              dir,
+                                     unsigned (du_high_unit_cell_slice_sched_config::*min_fn)() const,
+                                     unsigned (du_high_unit_cell_slice_sched_config::*ded_fn)() const) {
+      unsigned sum_min = 0;
+      unsigned sum_ded = 0;
+      for (const auto& slice_cfg : config.slice_cfg) {
+        sum_min += (slice_cfg.sched_cfg.*min_fn)();
+        sum_ded += (slice_cfg.sched_cfg.*ded_fn)();
+      }
+      if (sum_min > 100) {
+        fmt::print("Invalid slicing configuration: the sum of {} min_prb_policy_ratio across the {} configured slices "
+                   "is {}%, which exceeds 100%. The guaranteed minimum PRB shares are unsatisfiable.\n",
+                   dir,
+                   config.slice_cfg.size(),
+                   sum_min);
+        return false;
+      }
+      if (sum_ded > 100) {
+        fmt::print("Invalid slicing configuration: the sum of {} ded_prb_policy_ratio across the {} configured slices "
+                   "is {}%, which exceeds 100%. The dedicated PRB reservations are unsatisfiable.\n",
+                   dir,
+                   config.slice_cfg.size(),
+                   sum_ded);
+        return false;
+      }
+      return true;
+    };
+    if (not check_sum("DL",
+                      &du_high_unit_cell_slice_sched_config::min_dl_ratio,
+                      &du_high_unit_cell_slice_sched_config::ded_dl_ratio)) {
+      return false;
+    }
+    if (not check_sum("UL",
+                      &du_high_unit_cell_slice_sched_config::min_ul_ratio,
+                      &du_high_unit_cell_slice_sched_config::ded_ul_ratio)) {
       return false;
     }
   }

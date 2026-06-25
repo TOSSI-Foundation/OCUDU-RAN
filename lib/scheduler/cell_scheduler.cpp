@@ -4,6 +4,7 @@
 
 #include "cell_scheduler.h"
 #include "logging/scheduler_metrics_handler.h"
+#include "ocudu/scheduler/scheduler_metrics.h"
 
 using namespace ocudu;
 
@@ -120,6 +121,12 @@ void cell_scheduler::run_slot(slot_point_extended sl_tx_ext)
   // > Mark stop of the slot processing
   auto slot_stop_tp = std::chrono::high_resolution_clock::now();
   auto slot_dur     = std::chrono::duration_cast<std::chrono::microseconds>(slot_stop_tp - slot_start_tp);
+
+  if (metrics.enabled() && metrics.is_report_required(sl_tx_ext)) {
+    std::vector<scheduler_slice_metrics> slice_snap;
+    ue_sched->collect_slice_metrics(slice_snap);
+    metrics.update_slice_snapshot(std::move(slice_snap));
+  }
 
   // > Log processed events.
   event_logger.log();

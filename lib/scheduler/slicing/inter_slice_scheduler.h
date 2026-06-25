@@ -7,6 +7,7 @@
 #include "../policy/scheduler_policy.h"
 #include "ran_slice_candidate.h"
 #include "ran_slice_instance.h"
+#include "ocudu/scheduler/scheduler_metrics.h"
 
 namespace ocudu {
 
@@ -40,6 +41,8 @@ public:
   size_t                         nof_slices() const { return slices.size(); }
   const slice_rrm_policy_config& slice_config(ran_slice_id_t id) const { return slices[id.value()].inst.cfg; }
   scheduler_policy&              get_policy(ran_slice_id_t id) const { return *slices[id.value()].policy; }
+
+  void collect_slice_metrics(std::vector<scheduler_slice_metrics>& out) const;
 
   void handle_slice_reconfiguration_request(const du_cell_slice_reconfig_request& slice_reconf_req);
 

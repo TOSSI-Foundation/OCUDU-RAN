@@ -511,8 +511,12 @@ protected:
 
   prioritised_slice_scheduler_test() :
     slice_scheduler_test(
-        {{{plmn_identity::test_value(), s_nssai_t{slice_service_type{1}}}, {MIN_SLICE_RB, MAX_NOF_PRBS}, PRIORITY},
-         {{plmn_identity::test_value(), s_nssai_t{slice_service_type{2}}}, {0, MAX_NOF_PRBS}, PRIORITY}})
+        {{.rrc_member = {plmn_identity::test_value(), s_nssai_t{slice_service_type{1}}},
+          .rbs        = {MIN_SLICE_RB, MAX_NOF_PRBS},
+          .priority   = PRIORITY},
+         {.rrc_member = {plmn_identity::test_value(), s_nssai_t{slice_service_type{2}}},
+          .rbs        = {0, MAX_NOF_PRBS},
+          .priority   = PRIORITY}})
   {
   }
 
@@ -591,10 +595,12 @@ protected:
 
   dedicated_slice_scheduler_test() :
     slice_scheduler_test(
-        {{{plmn_identity::test_value(), s_nssai_t{slice_service_type{1}}},
-          {DED_SLICE_RB, MIN_SLICE_RB, MAX_NOF_PRBS},
-          PRIORITY},
-         {{plmn_identity::test_value(), s_nssai_t{slice_service_type{2}}}, {0, MAX_NOF_PRBS}, PRIORITY}})
+        {{.rrc_member = {plmn_identity::test_value(), s_nssai_t{slice_service_type{1}}},
+          .rbs        = {DED_SLICE_RB, MIN_SLICE_RB, MAX_NOF_PRBS},
+          .priority   = PRIORITY},
+         {.rrc_member = {plmn_identity::test_value(), s_nssai_t{slice_service_type{2}}},
+          .rbs        = {0, MAX_NOF_PRBS},
+          .priority   = PRIORITY}})
   {
   }
 
@@ -703,10 +709,12 @@ protected:
 
   dedicated_slice_scheduler_test_2nd() :
     slice_scheduler_test(
-        {{{plmn_identity::test_value(), s_nssai_t{slice_service_type{1}}}, {0, MAX_NOF_PRBS}, PRIORITY},
-         {{plmn_identity::test_value(), s_nssai_t{slice_service_type{2}}},
-          {DED_SLICE_RB, MIN_SLICE_RB, MAX_NOF_PRBS},
-          PRIORITY}})
+        {{.rrc_member = {plmn_identity::test_value(), s_nssai_t{slice_service_type{1}}},
+          .rbs        = {0, MAX_NOF_PRBS},
+          .priority   = PRIORITY},
+         {.rrc_member = {plmn_identity::test_value(), s_nssai_t{slice_service_type{2}}},
+          .rbs        = {DED_SLICE_RB, MIN_SLICE_RB, MAX_NOF_PRBS},
+          .priority   = PRIORITY}})
   {
   }
 
@@ -813,10 +821,12 @@ protected:
 
   dedicated_empty_slice_scheduler_test() :
     slice_scheduler_test(
-        {{{plmn_identity::test_value(), s_nssai_t{slice_service_type{1}}},
-          {DED_SLICE_RB, MIN_SLICE_RB, MAX_NOF_PRBS},
-          PRIORITY},
-         {{plmn_identity::test_value(), s_nssai_t{slice_service_type{2}}}, {MIN_SLICE_RB, MAX_NOF_PRBS}, PRIORITY}})
+        {{.rrc_member = {plmn_identity::test_value(), s_nssai_t{slice_service_type{1}}},
+          .rbs        = {DED_SLICE_RB, MIN_SLICE_RB, MAX_NOF_PRBS},
+          .priority   = PRIORITY},
+         {.rrc_member = {plmn_identity::test_value(), s_nssai_t{slice_service_type{2}}},
+          .rbs        = {MIN_SLICE_RB, MAX_NOF_PRBS},
+          .priority   = PRIORITY}})
   {
   }
 

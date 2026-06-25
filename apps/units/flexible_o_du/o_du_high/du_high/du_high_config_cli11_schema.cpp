@@ -2122,9 +2122,45 @@ static void configure_cli11_slicing_scheduling_args(CLI::App&                   
              "Dedicated percentage of PRBs to be allocated to the slice")
       ->capture_default_str()
       ->check(CLI::Range(1U, 100U));
-  add_option(app, "--priority", slice_sched_params.priority, "Slice priority")
+  add_option(app,
+             "--min_prb_policy_ratio_dl",
+             slice_sched_params.min_prb_policy_ratio_dl,
+             "Minimum percentage of DL PRBs for the slice (overrides min_prb_policy_ratio in the downlink)")
+      ->check(CLI::Range(0U, 100U));
+  add_option(app,
+             "--max_prb_policy_ratio_dl",
+             slice_sched_params.max_prb_policy_ratio_dl,
+             "Maximum percentage of DL PRBs for the slice (overrides max_prb_policy_ratio in the downlink)")
+      ->check(CLI::Range(1U, 100U));
+  add_option(app,
+             "--ded_prb_policy_ratio_dl",
+             slice_sched_params.ded_prb_policy_ratio_dl,
+             "Dedicated percentage of DL PRBs for the slice (overrides ded_prb_policy_ratio in the downlink)")
+      ->check(CLI::Range(0U, 100U));
+  add_option(app,
+             "--min_prb_policy_ratio_ul",
+             slice_sched_params.min_prb_policy_ratio_ul,
+             "Minimum percentage of UL PRBs for the slice (overrides min_prb_policy_ratio in the uplink)")
+      ->check(CLI::Range(0U, 100U));
+  add_option(app,
+             "--max_prb_policy_ratio_ul",
+             slice_sched_params.max_prb_policy_ratio_ul,
+             "Maximum percentage of UL PRBs for the slice (overrides max_prb_policy_ratio in the uplink)")
+      ->check(CLI::Range(1U, 100U));
+  add_option(app,
+             "--ded_prb_policy_ratio_ul",
+             slice_sched_params.ded_prb_policy_ratio_ul,
+             "Dedicated percentage of UL PRBs for the slice (overrides ded_prb_policy_ratio in the uplink)")
+      ->check(CLI::Range(0U, 100U));
+  // TS 28.541
+  // TS 28.541; ITU-T X.731
+  add_option(app,
+             "--administrative_state",
+             slice_sched_params.administrative_state,
+             "Slice administrative state per 3GPP TS 28.541 (ITU-T X.731): \"UNLOCKED\" (served) or \"LOCKED\" (revoked,"
+             " scheduler allocates no resources)")
       ->capture_default_str()
-      ->check(CLI::Range(0U, 254U));
+      ->check(CLI::IsMember({"UNLOCKED", "LOCKED"}));
 
   // Scheduler policy configuration.
   CLI::App* policy_cfg_cmd =
@@ -2349,6 +2385,13 @@ static void configure_cli11_common_cell_args(CLI::App& app, du_high_unit_base_ce
 
   CLI::App* drx_subcmd = add_subcommand(app, "drx", "DRX parameters");
   configure_cli11_drx_args(*drx_subcmd, cell_params.drx_cfg);
+
+  add_option(app,
+             "--strict_slice_admission",
+             cell_params.strict_slice_admission,
+             "If true, a UE bearer requesting an S-NSSAI not configured in 'slicing' is refused at setup instead of "
+             "being silently served on the default slice")
+      ->capture_default_str();
 
   // Slicing configuration.
   auto slicing_lambda = [&cell_params](const std::vector<std::string>& values) {

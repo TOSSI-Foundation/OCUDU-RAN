@@ -595,8 +595,25 @@ static YAML::Node build_du_high_slice(const du_high_unit_cell_slice_config& conf
   sched_cfg_node["min_prb_policy_ratio"] = config.sched_cfg.min_prb_policy_ratio;
   sched_cfg_node["max_prb_policy_ratio"] = config.sched_cfg.max_prb_policy_ratio;
   sched_cfg_node["ded_prb_policy_ratio"] = config.sched_cfg.ded_prb_policy_ratio;
-  sched_cfg_node["priority"]             = config.sched_cfg.priority;
-  node["sched_cfg"]                      = sched_cfg_node;
+  if (config.sched_cfg.min_prb_policy_ratio_dl.has_value()) {
+    sched_cfg_node["min_prb_policy_ratio_dl"] = config.sched_cfg.min_prb_policy_ratio_dl.value();
+  }
+  if (config.sched_cfg.max_prb_policy_ratio_dl.has_value()) {
+    sched_cfg_node["max_prb_policy_ratio_dl"] = config.sched_cfg.max_prb_policy_ratio_dl.value();
+  }
+  if (config.sched_cfg.ded_prb_policy_ratio_dl.has_value()) {
+    sched_cfg_node["ded_prb_policy_ratio_dl"] = config.sched_cfg.ded_prb_policy_ratio_dl.value();
+  }
+  if (config.sched_cfg.min_prb_policy_ratio_ul.has_value()) {
+    sched_cfg_node["min_prb_policy_ratio_ul"] = config.sched_cfg.min_prb_policy_ratio_ul.value();
+  }
+  if (config.sched_cfg.max_prb_policy_ratio_ul.has_value()) {
+    sched_cfg_node["max_prb_policy_ratio_ul"] = config.sched_cfg.max_prb_policy_ratio_ul.value();
+  }
+  if (config.sched_cfg.ded_prb_policy_ratio_ul.has_value()) {
+    sched_cfg_node["ded_prb_policy_ratio_ul"] = config.sched_cfg.ded_prb_policy_ratio_ul.value();
+  }
+  node["sched_cfg"] = sched_cfg_node;
 
   return node;
 }

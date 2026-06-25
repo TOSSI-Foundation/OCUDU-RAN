@@ -7,6 +7,7 @@
 #include "../pucch_scheduling/pucch_allocator.h"
 #include "../uci_scheduling/uci_allocator.h"
 #include "ocudu/scheduler/scheduler_configurator.h"
+#include "ocudu/scheduler/scheduler_metrics.h"
 #include "ocudu/scheduler/scheduler_positioning_handler.h"
 
 namespace ocudu {
@@ -68,6 +69,8 @@ public:
 
   /// Called when cell is deactivated.
   virtual void stop() = 0;
+
+  virtual void collect_slice_metrics(std::vector<scheduler_slice_metrics>& out) const = 0;
 };
 
 /// Interface of data scheduler that is used to allocate UE DL and UL grants in a given slot

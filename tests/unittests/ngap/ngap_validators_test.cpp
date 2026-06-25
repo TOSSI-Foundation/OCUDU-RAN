@@ -189,7 +189,7 @@ TEST_F(ngap_validator_test, when_valid_request_received_then_pdu_session_setup_s
 
   ngap_ue_logger ue_logger{"NGAP", {ue_index, ran_ue_id}};
   // Verify PDU session resource setup request.
-  auto verification_outcome = verify_pdu_session_resource_setup_request(request, asn1_request, ue_logger);
+  auto verification_outcome = verify_pdu_session_resource_setup_request(request, asn1_request, {}, ue_logger);
 
   ASSERT_EQ(verification_outcome.request.pdu_session_res_setup_items.size(), 1U);
   ASSERT_EQ(verification_outcome.response.pdu_session_res_setup_response_items.size(), 0U);
@@ -212,7 +212,7 @@ TEST_F(ngap_validator_test, when_duplicate_pdu_session_id_then_pdu_session_setup
 
   ngap_ue_logger ue_logger{"NGAP", {ue_index, ran_ue_id}};
   // Verify PDU session resource setup request.
-  auto verification_outcome = verify_pdu_session_resource_setup_request(request, asn1_request, ue_logger);
+  auto verification_outcome = verify_pdu_session_resource_setup_request(request, asn1_request, {}, ue_logger);
 
   ASSERT_TRUE(verification_outcome.request.pdu_session_res_setup_items.empty());
   ASSERT_EQ(verification_outcome.response.pdu_session_res_failed_to_setup_items.size(), 1U);
@@ -234,7 +234,7 @@ TEST_F(ngap_validator_test, when_unique_and_duplicate_pdu_session_id_then_pdu_se
 
   ngap_ue_logger ue_logger{"NGAP", {ue_index, ran_ue_id}};
   // Verify PDU session resource setup request.
-  auto verification_outcome = verify_pdu_session_resource_setup_request(request, asn1_request, ue_logger);
+  auto verification_outcome = verify_pdu_session_resource_setup_request(request, asn1_request, {}, ue_logger);
 
   ASSERT_EQ(verification_outcome.request.pdu_session_res_setup_items.size(), 1U);
   ASSERT_EQ(verification_outcome.response.pdu_session_res_failed_to_setup_items.size(), 1U);
@@ -262,7 +262,7 @@ TEST_F(
 
   ngap_ue_logger ue_logger{"NGAP", {ue_index, ran_ue_id}};
   // Verify PDU session resource setup request.
-  auto verification_outcome = verify_pdu_session_resource_setup_request(request, asn1_request, ue_logger);
+  auto verification_outcome = verify_pdu_session_resource_setup_request(request, asn1_request, {}, ue_logger);
 
   ASSERT_TRUE(verification_outcome.request.pdu_session_res_setup_items.empty());
   ASSERT_EQ(verification_outcome.response.pdu_session_res_failed_to_setup_items.size(), 1U);

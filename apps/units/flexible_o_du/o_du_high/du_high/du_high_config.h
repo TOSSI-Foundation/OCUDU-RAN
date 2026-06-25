@@ -999,10 +999,27 @@ struct du_high_unit_cell_slice_sched_config {
   /// Sets the dedicated percentage of PRBs to be allocated to this slice.
   /// \remark This parameter must satisfy the inequality ded_prb_policy_ratio <= min_prb_policy_ratio.
   unsigned ded_prb_policy_ratio = 0;
-  /// Sets the slice priority. Values: {0,...,254}. 255 is reserved for the SRBs.
-  unsigned priority = 0;
+  std::optional<unsigned> min_prb_policy_ratio_dl;
+  std::optional<unsigned> max_prb_policy_ratio_dl;
+  std::optional<unsigned> ded_prb_policy_ratio_dl;
+  std::optional<unsigned> min_prb_policy_ratio_ul;
+  std::optional<unsigned> max_prb_policy_ratio_ul;
+  std::optional<unsigned> ded_prb_policy_ratio_ul;
+  /// ITU-T X.731; TS 28.541 clause 6.3.1; TS 28.531
+  std::string administrative_state = "UNLOCKED";
   /// Scheduler policy configuration for the slice. Default: Policy configured for the cell.
   std::optional<scheduler_policy_config> slice_policy_cfg;
+
+  unsigned min_dl_ratio() const { return min_prb_policy_ratio_dl.value_or(min_prb_policy_ratio); }
+  unsigned max_dl_ratio() const { return max_prb_policy_ratio_dl.value_or(max_prb_policy_ratio); }
+  unsigned ded_dl_ratio() const { return ded_prb_policy_ratio_dl.value_or(ded_prb_policy_ratio); }
+  unsigned min_ul_ratio() const { return min_prb_policy_ratio_ul.value_or(min_prb_policy_ratio); }
+  unsigned max_ul_ratio() const { return max_prb_policy_ratio_ul.value_or(max_prb_policy_ratio); }
+  unsigned ded_ul_ratio() const { return ded_prb_policy_ratio_ul.value_or(ded_prb_policy_ratio); }
+  bool has_ul_dl_split() const
+  {
+    return min_dl_ratio() != min_ul_ratio() or max_dl_ratio() != max_ul_ratio() or ded_dl_ratio() != ded_ul_ratio();
+  }
 };
 
 /// Radio Link Monitoring Config for a cell.
@@ -1092,6 +1109,7 @@ struct du_high_unit_base_cell_config {
   du_high_unit_drx_config drx_cfg;
   /// Network slice configuration.
   std::vector<du_high_unit_cell_slice_config> slice_cfg;
+  bool strict_slice_admission = false;
   /// NTN configuration.
   std::optional<du_high_unit_cell_ntn_config> ntn_cfg;
   /// Radio Link Monitoring configuration.

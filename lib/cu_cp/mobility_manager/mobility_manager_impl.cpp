@@ -3,8 +3,12 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "mobility_manager_impl.h"
+#include "../cell_meas_manager/cell_meas_manager_impl.h"
+#include "../cell_meas_manager/slice_aware_matching.h"
 #include "../du_processor/du_processor_repository.h"
+#include "ocudu/cu_cp/up_context.h"
 #include "ocudu/ran/nr_cgi.h"
+#include <algorithm>
 #include <optional>
 #include <set>
 #include <vector>
@@ -12,16 +16,36 @@
 using namespace ocudu;
 using namespace ocucp;
 
+namespace {
+
+// TS 23.501 clause 5.15.2
+std::vector<s_nssai_t> get_ue_active_snssais(cu_cp_ue& ue)
+{
+  std::vector<s_nssai_t> snssais;
+  for (const auto& [psi, session] : ue.get_up_resource_manager().get_pdu_sessions_map()) {
+    for (const auto& [drb_id, drb] : session.drbs) {
+      if (std::none_of(snssais.begin(), snssais.end(), [&drb](const s_nssai_t& s) { return s == drb.s_nssai; })) {
+        snssais.push_back(drb.s_nssai);
+      }
+    }
+  }
+  return snssais;
+}
+
+} // namespace
+
 mobility_manager::mobility_manager(const mobility_manager_cfg&      cfg_,
                                    mobility_manager_cu_cp_notifier& cu_cp_notifier_,
                                    ngap_repository&                 ngap_db_,
                                    du_processor_repository&         du_db_,
-                                   ue_manager&                      ue_mng_) :
+                                   ue_manager&                      ue_mng_,
+                                   cell_meas_manager&               cell_meas_mng_) :
   cfg(cfg_),
   cu_cp_notifier(cu_cp_notifier_),
   ngap_db(ngap_db_),
   du_db(du_db_),
   ue_mng(ue_mng_),
+  cell_meas_mng(cell_meas_mng_),
   logger(ocudulog::fetch_basic_logger("CU-CP"))
 {
 }
@@ -119,7 +143,20 @@ void mobility_manager::handle_conditional_handover(
       logger.warning("ue={}: CHO preparation failed. Could not find CGI for PCI {}", ue_index, target_pci);
       return;
     }
+    // TS 23.501 clause 5.15.3; TS 38.413; TS 38.423
+    if (not target_cell_supports_ue_slices(ue_index, cgi.value().nci)) {
+      logger.info("ue={}: CHO candidate pci={} skipped: target cell does not support all of the UE's active slices",
+                  ue_index,
+                  target_pci);
+      continue;
+    }
     targets.push_back({target_pci, cgi.value(), target_du});
+  }
+
+  if (targets.empty()) {
+    metrics_handler.aggregate_suppressed_handover_slice_mismatch();
+    logger.info("ue={}: CHO suppressed: no slice-compatible target candidate", ue_index);
+    return;
   }
 
   // Check if CHO is already pending.
@@ -167,7 +204,40 @@ void mobility_manager::handle_neighbor_better_than_spcell(ue_index_t       ue_in
     logger.debug("ue={}: Ignoring better neighbor pci={}", ue_index, neighbor_pci);
     return;
   }
+
+  // TS 23.501 clause 5.15.3; TS 38.413; TS 38.423
+  if (not target_cell_supports_ue_slices(ue_index, neighbor_nci)) {
+    metrics_handler.aggregate_suppressed_handover_slice_mismatch();
+    logger.info(
+        "ue={}: Handover suppressed: target pci={} (nci={:#x}) does not support all of the UE's active slices",
+        ue_index,
+        neighbor_pci,
+        neighbor_nci);
+    return;
+  }
+
   handle_handover(ue_index, neighbor_gnb_id, neighbor_nci, neighbor_pci);
+}
+
+bool mobility_manager::target_cell_supports_ue_slices(ue_index_t ue_index, nr_cell_identity target_nci)
+{
+  cu_cp_ue* u = ue_mng.find_du_ue(ue_index);
+  if (u == nullptr) {
+    return true;
+  }
+
+  const std::vector<s_nssai_t> ue_slices = get_ue_active_snssais(*u);
+  if (ue_slices.empty()) {
+    logger.debug("ue={}: Slice check skipped: UE has no active DRB/slice", ue_index);
+    return true;
+  }
+
+  std::optional<cell_meas_config> target_cfg = cell_meas_mng.get_cell_config(target_nci);
+  if (not target_cfg.has_value()) {
+    return true;
+  }
+
+  return cell_supports_all_ue_slices(target_cfg->serving_cell_cfg.supported_slices, ue_slices);
 }
 
 void mobility_manager::handle_handover(ue_index_t       ue_index,

@@ -8,6 +8,7 @@
 #include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/ran/band_helper.h"
 #include "ocudu/ran/nr_cgi.h"
+#include "ocudu/ran/s_nssai.h"
 #include "ocudu/ran/tac.h"
 #include <string>
 
@@ -37,6 +38,8 @@ struct du_cell_configuration {
   du_sys_info sys_info;
   /// Deactivated PLMN identitys initially served by the cell.
   std::vector<plmn_identity> deactivated_plmns;
+  /// TS 23.501 clause 5.15.3; TS 38.423; TS 38.413; TS 38.473
+  std::vector<s_nssai_t> supported_slices;
 };
 
 } // namespace ocucp

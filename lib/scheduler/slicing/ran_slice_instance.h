@@ -72,6 +72,22 @@ public:
   float average_pdsch_rbs_per_slot() const { return avg_pdsch_rbs_per_slot; }
   float average_pusch_rbs_per_slot() const { return avg_pusch_rbs_per_slot; }
 
+  /// TS 28.552
+  float metric_avg_pdsch_rbs_per_slot() const
+  {
+    return metric_nof_slots != 0 ? static_cast<float>(metric_pdsch_rb_sum) / metric_nof_slots : 0.0F;
+  }
+  float metric_avg_pusch_rbs_per_slot() const
+  {
+    return metric_nof_slots != 0 ? static_cast<float>(metric_pusch_rb_sum) / metric_nof_slots : 0.0F;
+  }
+  void reset_metric_period() const
+  {
+    metric_pdsch_rb_sum = 0;
+    metric_pusch_rb_sum = 0;
+    metric_nof_slots    = 0;
+  }
+
   ran_slice_id_t            id;
   const cell_configuration* cell_cfg;
   slice_rrm_policy_config   cfg;
@@ -95,9 +111,13 @@ private:
   // Last slot that the PUSCH was allocated.
   slot_point last_pusch_alloc_slot;
 
-  // Track average number of RBs scheduler per slice.
   float avg_pdsch_rbs_per_slot = 0;
   float avg_pusch_rbs_per_slot = 0;
+
+  // TS 28.552
+  mutable uint64_t metric_pdsch_rb_sum = 0;
+  mutable uint64_t metric_pusch_rb_sum = 0;
+  mutable unsigned metric_nof_slots    = 0;
 
   slice_ue_repository slice_ues;
 };

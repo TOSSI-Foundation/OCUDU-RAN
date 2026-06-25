@@ -324,12 +324,20 @@ generate_du_slicing_rrm_policy_config(span<const std::string>                   
       rrm_policy_cfgs.back().rrc_member.s_nssai =
           s_nssai_t{slice_service_type{cfg.sst}, slice_differentiator::create(cfg.sd).value()};
       rrm_policy_cfgs.back().rrc_member.plmn_id = plmn_identity::parse(plmn).value();
-      unsigned min_rbs                          = (nof_cell_crbs * cfg.sched_cfg.min_prb_policy_ratio) / 100;
-      unsigned max_rbs                          = (nof_cell_crbs * cfg.sched_cfg.max_prb_policy_ratio) / 100;
-      unsigned ded_rbs                          = (nof_cell_crbs * cfg.sched_cfg.ded_prb_policy_ratio) / 100;
-      rrm_policy_cfgs.back().rbs                = {ded_rbs, min_rbs, max_rbs};
-      rrm_policy_cfgs.back().priority           = cfg.sched_cfg.priority;
-      rrm_policy_cfgs.back().policy_sched_cfg   = cfg.sched_cfg.slice_policy_cfg.value_or(default_policy_sched_cfg);
+      const auto& sc                            = cfg.sched_cfg;
+      unsigned dl_min            = (nof_cell_crbs * sc.min_dl_ratio()) / 100;
+      unsigned dl_max            = (nof_cell_crbs * sc.max_dl_ratio()) / 100;
+      unsigned dl_ded            = (nof_cell_crbs * sc.ded_dl_ratio()) / 100;
+      rrm_policy_cfgs.back().rbs = {dl_ded, dl_min, dl_max};
+      if (sc.has_ul_dl_split()) {
+        unsigned ul_min              = (nof_cell_crbs * sc.min_ul_ratio()) / 100;
+        unsigned ul_max              = (nof_cell_crbs * sc.max_ul_ratio()) / 100;
+        unsigned ul_ded              = (nof_cell_crbs * sc.ded_ul_ratio()) / 100;
+        rrm_policy_cfgs.back().rbs_ul = rrm_policy_ratio_rb_limits{ul_ded, ul_min, ul_max};
+      }
+      // TS 28.541
+      rrm_policy_cfgs.back().administrative_unlocked = (cfg.sched_cfg.administrative_state != "LOCKED");
+      rrm_policy_cfgs.back().policy_sched_cfg = cfg.sched_cfg.slice_policy_cfg.value_or(default_policy_sched_cfg);
     }
   }
   return rrm_policy_cfgs;
@@ -958,6 +966,7 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
     std::vector<std::string> cell_plmns{base_cell.plmn};
     out_cell.rrm_policy_members = generate_du_slicing_rrm_policy_config(
         cell_plmns, base_cell.slice_cfg, nof_crbs, *cell.cell.scheduler_cfg.policy_cfg);
+    out_cell.strict_slice_admission = base_cell.strict_slice_admission;
 
     error_type<std::string> error = is_du_cell_config_valid(out_cfg.back());
     if (!error) {

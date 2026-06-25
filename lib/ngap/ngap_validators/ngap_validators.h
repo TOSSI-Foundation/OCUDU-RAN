@@ -26,6 +26,7 @@ struct pdu_session_resource_setup_validation_outcome {
 pdu_session_resource_setup_validation_outcome
 verify_pdu_session_resource_setup_request(const cu_cp_pdu_session_resource_setup_request&    request,
                                           const asn1::ngap::pdu_session_res_setup_request_s& asn1_request,
+                                          const std::vector<s_nssai_t>&                      supported_snssais,
                                           const ngap_ue_logger&                              logger);
 
 struct pdu_session_resource_modify_validation_outcome {

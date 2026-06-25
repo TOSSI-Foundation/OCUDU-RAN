@@ -160,6 +160,14 @@ static YAML::Node build_cu_cp_mobility_cells_section(const cu_cp_unit_cell_confi
     node["ssb_duration"] = config.ssb_duration.value();
   }
 
+  // TS 23.003
+  for (const auto& slice : config.supported_slices) {
+    YAML::Node slice_node;
+    slice_node["sst"] = slice.sst;
+    slice_node["sd"]  = slice.sd;
+    node["supported_slices"].push_back(slice_node);
+  }
+
   for (const auto& ncell : config.ncells) {
     node["ncells"] = build_cu_cp_mobility_ncells_section(ncell);
   }

@@ -8,6 +8,7 @@
 #include "ocudu/ran/gnb_id.h"
 #include "ocudu/ran/nr_cgi.h"
 #include "ocudu/ran/plmn_identity.h"
+#include "ocudu/ran/s_nssai.h"
 #include "ocudu/ran/subcarrier_spacing.h"
 #include "ocudu/rrc/meas_types.h"
 #include <map>
@@ -31,6 +32,8 @@ struct serving_cell_meas_config {
   std::optional<rrc_ssb_mtc>        ssb_mtc;   ///< SSB measurement and timing config.
   std::optional<arfcn_t>            ssb_arfcn; ///< SSB ARFCN.
   std::optional<subcarrier_spacing> ssb_scs;   ///< SSB subcarrier spacing.
+  /// TS 23.501 clause 5.15.3; TS 38.423; TS 38.413
+  std::vector<s_nssai_t> supported_slices;
 };
 
 struct neighbor_cell_meas_config {

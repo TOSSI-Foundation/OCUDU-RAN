@@ -16,7 +16,9 @@ class common_ran_slice_candidate
 {
 public:
   common_ran_slice_candidate(ran_slice_instance& instance_, slot_point slot_tx_, unsigned max_rbs_ = 0) :
-    inst(&instance_), max_rbs(max_rbs_ == 0 ? inst->cfg.rbs.max() : max_rbs_), slot_tx(slot_tx_)
+    inst(&instance_),
+    max_rbs(max_rbs_ == 0 ? (IsDl ? inst->cfg.dl_rbs() : inst->cfg.ul_rbs()).max() : max_rbs_),
+    slot_tx(slot_tx_)
   {
   }
 

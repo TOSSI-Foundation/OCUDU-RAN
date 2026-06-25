@@ -279,6 +279,8 @@ bool intra_cu_handover_routine::generate_ue_context_setup_request(f1ap_ue_contex
       f1ap_drb_to_setup drb_item;
       drb_item.drb_id           = drb_context.drb_id;
       drb_item.qos_info.drb_qos = drb_context.qos_params;
+      // TS 23.501; TS 38.413; TS 38.473
+      drb_item.qos_info.s_nssai = drb_context.s_nssai;
 
       // Add each QoS flow including QoS.
       for (const auto& flow : drb_context.qos_flows) {

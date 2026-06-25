@@ -21,7 +21,14 @@ public:
                                       pci_t            neighbor_pci) override
   {
     fmt::print("on_neighbor_better_than_spcell() called.\n");
+    ++nof_notifications;
+    last_neighbor_pci = neighbor_pci;
+    last_neighbor_nci = neighbor_nci;
   }
+
+  unsigned                        nof_notifications = 0;
+  std::optional<pci_t>            last_neighbor_pci;
+  std::optional<nr_cell_identity> last_neighbor_nci;
 };
 
 /// Fixture class to create cell meas manager object.

@@ -1,0 +1,127 @@
+# O-DU (monolithic L1+L2) — ZMQ radio, 40 MHz variant of du_liteon_zmq.yaml.
+#
+# 40 MHz / 30 kHz SCS -> 106 RB -> FFT 2048 -> srate 61.44 Msps.
+# The OAI UE must match: run with  -r 106  (no -E). srate is auto-derived by the UE
+# from -r 106 + numerology 1, so it lands on 61.44 to match this DU.
+# Use this for a HIGH-THROUGHPUT single/low-UE test (more PRBs = higher peak rate).
+# SSB offset/k_ssb left AUTO (band_helper); the UE should SCAN for it
+# (--ue-scan-carrier) so you don't need the exact --ssb.
+
+# ── F1 toward the CU (same as the other variants) ────────────────────────────
+f1ap:
+  cu_cp_addr: 127.0.10.1
+  bind_addr: 127.0.1.2
+
+f1u:
+  socket:
+    -
+      bind_addr: 127.0.1.2
+
+expert_phy:
+  allow_request_on_empty_uplink_slot: true
+
+# ── Radio: ZMQ. srate MUST match the 40 MHz cell: 40 MHz/30 kHz -> 61.44 Msps ─
+ru_sdr:
+  device_driver: zmq
+  device_args: tx_port=tcp://127.0.0.1:4556,rx_port=tcp://127.0.0.1:4557
+  srate: 61.44                     # was 30.72 @ 20 MHz
+  tx_gain: 80
+  rx_gain: 40
+
+# ── Cell: 40 MHz / 1x1, same center (3489.42 MHz) as the 20 MHz cell ─────────
+cell_cfg:
+  dl_arfcn: 632628                 # center 3489.42 MHz (matches UE -C 3489420000)
+  band: 78
+  channel_bandwidth_MHz: 40        # was 20  -> 106 RB
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+  nof_antennas_dl: 1
+  nof_antennas_ul: 1
+
+  # Strict slice admission. A DRB whose S-NSSAI is NOT in the `slicing` list below is
+  # REJECTED at the DU (failed_drbs_setups, cause no_radio_res_available). sd3 is not
+  # listed -> a UE on sst1/sd3 is refused by the RAN even though the 5GC has SMF3/UPF3
+  # for it. Set false to admit any slice (legacy behaviour).
+  strict_slice_admission: true
+
+  prach:
+    preamble_trans_max: 200
+    # 64 contention-based preambles (max) so 8 UEs racing PRACH at once rarely
+    # collide on the same preamble. (Default is already 64; set explicitly.)
+    total_nof_ra_preambles: 64
+
+  # ── RLF tolerance (ZMQ sim) — same as du_liteon_zmq.yaml (20 MHz) ────────────
+  # Default n310=1 declares T310/RLF on a SINGLE missed UL slot; under ZMQ jitter
+  # this fires constantly -> UE drops oaitun_ue1 + re-syncs -> no sustained data
+  # path. n310=10 (10 consecutive OOS), t310=2s, t311=3s lets a jitter burst pass.
+  sib:
+    n310: 10
+    t310: 2000
+    n311: 1
+    t311: 3000
+
+  # ── PDCCH: widen the COMMON search space so the gNB can address several UEs ──
+  # per slot during the RRC-setup burst. Default ss1_n_candidates {0,0,1,0,0} =
+  # ONE AL4 candidate -> only 1 UE can get RAR/Msg4 per slot -> "No space in
+  # PDCCH" when all 8 UEs RACH simultaneously -> UEContextRelease -> no IP.
+  # {0,0,2,1,0} = 2x AL4 + 1x AL8 = 3 common-SS candidates (3x the RA/Msg4
+  # addressing). Order is [AL1, AL2, AL4, AL8, AL16]; allowed {0,1,2,3,4,5,6,8}.
+  pdcch:
+    common:
+      ss1_n_candidates: [0, 0, 2, 1, 0]
+
+  # ── Network slicing: 4-slice system, DU SUPPORTS ONLY sd1/sd2/sd4 ────────────
+  # sd3 is deliberately ABSENT here; with strict_slice_admission:true (above) a UE on
+  # sst1/sd3 has its DRB REJECTED at the DU — the 5GC still has SMF3/UPF3 for sd3, so
+  # the core sets the session up but the RAN refuses it -> no data path.
+  #
+  # Per-slice RRM policy ratios (TS 28.541 RRMPolicyRatio):
+  #   - independent UL/DL ratios    -> sd1 has *_ul overrides (UL guarantee ≠ DL).
+  #   - max cap (rRMPolicyMaxRatio) -> sd2 capped at 50% even when the cell is idle.
+  #   - min floor + dedicated reserve (ded_prb_policy_ratio, reserved even if idle).
+  #   - administrative_state UNLOCKED|LOCKED -> flip sd4 to "LOCKED" to revoke it
+  #     (scheduler then gives sd4 zero PRBs; its UEs keep RRC but get no data).
+  #   - per-slice metrics (enabled below) print per S-NSSAI ("Scheduler slice ... sst/sd").
+  # Validator: ΣminDL=40+20+20=80, ΣminUL=25+20+20=65, Σded≤45 — all ≤100, and
+  # ded≤min≤max per slice.
+  slicing:
+    - sst: 1                          # sd1 — eMBB: dedicated reserve + UL/DL split
+      sd: 1
+      sched_cfg:
+        min_prb_policy_ratio: 40      # DL floor
+        max_prb_policy_ratio: 100
+        ded_prb_policy_ratio: 20      # 20% reserved for sd1 even if idle
+        min_prb_policy_ratio_ul: 25   # UL guarantee differs from DL
+        max_prb_policy_ratio_ul: 80
+        ded_prb_policy_ratio_ul: 10
+        administrative_state: "UNLOCKED"
+    - sst: 1                          # sd2 — URLLC: max cap + dedicated reserve
+      sd: 2
+      sched_cfg:
+        min_prb_policy_ratio: 20
+        max_prb_policy_ratio: 50      # hard cap at 50% of PRBs
+        ded_prb_policy_ratio: 15
+        administrative_state: "UNLOCKED"
+    - sst: 1                          # sd4 — mMTC: administrative revoke demo
+      sd: 4
+      sched_cfg:
+        min_prb_policy_ratio: 20
+        max_prb_policy_ratio: 60
+        ded_prb_policy_ratio: 10
+        administrative_state: "LOCKED"
+    # sd3 intentionally OMITTED -> rejected by strict_slice_admission.
+
+log:
+  filename: du.log
+  all_level: info
+  phy_level: warning
+  fapi_level: warning   # logs the CONFIG.request SSB params (offset_to_pointA / k_ssb)]
+
+metrics:
+  enable_log: true              # master gate (default false) -> prints "Scheduler slice"/"Scheduler cell"
+  periodicity:
+    du_report_period: 1000      # ms between reports (default 1000)
+  layers:
+    enable_sched: true          # scheduler metrics (default true, set explicit)

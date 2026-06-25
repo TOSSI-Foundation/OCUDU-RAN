@@ -15,6 +15,7 @@ using namespace asn1::ngap;
 ngap_pdu_session_resource_setup_procedure::ngap_pdu_session_resource_setup_procedure(
     const cu_cp_pdu_session_resource_setup_request&    request_,
     const asn1::ngap::pdu_session_res_setup_request_s& asn1_request_,
+    std::vector<s_nssai_t>                             supported_snssais_,
     const ngap_ue_ids&                                 ue_ids_,
     ngap_cu_cp_notifier&                               cu_cp_notifier_,
     ngap_metrics_aggregator&                           metrics_handler_,
@@ -22,6 +23,7 @@ ngap_pdu_session_resource_setup_procedure::ngap_pdu_session_resource_setup_proce
     ngap_ue_logger&                                    logger_) :
   request(request_),
   asn1_request(asn1_request_),
+  supported_snssais(std::move(supported_snssais_)),
   ue_ids(ue_ids_),
   cu_cp_notifier(cu_cp_notifier_),
   metrics_handler(metrics_handler_),
@@ -41,7 +43,8 @@ void ngap_pdu_session_resource_setup_procedure::operator()(coro_context<async_ta
   logger.log_debug("\"{}\" started...", name());
 
   // Verify PDU Session Resource Setup Request.
-  verification_outcome = verify_pdu_session_resource_setup_request(request, asn1_request, logger);
+  verification_outcome =
+      verify_pdu_session_resource_setup_request(request, asn1_request, supported_snssais, logger);
 
   if (verification_outcome.request.pdu_session_res_setup_items.empty()) {
     logger.log_info("Validation of PDUSessionResourceSetupRequest failed");

@@ -18,6 +18,7 @@ class ngap_pdu_session_resource_setup_procedure
 public:
   ngap_pdu_session_resource_setup_procedure(const cu_cp_pdu_session_resource_setup_request&    request_,
                                             const asn1::ngap::pdu_session_res_setup_request_s& asn1_request_,
+                                            std::vector<s_nssai_t>                             supported_snssais_,
                                             const ngap_ue_ids&                                 ue_ids_,
                                             ngap_cu_cp_notifier&                               cu_cp_notifier_,
                                             ngap_metrics_aggregator&                           metrics_handler_,
@@ -36,6 +37,7 @@ private:
 
   const cu_cp_pdu_session_resource_setup_request    request;
   const asn1::ngap::pdu_session_res_setup_request_s asn1_request;
+  const std::vector<s_nssai_t>                      supported_snssais;
   cu_cp_pdu_session_resource_setup_response         validation_response;
   byte_buffer                                       nas_pdu;
   const ngap_ue_ids                                 ue_ids;

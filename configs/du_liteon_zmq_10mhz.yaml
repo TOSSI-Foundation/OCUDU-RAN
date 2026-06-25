@@ -1,0 +1,87 @@
+# O-DU (monolithic L1+L2) — ZMQ radio, 10 MHz variant of du_liteon_zmq.yaml.
+#
+# WHY 10 MHz: this box has 11 cores for up to 10 OAI UEs (~28 RT threads each).
+# 20 MHz / 51 RB costs ~1 core of PHY per UE -> at 10 UEs the box saturates,
+# UEs lose ZMQ-lockstep sync, and only a few complete the PDU session / get an IP.
+# 10 MHz / 24 RB roughly HALVES per-UE PHY CPU (FFT 512 vs 1024), giving the
+# headroom for all 10 UEs to hold sync and get IPs. Use 20 MHz for <=5 UEs
+# (better per-UE throughput), 10 MHz for the full 10-UE data-plane run.
+#
+# Cell math: 10 MHz / 30 kHz SCS -> 24 RB -> FFT 512 -> srate 15.36 Msps.
+# The OAI UE must match: run with -r 24 (no -E). srate is auto-derived by the UE
+# from -r 24 + numerology 1, so it lands on 15.36 to match this DU.
+# SSB offset/k_ssb are LEFT AUTO (srsRAN band_helper places them for 10 MHz); the
+# DU prints them at startup ("ssb_offset_to_pointA=.. ssb_k=..", warning level) so
+# clean_start.sh auto-derives the UE --ssb = (offset_to_pointA*12 + k_ssb)/2.
+
+# ── F1 toward the CU (same as 20 MHz variant) ────────────────────────────────
+f1ap:
+  cu_cp_addr: 127.0.10.1            # CU-CP F1-C address (cu.yml f1ap.bind_addrs)
+  bind_addr: 127.0.1.2             # this DU's F1-C address
+
+f1u:
+  socket:
+    -
+      bind_addr: 127.0.1.2
+
+# ── L1 timing knob (same) ────────────────────────────────────────────────────
+expert_phy:
+  allow_request_on_empty_uplink_slot: true
+
+# ── Radio: ZMQ. srate MUST match the 10 MHz cell: 10 MHz/30 kHz -> 15.36 Msps ─
+ru_sdr:
+  device_driver: zmq
+  device_args: tx_port=tcp://127.0.0.1:4556,rx_port=tcp://127.0.0.1:4557
+  srate: 15.36                     # was 30.72 @ 20 MHz
+  tx_gain: 80
+  rx_gain: 40
+
+# ── Cell: 10 MHz / 1x1, same center (3489.42 MHz) as the 20 MHz cell ─────────
+cell_cfg:
+  dl_arfcn: 632628                 # same DL center as 20 MHz; carrier just narrows
+  band: 78
+  channel_bandwidth_MHz: 10        # was 20  -> 24 RB
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+  nof_antennas_dl: 1
+  nof_antennas_ul: 1
+  # SSB offset/k_ssb/coreset0/TDD left auto-derived for 10 MHz (band_helper).
+  prach:
+    # Many UEs contend on PRACH; raise retry budget so stragglers keep trying.
+    # Do NOT set ra_resp_window (an explicit value closes the RAR window early).
+    preamble_trans_max: 200
+  sib:
+    # ZMQ sim fix: default n310=1 + t310=1000ms causes RLF on first ZMQ jitter
+    # burst under 10-UE CPU load. 10 consecutive OOS events + 2s window prevents
+    # spurious Radio Link Failure during multi-UE simulation startup.
+    n310: 10
+    t310: 2000
+    # Re-establishment window: 3s (default 1s too tight under 10-UE ZMQ CPU load).
+    # n311=1: only 1 in-sync event needed to confirm recovery — keeps reconnect fast.
+    n311: 1
+    t311: 3000
+
+  # ── Network slicing: 2 RAN slices with different PRB guarantees ───────────────
+  # Mirrors the 20 MHz config: SST=1 (eMBB) gets >=25% min, SST=2 (URLLC) gets
+  # >=50% min.  At 24 RB (10 MHz) these ratios translate to ~6 RB min for eMBB
+  # and ~12 RB min for URLLC — still meaningful under 4-6 UE contention.
+  # The same SST=2 must be advertised in cu.yml tai_slice_support_list, the 5GC
+  # (AMF/SMF/UPF) and each URLLC subscriber's allowed-NSSAI.
+  slicing:
+    - sst: 1
+      sched_cfg:
+        min_prb_policy_ratio: 25
+        max_prb_policy_ratio: 100
+    - sst: 2
+      sched_cfg:
+        min_prb_policy_ratio: 50
+        max_prb_policy_ratio: 100
+
+log:
+  filename: du.log
+  all_level: warning
+  phy_level: warning
+  fapi_level: warning   # SEPARATE channel — needed so the CONFIG.request line (ssb_offset_to_pointA
+                        # / ssb_k / dl_bw) is logged; clean_start.sh parses it to auto-derive --ssb.

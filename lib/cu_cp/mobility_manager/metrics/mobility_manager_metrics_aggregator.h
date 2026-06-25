@@ -23,6 +23,8 @@ public:
   /// \brief Aggregates the metrics for the successful handover execution.
   void aggregate_successful_handover_execution();
 
+  void aggregate_suppressed_handover_slice_mismatch();
+
   mobility_management_metrics request_metrics_report() const;
 
 private:
