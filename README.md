@@ -170,6 +170,59 @@ The Host-B L2-side transport knobs (`xsm_pair_index`, `xsm_file_prefix`, `dpdk_p
 
 ---
 
+## Network slicing
+
+The stack implements end-to-end 5G network slicing across the DU scheduler, DU/CU admission, and CU-CP mobility. A slice is one **S-NSSAI** (`SST` + optional `SD`); slices are configured per cell and enforced from the radio scheduler up to the NGAP interface.
+
+### Per-slice radio resource management
+
+The DU scheduler partitions PRBs per slice every slot using **TS 28.541 RRMPolicyRatio** (`dedicated ≤ min ≤ max`, independent UL/DL):
+
+```yaml
+cell_cfg:
+  strict_slice_admission: true        # refuse DRBs whose S-NSSAI is not configured below
+  slicing:
+    - sst: 1
+      sd: 1
+      sched_cfg:
+        min_prb_policy_ratio: 40        # guaranteed floor (rRMPolicyMinRatio)
+        max_prb_policy_ratio: 100       # hard cap       (rRMPolicyMaxRatio)
+        ded_prb_policy_ratio: 20        # reserved even if idle (rRMPolicyDedicatedRatio)
+        min_prb_policy_ratio_ul: 25     # independent UL guarantee (UL ≠ DL)
+        administrative_state: "UNLOCKED"  # set "LOCKED" to revoke the slice (zero PRBs)
+```
+
+| Capability | Mechanism |
+|---|---|
+| Min / max / dedicated PRB tiers | `inter_slice_scheduler` RB-limit computation per slice |
+| Independent UL/DL ratios | `*_prb_policy_ratio_ul` overrides; direction-specific limits |
+| Administrative lock | `administrative_state: LOCKED` → slice receives zero PRBs |
+| Config validation | DU validator: `ded ≤ min ≤ max` per slice and `Σmin ≤ 100%` per direction |
+
+### Admission control
+
+| Layer | Behaviour |
+|---|---|
+| **DU** | `strict_slice_admission` refuses a DRB whose S-NSSAI is not in the cell's `slicing` list. |
+| **CU-CP** | NGAP validates each PDU session's S-NSSAI against the node's `tai_slice_support_list`; an unsupported slice is rejected with cause *slice-not-supported*. |
+
+### Slice-aware mobility
+
+On a handover the CU-CP checks whether the target cell can serve **all of the UE's active slices** before proceeding. Per-cell supported slices are declared under `cu_cp.mobility.cells[].supported_slices`; a handover to a cell that cannot serve the UE's slices is vetoed (forced and measurement-triggered paths) or re-ranked toward a slice-compatible neighbour, and the S-NSSAI is propagated to the target DU over F1.
+
+### Per-slice performance metrics (O1)
+
+Each UE's scheduler metrics are tagged with its S-NSSAI, so per-slice PM can be aggregated downstream over the O1 interface. The per-UE metrics JSON carries `sst` (and `sd` when set). The slice is sourced from the UE's data-plane bearer config at creation/reconfiguration. Enable the JSON metrics stream and the remote-control channel via the `metrics` and `remote_control` config blocks.
+
+### Configuration
+
+| File | Role |
+|---|---|
+| [`configs/du_liteon_zmq_40mhz.yaml`](configs/du_liteon_zmq_40mhz.yaml) | 4-slice DU config over a 40 MHz ZMQ cell (per-slice RRM ratios, strict admission). |
+| [`configs/config_o1.yaml`](configs/config_o1.yaml) | Monolithic gNB config that declares slices, opens the `remote_control` channel, and enables the JSON scheduler metrics stream carrying the per-slice S-NSSAI. |
+
+---
+
 ## Documentation
 
 | Document | Contents |
