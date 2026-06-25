@@ -7,6 +7,7 @@
 #include "ocudu/ran/du_types.h"
 #include "ocudu/ran/pci.h"
 #include "ocudu/ran/rnti.h"
+#include "ocudu/ran/s_nssai.h"
 
 namespace ocudu {
 
@@ -21,6 +22,9 @@ public:
 
   /// Handle a reconfiguration of an existing UE.
   virtual void handle_ue_reconfiguration(du_ue_index_t ue_index) = 0;
+
+  /// Update the S-NSSAI (slice) associated with a UE, for per-slice metrics. Default no-op.
+  virtual void handle_ue_slice_update(du_ue_index_t ue_index, const s_nssai_t& s_nssai) {}
 
   /// Removes a UE from the reported metrics.
   virtual void handle_ue_deletion(du_ue_index_t ue_index) = 0;

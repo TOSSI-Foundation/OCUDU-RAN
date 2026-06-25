@@ -98,6 +98,7 @@ class cell_metrics_handler final : public sched_metrics_ue_configurator
     pci_t                                  pci;
     du_ue_index_t                          ue_index;
     rnti_t                                 rnti;
+    s_nssai_t                              s_nssai{};
     unsigned                               last_bsr = 0;
     std::optional<int>                     last_phr;
     std::array<unsigned, MAX_NOF_RB_LCIDS> last_dl_bs{0};
@@ -183,6 +184,9 @@ public:
 
   /// \brief Register UE reconfiguration.
   void handle_ue_reconfiguration(du_ue_index_t ue_index) override;
+
+  /// \brief Update the S-NSSAI (slice) associated with a UE, for per-slice metrics.
+  void handle_ue_slice_update(du_ue_index_t ue_index, const s_nssai_t& s_nssai) override;
 
   /// \brief Register removal of a UE.
   void handle_ue_deletion(du_ue_index_t ue_index) override;

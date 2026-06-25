@@ -97,6 +97,16 @@ void cell_metrics_handler::handle_ue_reconfiguration(du_ue_index_t ue_index)
   }
 }
 
+void cell_metrics_handler::handle_ue_slice_update(du_ue_index_t ue_index, const s_nssai_t& s_nssai)
+{
+  if (not enabled()) {
+    return;
+  }
+  if (ues.contains(ue_index)) {
+    ues[ue_index].s_nssai = s_nssai;
+  }
+}
+
 void cell_metrics_handler::handle_ue_deletion(du_ue_index_t ue_index)
 {
   if (not enabled()) {
@@ -594,6 +604,7 @@ cell_metrics_handler::ue_metric_context::compute_report(std::chrono::millisecond
   ret.ue_index            = ue_index;
   ret.pci                 = pci;
   ret.rnti                = rnti;
+  ret.s_nssai             = s_nssai;
   ret.cqi_stats           = data.cqi;
   ret.dl_ri_stats         = data.dl_ri;
   uint8_t mcs             = data.nof_dl_cws > 0 ? std::round(static_cast<float>(data.dl_mcs) / data.nof_dl_cws) : 0;

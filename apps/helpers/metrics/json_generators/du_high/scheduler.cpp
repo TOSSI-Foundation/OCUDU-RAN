@@ -40,6 +40,10 @@ void to_json(nlohmann::json& json, const scheduler_ue_metrics& metrics)
   json["ue"]   = metrics.ue_index;
   json["pci"]  = metrics.pci;
   json["rnti"] = metrics.rnti;
+  json["sst"]  = metrics.s_nssai.sst.value();
+  if (metrics.s_nssai.sd.is_set()) {
+    json["sd"] = metrics.s_nssai.sd.value();
+  }
   json["cqi"]  = (metrics.cqi_stats.get_nof_observations() > 0)
                      ? static_cast<uint8_t>(std::round(metrics.cqi_stats.get_mean()))
                      : -1;

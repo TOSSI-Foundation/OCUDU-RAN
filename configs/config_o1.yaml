@@ -1,0 +1,85 @@
+cu_cp:
+  amf:
+    addrs: 192.168.70.132
+    port: 38412
+    bind_addrs: 192.168.70.129
+    supported_tracking_areas:
+      - tac: 1
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+                sd: 1
+              - sst: 1
+                sd: 3
+
+ru_sdr:
+  device_driver: zmq
+  device_args: tx_port=tcp://127.0.0.1:4556,rx_port=tcp://127.0.0.1:4557
+  srate: 61.44
+  tx_gain: 0
+  rx_gain: 0
+
+cell_cfg:
+  dl_arfcn: 632628
+  band: 78
+  channel_bandwidth_MHz: 40
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+  nof_antennas_dl: 1
+  nof_antennas_ul: 1
+  prach:
+    preamble_trans_max: 200
+    total_nof_ra_preambles: 64
+  pdcch:
+    common:
+      ss1_n_candidates: [0, 0, 2, 1, 0]
+  slicing:
+    - sst: 1
+      sd: 1
+      sched_cfg:
+        min_prb_policy_ratio: 50
+        max_prb_policy_ratio: 100
+    - sst: 1
+      sd: 3
+      sched_cfg:
+        min_prb_policy_ratio: 50
+        max_prb_policy_ratio: 100
+
+expert_phy:
+  allow_request_on_empty_uplink_slot: true
+
+log:
+  filename: gnb.log
+  all_level: debug
+
+pcap:
+  mac_enable: false
+  mac_filename: /tmp/gnb_mac.pcap
+  ngap_enable: false
+  ngap_filename: /tmp/gnb_ngap.pcap
+
+
+remote_control:
+  enabled: true
+  bind_addr: 0.0.0.0
+metrics:
+  enable_json: true
+  enable_log: true
+  autostart_stdout_metrics: true
+  periodicity:
+    du_report_period: 1000
+    cu_cp_report_period: 1000
+    cu_up_report_period: 1000
+  layers:
+    enable_ru: true
+    enable_du_low: false
+    enable_sched: true
+    enable_mac: false
+    enable_rlc: false
+    enable_rrc: false
+    enable_ngap: false
+    enable_e1ap: false
+    enable_pdcp: false

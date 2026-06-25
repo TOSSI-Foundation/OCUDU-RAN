@@ -5,10 +5,30 @@
 #include "sched_config_manager.h"
 #include "../logging/scheduler_metrics_handler.h"
 #include "ocudu/ocudulog/ocudulog.h"
+#include "ocudu/ran/logical_channel/lcid.h"
+#include "ocudu/ran/s_nssai.h"
 #include "ocudu/scheduler/config/scheduler_cell_config_validator.h"
 #include "ocudu/scheduler/config/scheduler_ue_config_validator.h"
 
 using namespace ocudu;
+
+namespace {
+
+// Extract the UE data-plane S-NSSAI (slice) from its dedicated config, for per-slice metrics.
+// Prefers the first DRB's slice; falls back to the last logical channel seen.
+s_nssai_t extract_ue_snssai(const ue_configuration& cfg)
+{
+  s_nssai_t res{};
+  for (const auto& lc : *cfg.logical_channels()) {
+    if (not is_srb(lc->lcid)) {
+      return lc->rrm_policy.s_nssai;
+    }
+    res = lc->rrm_policy.s_nssai;
+  }
+  return res;
+}
+
+} // namespace
 
 ue_config_update_event::ue_config_update_event(du_ue_index_t                     ue_index_,
                                                sched_config_manager&             parent_,
@@ -267,6 +287,7 @@ void sched_config_manager::handle_ue_config_complete(du_ue_index_t ue_index, std
       // Reconfiguration case.
       cell_metrics.handle_ue_reconfiguration(ue_index);
     }
+    cell_metrics.handle_ue_slice_update(ue_index, extract_ue_snssai(*next_cfg));
 
     // Stores new UE config and deletes old config.
     ue_cfg_list[ue_index].swap(next_cfg);

@@ -7,6 +7,7 @@
 #include "ocudu/ran/du_types.h"
 #include "ocudu/ran/pci.h"
 #include "ocudu/ran/rnti.h"
+#include "ocudu/ran/s_nssai.h"
 #include "ocudu/ran/sch/sch_mcs.h"
 #include "ocudu/ran/slot_point.h"
 #include "ocudu/ran/slot_point_extended.h"
@@ -27,6 +28,8 @@ struct scheduler_ue_metrics {
   pci_t pci;
   /// Currently used C-RNTI for this UE.
   rnti_t rnti;
+  /// S-NSSAI (slice) the UE belongs to, for per-slice PM aggregation.
+  s_nssai_t s_nssai{};
   /// Average MCS index used for DL grants.
   sch_mcs_index dl_mcs;
   /// Number of RBs used for PDSCH.
