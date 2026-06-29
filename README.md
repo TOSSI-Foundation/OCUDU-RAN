@@ -223,6 +223,42 @@ Each UE's scheduler metrics are tagged with its S-NSSAI, so per-slice PM can be 
 
 ---
 
+## ML-based UL link adaptation
+
+Machine-learning uplink MCS selection for the scheduler. A gradient-boosted model predicts `P(crc_success | channel state, candidate MCS)`; at decision time the scheduler sweeps candidate MCS and picks the highest whose predicted success meets the configured BLER target, falling back to OLLA otherwise. The deployed model is a self-contained C++ tree traversal exported from training; no ML runtime is linked into the RAN. All behaviour is configured through the `ml_mcs` YAML block and is disabled by default.
+
+### Capabilities
+
+- **Inference**: ML controls UL MCS in `calculate_ul_mcs()`, gated by `ml_mcs.inference.enabled`, with OLLA as the safe fallback. The runtime model is loaded from a file and hot-swapped atomically off the scheduling hot path, so a retrained model is picked up without a restart.
+- **Dataset generation**: one self-labeled training row per decoded PUSCH is logged at CRC time (channel state + grant params joined with the CRC outcome), enabled by `ml_mcs.dataset_logging`.
+- **Online training**: a sidecar process retrains on the full accumulated data on a fixed interval (default 15 min), validates the candidate against a safety floor, promotes it for hot-swap, and auto-reverts to OLLA if the live model degrades. Passive learning only: the model always selects its greedy best MCS and never transmits a deliberately-suboptimal one.
+
+### Features and model
+
+Features (fixed order): `mcs`, `mcs_table`, `wideband_cqi`, `pusch_avg_sinr_db`, `ul_snr_offset_db`. Label: `crc_success`. Algorithm: gradient-boosted decision trees (scikit-learn) exported to a flat C++ array traversal.
+
+### Configuration (`ml_mcs` block)
+
+| Sub-block | Keys |
+|---|---|
+| `inference` | `enabled`, `bler_target`, `model_path` |
+| `dataset_logging` | `enabled`, `output_dir`, `scenario` |
+| `online_training` | `enabled`, `interval_min`, `min_rows`, `val_window`, `floor_bler`, `revert_flag` |
+
+The scheduler and the Python sidecar read the same DU YAML: a single source of truth (no environment variables). See [`configs/ml_mcs_example.yaml`](configs/ml_mcs_example.yaml) and [`ml/README.md`](ml/README.md).
+
+### Layout
+
+| Path | Role |
+|---|---|
+| [`lib/scheduler/support/mcs_ml_predictor.h`](lib/scheduler/support/mcs_ml_predictor.h) | Inference, runtime model hot-swap, auto-revert. |
+| [`lib/scheduler/logging/ml_la_dataset_logger.h`](lib/scheduler/logging/ml_la_dataset_logger.h) | CRC-time dataset logger. |
+| [`ml/training/`](ml/training/) | Model training and C++/runtime export. |
+| [`ml/serving/`](ml/serving/) | Online retrain + validation gate + auto-revert sidecar. |
+| [`ml/analysis/`](ml/analysis/) | OLLA-vs-ML SINR-matched comparison. |
+
+---
+
 ## Documentation
 
 | Document | Contents |
@@ -242,6 +278,9 @@ Each UE's scheduler metrics are tagged with its S-NSSAI, so per-slice PM can be 
 | [`lib/ipc/xsm/`](lib/ipc/xsm/) | xSM context wrapper around the precompiled `libxsm.so`. |
 | [`include/ocudu/xsm/`](include/ocudu/xsm/) | Imported xSM library headers and `libxsm.so` (precompiled, no source build). |
 | [`lib/support/`](lib/support/) | FAPI split trace logger, MAC/PHY handoff timing recorder, latency injector. |
+| [`lib/scheduler/support/`](lib/scheduler/support/) | ML MCS predictor and exported model. |
+| [`lib/scheduler/logging/`](lib/scheduler/logging/) | Scheduler loggers, including the ML dataset logger. |
+| [`ml/`](ml/) | ML training, serving (online retrain), and analysis framework. |
 | [`configs/`](configs/) | XFAPI-bridge YAML configs for L1 and L2. |
 | [`docs/`](docs/) | Project documentation. |
 
