@@ -1290,6 +1290,31 @@ struct du_high_unit_qos_config {
   du_high_unit_f1u_du_config f1u_du;
 };
 
+/// ML-based UL MCS link-adaptation configuration.
+struct du_high_unit_ml_mcs_config {
+  struct inference_config {
+    bool        enabled = false;
+    float       bler_target = 0.10f;
+    std::string model_path;
+  };
+  struct dataset_logging_config {
+    bool        enabled = false;
+    std::string output_dir = "ml/datasets";
+    std::string scenario = "default";
+  };
+  struct online_training_config {
+    bool        enabled = false;
+    unsigned    interval_min = 15;
+    unsigned    min_rows = 20000;
+    unsigned    val_window = 10000;
+    float       floor_bler = 0.30f;
+    std::string revert_flag;
+  };
+  inference_config        inference;
+  dataset_logging_config  dataset_logging;
+  online_training_config  online_training;
+};
+
 /// DU high configuration.
 struct du_high_unit_config {
   bool warn_on_drop = false;
@@ -1317,6 +1342,8 @@ struct du_high_unit_config {
   du_high_unit_expert_execution_config expert_execution_cfg;
   /// SRB configuration.
   std::map<srb_id_t, du_high_unit_srb_config> srb_cfg;
+  /// ML-based UL MCS link-adaptation configuration.
+  du_high_unit_ml_mcs_config ml_mcs;
 
   /// Returns true if testmode is enabled, false otherwise.
   bool is_testmode_enabled() const { return test_mode_cfg.test_ue.rnti != rnti_t::INVALID_RNTI; }

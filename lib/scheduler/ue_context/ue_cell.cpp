@@ -3,14 +3,17 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "ue_cell.h"
+#include "../logging/ml_la_dataset_logger.h"
 #include "../support/dmrs_helpers.h"
 #include "../support/mcs_calculator.h"
+#include "../support/mcs_ml_predictor.h"
 #include "../support/pdcch_aggregation_level_calculator.h"
 #include "../support/sch_pdu_builder.h"
 #include "ue_drx_controller.h"
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/ran/sch/tbs_calculator.h"
 #include "ocudu/scheduler/scheduler_feedback_handler.h"
+#include <limits>
 
 using namespace ocudu;
 
@@ -183,6 +186,77 @@ expected<units::bytes> ue_cell::handle_crc_pdu(slot_point pusch_slot, const ul_c
     // Update PUSCH SNR reported from PHY.
     if (crc_pdu.ul_sinr_dB.has_value()) {
       components.channel_state->update_pusch_snr(crc_pdu.ul_sinr_dB.value());
+    }
+
+    if (ml_la_dataset::is_enabled()) {
+      const auto&             gp = h_ul->get_grant_params();
+      ml_la_dataset::ul_sample s{};
+      s.slot        = pusch_slot.system_slot();
+      s.rnti        = static_cast<uint16_t>(rnti());
+      s.ue_index    = static_cast<uint16_t>(ue_index);
+      s.harq_id     = static_cast<uint8_t>(crc_pdu.harq_id);
+      s.nof_retxs   = static_cast<uint8_t>(h_ul->nof_retxs());
+      s.mcs         = gp.mcs.value();
+      s.mcs_table   = static_cast<uint8_t>(gp.mcs_table);
+      s.tbs_bytes   = static_cast<uint32_t>(gp.tbs.value());
+      s.nof_prbs    = static_cast<uint16_t>(gp.rbs.is_type1() ? gp.rbs.type1().length() : gp.rbs.type0().count());
+      s.nof_symbols = gp.nof_symbols;
+      s.nof_layers  = gp.nof_layers;
+      s.olla_mcs    = gp.olla_mcs.has_value() ? static_cast<int16_t>(gp.olla_mcs->value()) : static_cast<int16_t>(-1);
+
+      const auto& cs      = channel_state_manager();
+      s.wideband_cqi      = static_cast<uint8_t>(cs.get_wideband_cqi().value());
+      s.pusch_snr_db      = cs.get_pusch_snr();
+      s.pusch_avg_sinr_db = cs.get_pusch_average_sinr();
+      s.ul_snr_offset_db  = link_adaptation_controller().ul_snr_offset_db();
+
+      s.ul_sinr_db   = crc_pdu.ul_sinr_dB.has_value() ? crc_pdu.ul_sinr_dB.value() : std::numeric_limits<float>::quiet_NaN();
+      s.ul_rsrp_dbfs = crc_pdu.ul_rsrp_dBFS.has_value() ? crc_pdu.ul_rsrp_dBFS.value() : std::numeric_limits<float>::quiet_NaN();
+      s.ta_ns        = crc_pdu.time_advance_offset.has_value()
+                           ? static_cast<int32_t>(crc_pdu.time_advance_offset.value().to_seconds() * 1e9)
+                           : INT32_MIN;
+
+      s.nof_dl_layers                           = static_cast<uint8_t>(cs.get_nof_dl_layers());
+      s.nof_ul_layers                           = static_cast<uint8_t>(cs.get_nof_ul_layers());
+      const std::optional<csi_report_data>& csi = cs.get_latest_csi_report();
+      s.csi_ri  = (csi.has_value() and csi->ri.has_value()) ? static_cast<int16_t>(csi->ri->value()) : int16_t{-1};
+      s.csi_cri = (csi.has_value() and csi->cri.has_value()) ? static_cast<int16_t>(csi->cri.value()) : int16_t{-1};
+      s.slots_since_srs =
+          cs.last_aperiodic_srs_slot.valid() ? static_cast<int32_t>(pusch_slot - cs.last_aperiodic_srs_slot) : -1;
+
+      const auto& lac    = link_adaptation_controller();
+      s.dl_cqi_offset_db = lac.dl_cqi_offset();
+      s.effective_cqi    = lac.get_effective_cqi();
+      s.ul_olla_enabled  = lac.is_ul_olla_enabled() ? 1 : 0;
+      s.dl_olla_enabled  = lac.is_dl_olla_enabled() ? 1 : 0;
+
+      s.ul_bytes_in_harq   = static_cast<uint32_t>(harqs.total_ul_bytes_waiting_ack().value());
+      s.nof_empty_ul_harqs = static_cast<uint16_t>(harqs.nof_empty_ul_harqs());
+      s.nof_ul_harqs       = static_cast<uint16_t>(harqs.nof_ul_harqs());
+      s.max_nof_ul_retxs   = static_cast<uint8_t>(h_ul->max_nof_retxs());
+      s.ndi                = h_ul->ndi() ? 1 : 0;
+
+      s.slice_id     = gp.slice_id.has_value() ? static_cast<int16_t>(gp.slice_id->value()) : int16_t{-1};
+      s.dci_cfg_type = static_cast<uint8_t>(gp.dci_cfg_type);
+
+      s.sfn           = static_cast<uint16_t>(pusch_slot.sfn());
+      s.slot_in_frame = static_cast<uint8_t>(pusch_slot.slot_index());
+      s.subframe      = static_cast<uint8_t>(pusch_slot.subframe_index());
+      s.numerology    = static_cast<uint8_t>(pusch_slot.numerology());
+
+      s.is_fallback = is_in_fallback_mode() ? 1 : 0;
+
+      const mcs_ml::predictor& ml = mcs_ml::predictor::instance();
+      s.ml_in_control             = ml.enabled() ? 1 : 0;
+      s.ml_p_succ                 = static_cast<float>(ml.predict_for(s.mcs,
+                                                                      s.mcs_table,
+                                                                      s.wideband_cqi,
+                                                                      s.pusch_avg_sinr_db,
+                                                                      s.ul_snr_offset_db,
+                                                                      s.olla_mcs));
+
+      s.crc_success = crc_pdu.tb_crc_success ? 1 : 0;
+      ml_la_dataset::log_ul_sample(s);
     }
   }
 
