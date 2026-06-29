@@ -1,0 +1,16 @@
+ml_mcs:
+  inference:
+    enabled: false
+    bler_target: 0.10
+    model_path: ml/models/mcs_ml_seed.model
+  dataset_logging:
+    enabled: false
+    output_dir: ml/datasets
+    scenario: default
+  online_training:
+    enabled: false
+    interval_min: 15
+    min_rows: 20000
+    val_window: 10000
+    floor_bler: 0.30
+    revert_flag: /tmp/ocudu_ml_revert

@@ -17,6 +17,7 @@
 #include "ocudu/ran/slot_pdu_capacity_constants.h"
 #include "ocudu/ran/srs/srs_configuration.h"
 #include <chrono>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -124,6 +125,17 @@ struct scheduler_ta_control_config {
   float outlier_detection_zscore_threshold = 1.75F;
 };
 
+/// ML-based UL MCS link-adaptation configuration.
+struct ml_mcs_expert_config {
+  bool        inference_enabled = false;
+  float       inference_bler_target = 0.10f;
+  std::string inference_model_path;
+  bool        dataset_logging_enabled = false;
+  std::string dataset_output_dir;
+  std::string dataset_scenario = "default";
+  std::string revert_flag_path;
+};
+
 /// \brief UE scheduling statically configurable expert parameters.
 struct scheduler_ue_expert_config {
   /// Range of allowed MCS indices for DL UE scheduling. To use a fixed mcs, set the minimum mcs equal to the maximum.
@@ -210,6 +222,8 @@ struct scheduler_ue_expert_config {
   /// \bierf Defines a time window starting from the last sent aperiodic SRS within which any new allocation of
   /// aperiodic SRS is not allowed. Only applies to aperiodic SRS.
   std::optional<srs_periodicity> srs_prohibit_time;
+  /// ML-based UL MCS link-adaptation configuration.
+  ml_mcs_expert_config ml_mcs;
 };
 
 /// \brief System Information scheduling statically configurable expert parameters.

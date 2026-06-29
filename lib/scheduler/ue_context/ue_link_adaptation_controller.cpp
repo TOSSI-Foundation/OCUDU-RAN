@@ -3,7 +3,9 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "ue_link_adaptation_controller.h"
+#include "../logging/ml_la_dataset_logger.h"
 #include "../support/mcs_calculator.h"
+#include "../support/mcs_ml_predictor.h"
 
 using namespace ocudu;
 
@@ -27,6 +29,10 @@ ue_link_adaptation_controller::ue_link_adaptation_controller(const cell_configur
   // Set a different value to force update.
   last_ul_mcs_table = pusch_mcs_table::qam64LowSe;
   update_ul_mcs_lims(pusch_mcs_table::qam64, cell_cfg.use_msg3_transform_precoder());
+
+  const ml_mcs_expert_config& ml_cfg = cell_cfg.expert_cfg.ue.ml_mcs;
+  mcs_ml::predictor::instance().configure(ml_cfg);
+  ml_la_dataset::configure(ml_cfg.dataset_logging_enabled, ml_cfg.dataset_output_dir, ml_cfg.dataset_scenario);
 }
 
 void ue_link_adaptation_controller::handle_dl_ack_info(bool                         ack_value,
@@ -132,6 +138,18 @@ sch_mcs_index ue_link_adaptation_controller::calculate_ul_mcs(pusch_mcs_table mc
   // Derive MCS using the combination of estimated UL SNR + outer loop link adaptation.
   sch_mcs_index mcs = map_snr_to_mcs_ul(get_effective_snr(), mcs_table, use_transform_precoder);
   mcs               = std::min(std::max(mcs, ul_mcs_lims.start()), ul_mcs_lims.stop());
+
+  const mcs_ml::predictor& ml = mcs_ml::predictor::instance();
+  if (ml.enabled()) {
+    mcs = ml.select_mcs(static_cast<unsigned>(mcs_table),
+                        ue_ch_st.get_wideband_cqi().value(),
+                        ue_ch_st.get_pusch_average_sinr(),
+                        ul_snr_offset_db(),
+                        ul_olla.has_value() ? static_cast<int>(mcs.value()) : -1,
+                        ul_mcs_lims.start(),
+                        ul_mcs_lims.stop(),
+                        mcs);
+  }
 
   return mcs;
 }

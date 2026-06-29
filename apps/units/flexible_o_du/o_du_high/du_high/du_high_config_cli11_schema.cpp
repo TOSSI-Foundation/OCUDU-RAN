@@ -152,6 +152,42 @@ static void configure_cli11_expert_execution_args(CLI::App& app, du_high_unit_ex
       ->capture_default_str();
 }
 
+static void configure_cli11_ml_mcs_args(CLI::App& app, du_high_unit_ml_mcs_config& config)
+{
+  CLI::App* inference_subcmd = add_subcommand(app, "inference", "ML MCS inference parameters")->configurable();
+  add_option(*inference_subcmd, "--enabled", config.inference.enabled, "Enable ML-based UL MCS selection")
+      ->capture_default_str();
+  add_option(*inference_subcmd, "--bler_target", config.inference.bler_target, "Target BLER for the ML decision rule")
+      ->capture_default_str()
+      ->check(CLI::Range(0.0, 1.0));
+  add_option(*inference_subcmd, "--model_path", config.inference.model_path, "Path to the runtime ML model file")
+      ->capture_default_str();
+
+  CLI::App* logging_subcmd = add_subcommand(app, "dataset_logging", "ML dataset logging parameters")->configurable();
+  add_option(*logging_subcmd, "--enabled", config.dataset_logging.enabled, "Enable UL dataset logging")
+      ->capture_default_str();
+  add_option(*logging_subcmd, "--output_dir", config.dataset_logging.output_dir, "Directory for dataset CSV output")
+      ->capture_default_str();
+  add_option(*logging_subcmd, "--scenario", config.dataset_logging.scenario, "Scenario tag written into each row")
+      ->capture_default_str();
+
+  CLI::App* training_subcmd = add_subcommand(app, "online_training", "ML online training parameters")->configurable();
+  add_option(*training_subcmd, "--enabled", config.online_training.enabled, "Enable the online retraining loop")
+      ->capture_default_str();
+  add_option(*training_subcmd, "--interval_min", config.online_training.interval_min, "Retrain interval in minutes")
+      ->capture_default_str()
+      ->check(CLI::PositiveNumber);
+  add_option(*training_subcmd, "--min_rows", config.online_training.min_rows, "Rows required before first retrain")
+      ->capture_default_str();
+  add_option(*training_subcmd, "--val_window", config.online_training.val_window, "Validation window size in rows")
+      ->capture_default_str();
+  add_option(*training_subcmd, "--floor_bler", config.online_training.floor_bler, "Safety BLER floor for auto-revert")
+      ->capture_default_str()
+      ->check(CLI::Range(0.0, 1.0));
+  add_option(*training_subcmd, "--revert_flag", config.online_training.revert_flag, "Path to the auto-revert flag file")
+      ->capture_default_str();
+}
+
 static void configure_cli11_pdcch_common_args(CLI::App& app, pdcch_common_unit_config& common_params)
 {
   add_option(app, "--coreset0_index", common_params.coreset0_index, "CORESET#0 index")
@@ -2659,6 +2695,10 @@ void ocudu::configure_cli11_with_du_high_config_schema(CLI::App& app, du_high_pa
   // Expert execution section.
   CLI::App* expert_subcmd = add_subcommand(app, "expert_execution", "Expert execution configuration")->configurable();
   configure_cli11_expert_execution_args(*expert_subcmd, parsed_cfg.config.expert_execution_cfg);
+
+  // ML MCS section.
+  CLI::App* ml_mcs_subcmd = add_subcommand(app, "ml_mcs", "ML-based UL MCS configuration")->configurable();
+  configure_cli11_ml_mcs_args(*ml_mcs_subcmd, parsed_cfg.config.ml_mcs);
 
   // Cell section.
   add_option_cell(

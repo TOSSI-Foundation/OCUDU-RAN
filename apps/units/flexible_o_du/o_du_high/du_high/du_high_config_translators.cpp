@@ -1160,6 +1160,13 @@ static scheduler_expert_config generate_scheduler_expert_config(const du_high_un
   out_cfg.ue.olla_ul_target_bler              = pusch.olla_target_bler;
   out_cfg.ue.olla_ul_snr_inc                  = pusch.olla_snr_inc;
   out_cfg.ue.olla_max_ul_snr_offset           = pusch.olla_max_snr_offset;
+  out_cfg.ue.ml_mcs.inference_enabled         = config.ml_mcs.inference.enabled;
+  out_cfg.ue.ml_mcs.inference_bler_target     = config.ml_mcs.inference.bler_target;
+  out_cfg.ue.ml_mcs.inference_model_path      = config.ml_mcs.inference.model_path;
+  out_cfg.ue.ml_mcs.dataset_logging_enabled   = config.ml_mcs.dataset_logging.enabled;
+  out_cfg.ue.ml_mcs.dataset_output_dir        = config.ml_mcs.dataset_logging.output_dir;
+  out_cfg.ue.ml_mcs.dataset_scenario          = config.ml_mcs.dataset_logging.scenario;
+  out_cfg.ue.ml_mcs.revert_flag_path          = config.ml_mcs.online_training.revert_flag;
   out_cfg.ue.pdsch_crb_limits                 = {pdsch.start_rb, pdsch.end_rb};
   out_cfg.ue.pdsch_interleaving_bundle_size   = pdsch.interleaving_bundle_size;
   out_cfg.ue.pusch_crb_limits                 = {pusch.start_rb, pusch.end_rb};
