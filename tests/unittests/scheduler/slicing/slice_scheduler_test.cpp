@@ -237,7 +237,7 @@ TEST_F(default_slice_scheduler_test, returns_only_ul_pending_bytes_of_bearers_be
   ASSERT_NE(this->add_ue(ue_idx), nullptr);
   // Push UL BSR for DRB.
   ul_bsr_indication_message msg{
-      to_du_cell_index(0), ue_idx, to_rnti(0x4601 + static_cast<unsigned>(ue_idx)), bsr_format::SHORT_BSR, {}};
+      to_du_cell_index(0), ue_idx, to_rnti(0x4601 + static_cast<unsigned>(ue_idx)), slot_point{}, bsr_format::SHORT_BSR, {}};
   msg.reported_lcgs.push_back(ul_bsr_lcg_report{drb_lcg_id, drb_pending_bytes});
   this->ues[ue_idx].handle_bsr_indication(msg);
   // Push UL BSR for SRB.

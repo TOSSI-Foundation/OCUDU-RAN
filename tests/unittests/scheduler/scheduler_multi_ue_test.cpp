@@ -144,6 +144,7 @@ public:
         ul_bsr_indication_message bsr{to_du_cell_index(0),
                                       it->second,
                                       it->first,
+                                      slot_point{},
                                       bsr_format::LONG_BSR,
                                       ul_bsr_lcg_report_list{{uint_to_lcg_id(2), ul_bsr}}};
         this->push_bsr(bsr);
@@ -373,6 +374,7 @@ TEST_F(scheduler_buffer_occupancy_test, when_bsr_is_received_then_enough_ul_byte
     ul_bsr_indication_message bsr{to_du_cell_index(0),
                                   to_du_ue_index(i),
                                   to_rnti(0x4601 + i),
+                                  slot_point{},
                                   bsr_format::LONG_BSR,
                                   ul_bsr_lcg_report_list{{uint_to_lcg_id(2), ue_bsrs[i]}}};
     this->push_bsr(bsr);
@@ -402,6 +404,7 @@ TEST_F(scheduler_buffer_occupancy_test, when_bsr_is_received_then_enough_ul_byte
           to_du_cell_index(0),
           grant.context.ue_index,
           to_rnti(0x4601 + grant.context.ue_index),
+          slot_point{},
           bsr_format::LONG_BSR,
           ul_bsr_lcg_report_list{{uint_to_lcg_id(2), ue_bsr - std::min(ue_bsr, ue_sched_bytes)}}};
       this->push_bsr(bsr);
@@ -425,6 +428,7 @@ TEST_F(scheduler_buffer_occupancy_test, when_bsr_and_dl_bo_are_zero_no_grants_ar
     ul_bsr_indication_message bsr{to_du_cell_index(0),
                                   to_du_ue_index(i),
                                   to_rnti(0x4601 + i),
+                                  slot_point{},
                                   bsr_format::LONG_BSR,
                                   ul_bsr_lcg_report_list{{uint_to_lcg_id(2), 0}}};
     this->push_bsr(bsr);

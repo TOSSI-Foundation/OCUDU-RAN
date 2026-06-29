@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "ocudu/adt/byte_buffer.h"
 #include "ocudu/cu_cp/cu_cp_types.h"
 #include "ocudu/f1ap/common/f1ap_cho_types.h"
 #include "ocudu/f1ap/f1ap_ue_id_types.h"
@@ -229,6 +230,13 @@ struct f1ap_ue_context_modification_response {
 struct f1ap_ue_context_release_request {
   ue_index_t   ue_index;
   f1ap_cause_t cause;
+};
+
+// TS 38.473 §8.3.5
+struct f1ap_du_initiated_ue_context_modification_required {
+  ue_index_t ue_index;
+  // TS 38.331
+  byte_buffer master_cell_group;
 };
 
 /// \brief Indication from the DU that a UE has successfully accessed a target cell (TS 38.473 Section 8.3.8).

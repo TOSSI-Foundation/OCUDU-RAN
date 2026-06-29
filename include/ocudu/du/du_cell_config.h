@@ -47,6 +47,9 @@ struct du_cell_config {
   std::vector<slice_rrm_policy_config> rrm_policy_members;
 
   bool strict_slice_admission = false;
+
+  // TS 38.473 §8.3.5
+  bool bsr_ml_actuation_enabled = false;
 };
 
 } // namespace odu

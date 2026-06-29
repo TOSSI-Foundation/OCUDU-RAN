@@ -100,6 +100,7 @@ public:
     ul_bsr_indication_message bsr{to_du_cell_index(0),
                                   next_ue_idx,
                                   ue_cfg.crnti,
+                                  slot_point{},
                                   bsr_format::LONG_BSR,
                                   ul_bsr_lcg_report_list{{uint_to_lcg_id(2), BSR_VALUE}}};
     this->push_bsr(bsr);

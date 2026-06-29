@@ -101,6 +101,8 @@ struct scheduler_ue_metrics {
   sample_statistics<unsigned> dl_ri_stats;
   /// UL RI statistics over the metrics report interval.
   sample_statistics<unsigned> ul_ri_stats;
+  // TS 38.331, TS 38.473 §8.3.5
+  unsigned recommended_periodic_bsr_timer = 0;
 };
 
 struct scheduler_slice_metrics {

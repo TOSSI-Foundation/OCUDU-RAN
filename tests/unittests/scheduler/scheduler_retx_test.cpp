@@ -194,6 +194,7 @@ TEST_F(scheduler_missing_ack_tester, when_no_crc_arrives_then_ul_harq_eventually
   ul_bsr_indication_message bsr{to_du_cell_index(0),
                                 to_du_ue_index(0),
                                 rnti,
+                                slot_point{},
                                 bsr_format::SHORT_BSR,
                                 ul_bsr_lcg_report_list{ul_bsr_lcg_report{uint_to_lcg_id(0), 100000}}};
   bench.push_bsr(bsr);
@@ -290,6 +291,7 @@ TEST_F(scheduler_error_indication_tester,
   ul_bsr_indication_message bsr{to_du_cell_index(0),
                                 to_du_ue_index(0),
                                 rnti,
+                                slot_point{},
                                 bsr_format::SHORT_BSR,
                                 ul_bsr_lcg_report_list{ul_bsr_lcg_report{uint_to_lcg_id(0), 10}}};
   bench.push_bsr(bsr);

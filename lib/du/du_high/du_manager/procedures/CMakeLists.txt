@@ -6,6 +6,7 @@
 set(SOURCES
         du_stop_procedure.cpp
         du_cell_stop_procedure.cpp
+        du_bsr_periodicity_actuation_procedure.cpp
         du_ue_ric_configuration_procedure.cpp
         du_param_config_procedure.cpp
         du_mac_ntn_param_update_procedure.cpp

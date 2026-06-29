@@ -7,6 +7,8 @@
 #include "ocudu/du/du_high/du_manager/du_manager.h"
 #include "ocudu/du/du_high/du_manager/du_manager_params.h"
 #include "ocudu/du/du_high/du_metrics_notifier.h"
+#include "ocudu/ran/du_types.h"
+#include <functional>
 
 namespace ocudu {
 
@@ -31,6 +33,11 @@ public:
   void handle_cell_start(du_cell_index_t cell_index);
   void handle_cell_stop(du_cell_index_t cell_index);
 
+  void set_bsr_periodicity_recommendation_handler(std::function<void(du_ue_index_t, unsigned)> handler)
+  {
+    bsr_periodicity_handler = std::move(handler);
+  }
+
 private:
   void trigger_report();
 
@@ -41,6 +48,8 @@ private:
 
   unsigned          next_version = 0;
   du_metrics_report next_report{};
+
+  std::function<void(du_ue_index_t, unsigned)> bsr_periodicity_handler;
 };
 
 } // namespace odu

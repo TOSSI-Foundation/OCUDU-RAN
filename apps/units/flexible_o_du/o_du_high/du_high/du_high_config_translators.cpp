@@ -633,6 +633,8 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
     // MAC Cell Group Config parameters.
     out_cell.mcg_params = make_mac_cell_group_params(base_cell);
 
+    out_cell.bsr_ml_actuation_enabled = config.bsr_ml.actuation.enabled;
+
     // Paging parameters.
     out_cell.ran.dl_cfg_common.pcch_cfg = generate_pcch_config(base_cell);
     out_cell.ran.dl_cfg_common.init_dl_bwp.pdcch_common.paging_search_space_id =
@@ -1167,6 +1169,14 @@ static scheduler_expert_config generate_scheduler_expert_config(const du_high_un
   out_cfg.ue.ml_mcs.dataset_output_dir        = config.ml_mcs.dataset_logging.output_dir;
   out_cfg.ue.ml_mcs.dataset_scenario          = config.ml_mcs.dataset_logging.scenario;
   out_cfg.ue.ml_mcs.revert_flag_path          = config.ml_mcs.online_training.revert_flag;
+  out_cfg.ue.bsr_ml.inference_enabled         = config.bsr_ml.inference.enabled;
+  out_cfg.ue.bsr_ml.inference_model_path      = config.bsr_ml.inference.model_path;
+  out_cfg.ue.bsr_ml.dataset_logging_enabled   = config.bsr_ml.dataset_logging.enabled;
+  out_cfg.ue.bsr_ml.dataset_output_dir        = config.bsr_ml.dataset_logging.output_dir;
+  out_cfg.ue.bsr_ml.dataset_scenario          = config.bsr_ml.dataset_logging.scenario;
+  // TS 38.331, TS 38.321 clause 5.4.5
+  out_cfg.ue.bsr_ml.periodic_bsr_timer_subframes = cell.mcg_cfg.bsr_cfg.periodic_bsr_timer;
+  out_cfg.ue.bsr_ml.retx_bsr_timer_subframes     = cell.mcg_cfg.bsr_cfg.retx_bsr_timer;
   out_cfg.ue.pdsch_crb_limits                 = {pdsch.start_rb, pdsch.end_rb};
   out_cfg.ue.pdsch_interleaving_bundle_size   = pdsch.interleaving_bundle_size;
   out_cfg.ue.pusch_crb_limits                 = {pusch.start_rb, pusch.end_rb};

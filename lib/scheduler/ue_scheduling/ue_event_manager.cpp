@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "ue_event_manager.h"
+#include "../logging/bsr_ml_dataset_logger.h"
 #include "../logging/scheduler_event_logger.h"
 #include "../logging/scheduler_metrics_handler.h"
 #include "../srs/srs_scheduler.h"
@@ -357,6 +358,8 @@ void ue_cell_event_manager::handle_ue_deletion(ue_config_delete_event ev)
     // Schedule removal of UE from slice scheduler.
     slice_sched.rem_ue(ue_idx);
 
+    bsr_ml_dataset::remove_ue(static_cast<uint16_t>(ue_idx));
+
     // Schedule UE removal from repository.
     ue_db.schedule_ue_rem(std::move(ev));
 
@@ -433,6 +436,64 @@ void ue_cell_event_manager::handle_ul_bsr_indication(const ul_bsr_indication_mes
       fallback_sched.handle_ul_bsr_indication(bsr_ind->ue_index, *bsr_ind);
     }
 
+    if (bsr_ml_dataset::is_enabled()) {
+      const auto& cs = u.get_pcell().channel_state_manager();
+      const auto& csi = cs.get_latest_csi_report();
+
+      bsr_ml_dataset::bsr_sample s{};
+      s.slot          = bsr_ind->slot_rx.system_slot();
+      s.sfn           = static_cast<uint16_t>(bsr_ind->slot_rx.sfn());
+      s.subframe      = static_cast<uint8_t>(bsr_ind->slot_rx.subframe_index());
+      s.slot_in_frame = static_cast<uint8_t>(bsr_ind->slot_rx.slot_index());
+      s.numerology    = static_cast<uint8_t>(bsr_ind->slot_rx.numerology());
+      s.rnti          = static_cast<uint16_t>(bsr_ind->crnti);
+      s.ue_index      = static_cast<uint16_t>(bsr_ind->ue_index);
+      s.bsr_format    = static_cast<uint8_t>(bsr_ind->type);
+
+      for (const auto& lcg : bsr_ind->reported_lcgs) {
+        const unsigned id = static_cast<unsigned>(lcg.lcg_id);
+        switch (id) {
+          case 0: s.lcg0_bytes = lcg.nof_bytes; break;
+          case 1: s.lcg1_bytes = lcg.nof_bytes; break;
+          case 2: s.lcg2_bytes = lcg.nof_bytes; break;
+          case 3: s.lcg3_bytes = lcg.nof_bytes; break;
+          default: break;
+        }
+        s.bsr_total_bytes += lcg.nof_bytes;
+      }
+
+      // TS 38.321 §5.4.5
+      const uint32_t lcg_bytes_for_classify[4] = {s.lcg0_bytes, s.lcg1_bytes, s.lcg2_bytes, s.lcg3_bytes};
+      bsr_ml_dataset::classify_bsr_trigger(s.ue_index,
+                                           s.slot,
+                                           s.numerology,
+                                           s.bsr_format,
+                                           lcg_bytes_for_classify,
+                                           s.trigger_type,
+                                           s.has_interarrival,
+                                           s.interarrival_slots,
+                                           s.has_predicted_periodicity,
+                                           s.predicted_interarrival_slots,
+                                           s.predicted_periodicity_subframes);
+
+      s.wideband_cqi     = static_cast<uint8_t>(cs.get_wideband_cqi().value());
+      s.dl_ri            = (csi.has_value() && csi->ri.has_value())
+                               ? static_cast<uint8_t>(csi->ri->value())
+                               : static_cast<uint8_t>(0);
+      s.ul_ri            = static_cast<uint8_t>(cs.get_nof_ul_layers());
+      s.pusch_snr_db     = cs.get_pusch_snr();
+      s.pusch_avg_sinr_db = cs.get_pusch_average_sinr();
+
+      s.dl_brate_kbps    = metrics.get_last_dl_brate_kbps(bsr_ind->ue_index);
+      s.pending_ul_bytes = static_cast<uint32_t>(u.pending_ul_newtx_bytes().value());
+      s.ul_brate_kbps    = metrics.get_last_ul_brate_kbps(bsr_ind->ue_index);
+      s.ul_tb_bytes      = metrics.get_last_ul_tb_bytes(bsr_ind->ue_index);
+      s.nof_ul_grants    = metrics.get_last_nof_ul_grants(bsr_ind->ue_index);
+      s.sr_count         = metrics.get_last_sr_count(bsr_ind->ue_index);
+
+      bsr_ml_dataset::log_bsr_sample(s);
+    }
+
     // Log event.
     if (ev_logger.enabled()) {
       scheduler_event_logger::bsr_event event{};
@@ -481,6 +542,14 @@ void ue_cell_event_manager::handle_crc_indication(const ul_crc_indication& crc_i
       if (crc_ptr->tb_crc_success and crc_ptr->time_advance_offset.has_value() and crc_ptr->ul_sinr_dB.has_value()) {
         u.handle_ul_n_ta_update_indication(
             ue_cc->cell_index, crc_ptr->ul_sinr_dB.value(), crc_ptr->time_advance_offset.value());
+      }
+
+      // TS 38.314 §4.2.1.2.2
+      if (bsr_ml_dataset::is_enabled() and crc_ptr->tb_crc_success) {
+        bsr_ml_dataset::record_ul_crc_success(static_cast<uint16_t>(crc_ptr->ue_index),
+                                              static_cast<uint8_t>(crc_ptr->harq_id),
+                                              sl_rx.system_slot(),
+                                              static_cast<uint8_t>(sl_rx.numerology()));
       }
 
       // Log event.

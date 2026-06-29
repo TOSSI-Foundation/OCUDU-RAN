@@ -37,6 +37,7 @@ struct ul_bsr_indication_message {
   du_cell_index_t        cell_index;
   du_ue_index_t          ue_index;
   rnti_t                 crnti;
+  slot_point             slot_rx;
   bsr_format             type;
   ul_bsr_lcg_report_list reported_lcgs;
 };

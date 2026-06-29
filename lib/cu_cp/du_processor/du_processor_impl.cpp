@@ -51,6 +51,12 @@ public:
     parent.handle_du_initiated_ue_context_release_request(req);
   }
 
+  void on_du_initiated_ue_context_modification_required(
+      const f1ap_du_initiated_ue_context_modification_required& req) override
+  {
+    parent.handle_du_initiated_ue_context_modification_required(req);
+  }
+
   void on_access_success(const f1ap_access_success& msg) override { parent.handle_access_success(msg); }
 
   bool schedule_async_task(async_task<void> task) override
@@ -345,6 +351,49 @@ void du_processor_impl::handle_du_initiated_ue_context_release_request(const f1a
 
         CORO_AWAIT(cu_cp_notifier.on_ue_release_required(
             {request.ue_index, ue->get_up_resource_manager().get_pdu_sessions(), f1ap_to_ngap_cause(request.cause)}));
+        CORO_RETURN();
+      }));
+}
+
+void du_processor_impl::handle_du_initiated_ue_context_modification_required(
+    const f1ap_du_initiated_ue_context_modification_required& request)
+{
+  ocudu_assert(request.ue_index != ue_index_t::invalid, "Invalid UE index", request.ue_index);
+
+  cu_cp_ue* ue = ue_mng.find_du_ue(request.ue_index);
+  if (ue == nullptr) {
+    logger.warning("ue={}: Dropping DU initiated UE context modification required. UE does not exist",
+                   request.ue_index);
+    return;
+  }
+
+  auto* rrc_ue = ue->get_rrc_ue();
+  if (rrc_ue == nullptr) {
+    logger.warning("ue={}: Dropping DU initiated UE context modification required. RRC UE does not exist",
+                   request.ue_index);
+    return;
+  }
+
+  logger.info("ue={}: Handling DU-initiated UE Context Modification Required (adaptive BSR periodicity); applying "
+              "CellGroupConfig via RRC Reconfiguration (TS 38.473 §8.3.5.2).",
+              request.ue_index);
+
+  // TS 38.331
+  rrc_reconfiguration_procedure_request reconf_args;
+  rrc_recfg_v1530_ies                   v1530;
+  v1530.master_cell_group = request.master_cell_group.copy();
+  reconf_args.non_crit_ext.emplace(std::move(v1530));
+
+  ue->get_task_sched().schedule_async_task(
+      launch_async([rrc_ue, reconf_args = std::move(reconf_args), ue_index = request.ue_index, this, result = false](
+                       coro_context<async_task<void>>& ctx) mutable {
+        CORO_BEGIN(ctx);
+        CORO_AWAIT_VALUE(result, rrc_ue->handle_rrc_reconfiguration_request(reconf_args));
+        if (result) {
+          logger.debug("ue={}: BSR periodicity RRC Reconfiguration completed successfully.", ue_index);
+        } else {
+          logger.info("ue={}: BSR periodicity RRC Reconfiguration failed / not acknowledged by the UE.", ue_index);
+        }
         CORO_RETURN();
       }));
 }

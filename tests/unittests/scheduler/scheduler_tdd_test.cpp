@@ -114,7 +114,7 @@ public:
   {
     // Enqueue enough bytes for continuous UL tx.
     ul_bsr_indication_message bsr{
-        to_du_cell_index(0), ue_idx, ue_rnti, bsr_format::SHORT_BSR, {ul_bsr_lcg_report{uint_to_lcg_id(0), 10000000}}};
+        to_du_cell_index(0), ue_idx, ue_rnti, slot_point{}, bsr_format::SHORT_BSR, {ul_bsr_lcg_report{uint_to_lcg_id(0), 10000000}}};
     this->push_bsr(bsr);
 
     // Run some slots to ensure that there is space for PDCCH to be scheduled.
