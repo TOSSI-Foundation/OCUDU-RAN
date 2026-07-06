@@ -129,6 +129,27 @@ void to_json(nlohmann::json& json, const cu_cp_rrc_metrics_json& metrics)
   json["nof_successful_handover_executions"] = metrics.mobility.nof_successful_handover_executions;
 }
 
+void to_json(nlohmann::json& json, const cu_cp_metrics_report::cell_meas_metrics::cell_result& cell)
+{
+  json["pci"]          = (cell.pci >= 0) ? nlohmann::json(cell.pci) : nlohmann::json(nullptr);
+  json["ssb_rsrp_dbm"] = cell.ssb_rsrp_dbm.has_value() ? nlohmann::json(cell.ssb_rsrp_dbm.value()) : nlohmann::json(nullptr);
+  json["ssb_rsrq_db"]  = cell.ssb_rsrq_db.has_value() ? nlohmann::json(cell.ssb_rsrq_db.value()) : nlohmann::json(nullptr);
+  json["ssb_sinr_db"]  = cell.ssb_sinr_db.has_value() ? nlohmann::json(cell.ssb_sinr_db.value()) : nlohmann::json(nullptr);
+  json["csi_rsrp_dbm"] = cell.csi_rsrp_dbm.has_value() ? nlohmann::json(cell.csi_rsrp_dbm.value()) : nlohmann::json(nullptr);
+  json["csi_rsrq_db"]  = cell.csi_rsrq_db.has_value() ? nlohmann::json(cell.csi_rsrq_db.value()) : nlohmann::json(nullptr);
+  json["csi_sinr_db"]  = cell.csi_sinr_db.has_value() ? nlohmann::json(cell.csi_sinr_db.value()) : nlohmann::json(nullptr);
+}
+
+void to_json(nlohmann::json& json, const cu_cp_metrics_report::cell_meas_metrics& metrics)
+{
+  json["ue"]          = metrics.ue_index;
+  json["serving_nci"] = metrics.serving_nci;
+  json["serving_pci"] = metrics.serving_pci;
+  json["serving"]     = metrics.serving_cells;
+  json["best_neigh"]  = metrics.best_neigh_cells;
+  json["neigh"]       = metrics.neigh_cells;
+}
+
 } // namespace ocudu
 
 nlohmann::json ocudu::app_helpers::json_generators::generate(const cu_cp_metrics_report& report)
@@ -141,9 +162,10 @@ nlohmann::json ocudu::app_helpers::json_generators::generate(const cu_cp_metrics
   json["timestamp"]          = get_time_stamp();
   nlohmann::json& cu_cp_json = json["cu-cp"];
 
-  cu_cp_json["id"]    = "srs-cu-cp";
-  cu_cp_json["ngaps"] = ngap_metrics;
-  cu_cp_json["rrcs"]  = rrc_metrics;
+  cu_cp_json["id"]           = "srs-cu-cp";
+  cu_cp_json["ngaps"]        = ngap_metrics;
+  cu_cp_json["rrcs"]         = rrc_metrics;
+  cu_cp_json["meas_reports"] = report.meas_reports;
 
   return json;
 }

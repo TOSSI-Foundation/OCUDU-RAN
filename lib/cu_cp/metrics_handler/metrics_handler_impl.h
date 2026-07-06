@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "../cell_meas_manager/cell_meas_manager_impl.h"
 #include "../du_processor/du_metrics_handler.h"
 #include "../mobility_manager/mobility_manager_impl.h"
 #include "../ngap_repository.h"
@@ -24,7 +25,8 @@ public:
                        ue_metrics_handler&               ue_handler_,
                        du_repository_metrics_handler&    du_handler_,
                        ngap_repository_metrics_handler&  ngap_handler_,
-                       mobility_manager_metrics_handler& mobility_handler_);
+                       mobility_manager_metrics_handler& mobility_handler_,
+                       cell_meas_metrics_handler&        meas_handler_);
 
   std::unique_ptr<metrics_report_session>
   create_periodic_report_session(const periodic_metric_report_request& request) override;
@@ -51,6 +53,7 @@ private:
   du_repository_metrics_handler&    du_handler;
   ngap_repository_metrics_handler&  ngap_handler;
   mobility_manager_metrics_handler& mobility_handler;
+  cell_meas_metrics_handler&        meas_handler;
   ocudulog::basic_logger&           logger;
 
   // Member variables to manage pool of sessions.

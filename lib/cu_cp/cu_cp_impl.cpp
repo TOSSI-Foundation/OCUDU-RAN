@@ -117,7 +117,8 @@ cu_cp_impl::cu_cp_impl(const cu_cp_configuration& config_) :
                                                       ue_mng,
                                                       du_db,
                                                       ngap_db,
-                                                      mobility_mng)),
+                                                      mobility_mng,
+                                                      cell_meas_mng)),
   cu_cp_cfgtr(mobility_manager_ev_notifier, du_db, ngap_db, ue_mng)
 {
   assert_cu_cp_configuration_valid(cfg);

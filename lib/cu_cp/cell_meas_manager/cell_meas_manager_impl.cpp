@@ -7,6 +7,7 @@
 #include "ocudu/cu_cp/cell_meas_manager_config.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/rrc/meas_types.h"
+#include "ocudu/support/format/fmt_to_c_str.h"
 #include "ocudu/support/ocudu_assert.h"
 #include <set>
 #include <utility>
@@ -304,6 +305,151 @@ static std::optional<pci_t> find_strongest_neighbor(cu_cp_ue_index_t        ue_i
   return strongest_neighbor;
 }
 
+// Converts the RRC measResult quantized values (TS 38.133) reported by the UE to physical units.
+// RSRP: report value [0..127] -> dBm  = value - 156       (Table 10.1.6.1-1).
+// RSRQ: report value [0..127] -> dB  ~= 0.5 * value - 43   (Table 10.1.11.1-1).
+// SINR: report value [0..127] -> dB  ~= 0.5 * value - 23   (Table 10.1.16.1-1).
+static int   meas_rsrp_to_dbm(uint8_t value) { return static_cast<int>(value) - 156; }
+static float meas_rsrq_to_db(uint8_t value) { return 0.5F * static_cast<float>(value) - 43.0F; }
+static float meas_sinr_to_db(uint8_t value) { return 0.5F * static_cast<float>(value) - 23.0F; }
+
+// Appends the rsrp/rsrq/sinr columns for one reference signal (SSB or CSI-RS), printing "n/a" when not reported.
+static void append_meas_quant(fmt::memory_buffer& buffer, const std::optional<rrc_meas_quant_results>& quant)
+{
+  if (quant.has_value() && quant.value().rsrp.has_value()) {
+    fmt::format_to(std::back_inserter(buffer), " {:>8}", meas_rsrp_to_dbm(quant.value().rsrp.value()));
+  } else {
+    fmt::format_to(std::back_inserter(buffer), " {:>8}", "n/a");
+  }
+  if (quant.has_value() && quant.value().rsrq.has_value()) {
+    fmt::format_to(std::back_inserter(buffer), " {:>8.1f}", meas_rsrq_to_db(quant.value().rsrq.value()));
+  } else {
+    fmt::format_to(std::back_inserter(buffer), " {:>8}", "n/a");
+  }
+  if (quant.has_value() && quant.value().sinr.has_value()) {
+    fmt::format_to(std::back_inserter(buffer), " {:>8.1f}", meas_sinr_to_db(quant.value().sinr.value()));
+  } else {
+    fmt::format_to(std::back_inserter(buffer), " {:>8}", "n/a");
+  }
+}
+
+// Appends one cell row (serving/best-neighbour/neighbour) with its SSB and CSI-RS measurements.
+static void append_meas_cell_row(fmt::memory_buffer& buffer, const char* role, const rrc_meas_result_nr& cell)
+{
+  fmt::format_to(std::back_inserter(buffer), "\n {:<4}", role);
+  if (cell.pci.has_value()) {
+    fmt::format_to(std::back_inserter(buffer), " {:>4}", cell.pci.value());
+  } else {
+    fmt::format_to(std::back_inserter(buffer), " {:>4}", "-");
+  }
+  fmt::format_to(std::back_inserter(buffer), " |");
+  append_meas_quant(buffer, cell.cell_results.results_ssb_cell);
+  fmt::format_to(std::back_inserter(buffer), " |");
+  append_meas_quant(buffer, cell.cell_results.results_csi_rs_cell);
+}
+
+static cu_cp_metrics_report::cell_meas_metrics::cell_result make_meas_cell_result(const rrc_meas_result_nr& cell)
+{
+  cu_cp_metrics_report::cell_meas_metrics::cell_result res;
+  if (cell.pci.has_value()) {
+    res.pci = static_cast<int>(cell.pci.value());
+  }
+  const std::optional<rrc_meas_quant_results>& ssb = cell.cell_results.results_ssb_cell;
+  if (ssb.has_value()) {
+    if (ssb.value().rsrp.has_value()) {
+      res.ssb_rsrp_dbm = meas_rsrp_to_dbm(ssb.value().rsrp.value());
+    }
+    if (ssb.value().rsrq.has_value()) {
+      res.ssb_rsrq_db = meas_rsrq_to_db(ssb.value().rsrq.value());
+    }
+    if (ssb.value().sinr.has_value()) {
+      res.ssb_sinr_db = meas_sinr_to_db(ssb.value().sinr.value());
+    }
+  }
+  const std::optional<rrc_meas_quant_results>& csi = cell.cell_results.results_csi_rs_cell;
+  if (csi.has_value()) {
+    if (csi.value().rsrp.has_value()) {
+      res.csi_rsrp_dbm = meas_rsrp_to_dbm(csi.value().rsrp.value());
+    }
+    if (csi.value().rsrq.has_value()) {
+      res.csi_rsrq_db = meas_rsrq_to_db(csi.value().rsrq.value());
+    }
+    if (csi.value().sinr.has_value()) {
+      res.csi_sinr_db = meas_sinr_to_db(csi.value().sinr.value());
+    }
+  }
+  return res;
+}
+
+static cu_cp_metrics_report::cell_meas_metrics build_meas_report_metrics(cu_cp_ue_index_t        ue_index,
+                                                                         const meas_context_t&   meas_ctxt,
+                                                                         const rrc_meas_results& meas_results)
+{
+  cu_cp_metrics_report::cell_meas_metrics m;
+  m.ue_index    = cu_cp_ue_index_to_uint(ue_index);
+  m.serving_nci = meas_ctxt.nci.value();
+  m.serving_pci = static_cast<int>(meas_ctxt.pci);
+  for (const auto& serv_mo : meas_results.meas_result_serving_mo_list) {
+    m.serving_cells.push_back(make_meas_cell_result(serv_mo.meas_result_serving_cell));
+    if (serv_mo.meas_result_best_neigh_cell.has_value()) {
+      m.best_neigh_cells.push_back(make_meas_cell_result(serv_mo.meas_result_best_neigh_cell.value()));
+    }
+  }
+  if (meas_results.meas_result_neigh_cells.has_value()) {
+    for (const auto& ncell : meas_results.meas_result_neigh_cells.value().meas_result_list_nr) {
+      m.neigh_cells.push_back(make_meas_cell_result(ncell));
+    }
+  }
+  return m;
+}
+
+// Logs a clean per-UE table with the serving and neighbour cell measurements reported by this UE.
+static void log_measurement_report(ocudulog::basic_logger& logger,
+                                   cu_cp_ue_index_t        ue_index,
+                                   const meas_context_t&   meas_ctxt,
+                                   const rrc_meas_results& meas_results)
+{
+  if (not logger.info.enabled()) {
+    return;
+  }
+
+  fmt::memory_buffer buffer;
+  fmt::format_to(std::back_inserter(buffer),
+                 "Neighbour cell measurement report (CU-CP) | ue={} meas_id={} serving_nci={:#x} serving_pci={} "
+                 "(rsrp in dBm, rsrq/sinr in dB; 'n/a' = not reported)",
+                 ue_index,
+                 fmt::underlying(meas_results.meas_id),
+                 meas_ctxt.nci,
+                 meas_ctxt.pci);
+  fmt::format_to(std::back_inserter(buffer),
+                 "\n {:<4} {:>4} |{:>9}{:>9}{:>9} |{:>9}{:>9}{:>9}",
+                 "role",
+                 "pci",
+                 "ssb-rsrp",
+                 "ssb-rsrq",
+                 "ssb-sinr",
+                 "csi-rsrp",
+                 "csi-rsrq",
+                 "csi-sinr");
+
+  // Serving cell(s) and, when present, the best neighbour reported per serving measurement object.
+  for (const auto& serv_mo : meas_results.meas_result_serving_mo_list) {
+    append_meas_cell_row(buffer, "SERV", serv_mo.meas_result_serving_cell);
+    if (serv_mo.meas_result_best_neigh_cell.has_value()) {
+      append_meas_cell_row(buffer, "BEST", serv_mo.meas_result_best_neigh_cell.value());
+    }
+  }
+
+  // Full neighbour cell list.
+  if (meas_results.meas_result_neigh_cells.has_value()) {
+    for (const auto& ncell : meas_results.meas_result_neigh_cells.value().meas_result_list_nr) {
+      append_meas_cell_row(buffer, "NBR", ncell);
+    }
+  }
+
+  logger.info("{}", to_c_str(buffer));
+}
+
 void cell_meas_manager::report_measurement(cu_cp_ue_index_t ue_index, const rrc_meas_results& meas_results)
 {
   logger.debug("ue={}: Received measurement result with meas_id={}", ue_index, fmt::underlying(meas_results.meas_id));
@@ -322,6 +468,11 @@ void cell_meas_manager::report_measurement(cu_cp_ue_index_t ue_index, const rrc_
   store_measurement_results(ue_index, meas_results);
 
   auto& meas_ctxt = ue_meas_context.meas_id_to_meas_context.at(meas_results.meas_id);
+
+  // Log a per-UE table with the serving and neighbour cell measurements reported by this UE.
+  log_measurement_report(logger, ue_index, meas_ctxt, meas_results);
+
+  latest_meas_reports[ue_index] = build_meas_report_metrics(ue_index, meas_ctxt, meas_results);
 
   // Handle periodic measurement results.
   if (cfg.cells.at(meas_ctxt.nci).periodic_report_cfg_id.has_value() &&
@@ -392,6 +543,16 @@ void cell_meas_manager::report_measurement(cu_cp_ue_index_t ue_index, const rrc_
       return;
     }
   }
+}
+
+std::vector<cu_cp_metrics_report::cell_meas_metrics> cell_meas_manager::handle_cell_meas_metrics_report_request() const
+{
+  std::vector<cu_cp_metrics_report::cell_meas_metrics> reports;
+  reports.reserve(latest_meas_reports.size());
+  for (const auto& [ue_index, report] : latest_meas_reports) {
+    reports.push_back(report);
+  }
+  return reports;
 }
 
 void cell_meas_manager::generate_measurement_objects_for_serving_cells()

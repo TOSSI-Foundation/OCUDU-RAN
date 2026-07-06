@@ -12,6 +12,9 @@
 #include "ocudu/rrc/rrc_metrics.h"
 #include "ocudu/rrc/rrc_ue.h"
 #include "ocudu/support/format/fmt_to_c_str.h"
+#include <cstdint>
+#include <optional>
+#include <vector>
 
 namespace ocudu {
 
@@ -40,10 +43,29 @@ struct cu_cp_metrics_report {
     rrc_du_metrics rrc_metrics;
   };
 
-  std::vector<ue_info>        ues;
-  std::vector<du_info>        dus;
-  std::vector<ngap_info>      ngaps;
-  mobility_management_metrics mobility;
+  struct cell_meas_metrics {
+    struct cell_result {
+      int                  pci = -1;
+      std::optional<int>   ssb_rsrp_dbm;
+      std::optional<float> ssb_rsrq_db;
+      std::optional<float> ssb_sinr_db;
+      std::optional<int>   csi_rsrp_dbm;
+      std::optional<float> csi_rsrq_db;
+      std::optional<float> csi_sinr_db;
+    };
+    uint64_t                 ue_index;
+    uint64_t                 serving_nci;
+    int                      serving_pci = -1;
+    std::vector<cell_result> serving_cells;
+    std::vector<cell_result> best_neigh_cells;
+    std::vector<cell_result> neigh_cells;
+  };
+
+  std::vector<ue_info>           ues;
+  std::vector<du_info>           dus;
+  std::vector<ngap_info>         ngaps;
+  mobility_management_metrics    mobility;
+  std::vector<cell_meas_metrics> meas_reports;
 };
 
 /// Interface used by the CU-CP to report metrics.

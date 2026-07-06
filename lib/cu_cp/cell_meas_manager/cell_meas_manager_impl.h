@@ -7,6 +7,7 @@
 #include "../ue_manager/ue_manager_impl.h"
 #include "ocudu/adt/span.h"
 #include "ocudu/cu_cp/cell_meas_manager_config.h"
+#include "ocudu/cu_cp/cu_cp_metrics_notifier.h"
 #include "ocudu/ran/cu_cp_types.h"
 #include "ocudu/ran/plmn_identity.h"
 #include "ocudu/rrc/meas_types.h"
@@ -29,8 +30,16 @@ public:
                                               std::optional<tac_t> neighbor_tac = std::nullopt) = 0;
 };
 
+class cell_meas_metrics_handler
+{
+public:
+  virtual ~cell_meas_metrics_handler() = default;
+
+  virtual std::vector<cu_cp_metrics_report::cell_meas_metrics> handle_cell_meas_metrics_report_request() const = 0;
+};
+
 /// Basic cell manager implementation
-class cell_meas_manager
+class cell_meas_manager : public cell_meas_metrics_handler
 {
 public:
   cell_meas_manager(const cell_meas_manager_cfg&         cfg_,
@@ -48,6 +57,8 @@ public:
   std::vector<pci_t>              get_neighbor_pcis(nr_cell_identity serving_nci) const;
   bool update_cell_config(nr_cell_identity nci, const serving_cell_meas_config& serv_cell_cfg);
   void report_measurement(cu_cp_ue_index_t ue_index, const rrc_meas_results& meas_results);
+
+  std::vector<cu_cp_metrics_report::cell_meas_metrics> handle_cell_meas_metrics_report_request() const override;
 
   expected<std::pair<unsigned, nr_cell_identity>> find_neighbour_nci(pci_t pci);
 
@@ -67,6 +78,8 @@ private:
       ssb_freq_to_meas_object; // unique measurement objects, indexed by SSB frequency.
   std::unordered_map<ssb_frequency_t, std::vector<nr_cell_identity>> ssb_freq_to_ncis;
   std::map<nr_cell_identity, serving_cell_meas_config>               nci_to_serving_cell_meas_config;
+
+  std::map<cu_cp_ue_index_t, cu_cp_metrics_report::cell_meas_metrics> latest_meas_reports;
 
   ocudulog::basic_logger& logger;
 };
