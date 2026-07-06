@@ -1,0 +1,168 @@
+    gnb_id: 411
+    cu_cp:
+      amf:
+        addr: x.x.x.x
+        port: 38412
+        bind_addr: x.x.x.x
+        supported_tracking_areas:
+          - tac: 1
+            plmn_list:
+              - plmn: "00101"
+                # Network slicing configuration
+                tai_slice_support_list:
+                  - sst: 1
+                    sd: "102030"
+
+      # ---- Xn-C link to gNB2 (SCTP) ----
+      xnap:
+        gateways:
+          - bind_addrs:
+              - x.x.x.x               # this server's (gNB1) Xn IP
+            connections:
+              - peer_addrs:
+                  - x.x.x.x           # gNB2's Xn IP (the peer)
+
+      # ---- Neighbor relations: gNB1 must know gNB2's cell (0x670000, pci 2) ----
+      mobility:
+        trigger_handover_from_measurements: false   # HO driven manually via the `ho` command
+        cells:
+          - nr_cell_id: 0x66C000      # gNB1's own serving cell (pci 1)
+            periodic_report_cfg_id: 1   # periodic report of serving cell (pci 1)
+            ncells:
+              - nr_cell_id: 0x670000
+                report_configs: [2]
+          - nr_cell_id: 0x670000      # foreign cell = gNB2
+            ncells:
+              - nr_cell_id: 0x66C000
+                report_configs: [2]
+            gnb_id_bit_length: 22
+            pci: 2
+            plmn: "00101"
+            tac: 1
+            ssb_arfcn: 630048              # <-- set to gNB2's actual SSB-ARFCN (same RF => same value as this cell)
+            band: 78
+            ssb_scs: 30
+            ssb_period: 10
+            ssb_offset: 0
+            ssb_duration: 5
+        report_configs:
+            - report_cfg_id: 1
+              report_type: periodical
+              report_interval_ms: 1024
+            - report_cfg_id: 2
+              report_type: event_triggered
+              event_triggered_report_type: a3
+              meas_trigger_quantity: rsrp
+              meas_trigger_quantity_offset_db: 0
+              hysteresis_db: 0
+              time_to_trigger_ms: 0
+              report_interval_ms: 1024
+    # ---- N3 user-plane (GTP-U to the UPF) - advertise this gNB N3 IP so UPF sends DL here ----
+    cu_up:
+      ngu:
+        socket:
+          - bind_addr: x.x.x.x
+            ext_addr: x.x.x.x
+    hal:
+      eal_args: "--lcores (0-1)@(0,2,4) -a 0000:51:11.0 -a 0000:51:11.1 --iova-mode=pa --log-level=pmd.net.iavf:8 --log-level=bus.pci:8"
+    expert_phy:
+      allow_request_on_empty_uplink_slot: true
+      max_proc_delay: 5
+    ru_ofh:
+      t1a_max_cp_dl: 429
+      t1a_min_cp_dl: 285
+      t1a_max_cp_ul: 429
+      t1a_min_cp_ul: 285
+      t1a_max_up: 196
+      t1a_min_up: 96
+      ta4_max: 180
+      ta4_min: 110
+      is_prach_cp_enabled: true
+      ignore_ecpri_payload_size: false
+      ignore_ecpri_seq_id: true
+      compr_method_ul: bfp
+      compr_bitwidth_ul: 9
+      compr_method_dl: bfp
+      compr_bitwidth_dl: 9
+      compr_method_prach: bfp
+      compr_bitwidth_prach: 9
+      enable_ul_static_compr_hdr: true
+      enable_dl_static_compr_hdr: true
+      iq_scaling: 5.0
+      cells:
+        - network_interface: 0000:51:11.0
+          ru_mac_addr: xx:xx:xx:xx:xx:xx
+          du_mac_addr: xx:xx:xx:xx:xx:xx
+          enable_promiscuous: true
+          prach_port_id: [4, 5, 6, 7]
+          dl_port_id: [0, 1, 2, 3]
+          ul_port_id: [0, 1, 2, 3]
+
+    cell_cfg:
+      dl_arfcn: 630048
+      band: 78
+      channel_bandwidth_MHz: 100
+      common_scs: 30
+      plmn: "00101"
+      tac: 1
+      pci: 1
+      nof_antennas_dl: 4
+      nof_antennas_ul: 4
+      ssb:
+        ssb_block_power_dbm: 0
+        offset_to_point_a: 252
+        k_ssb: 12
+      pdcch:
+        common:
+          coreset0_index: 11
+      prach:
+        prach_config_index: 159
+        prach_root_sequence_index: 1
+        zero_correlation_zone: 14
+        prach_frequency_start: 22
+        preamble_rx_target_pw: -80
+        preamble_trans_max: 200
+        ra_resp_window: 10
+
+      tdd_ul_dl_cfg:
+        dl_ul_tx_period: 5
+        nof_dl_slots: 3
+        nof_dl_symbols: 6
+        nof_ul_slots: 1
+        nof_ul_symbols: 4
+
+      pusch:
+        p0_nominal_with_grant: -76
+        msg3_delta_preamble: 2
+
+    expert_execution:
+      affinities:
+        main_pool_cpus: "1,3,5,7,9,11,13"
+        main_pool_pinning: "mask"
+      threads:
+        main_pool:
+          nof_threads: 7
+
+    log:
+      filename: gnb.log # /dev/stdout
+      all_level: debug
+      f1ap_level: debug
+      ofh_level: info
+      phy_level: warning
+      fapi_level: warning
+
+    pcap:
+      mac_enable: false
+      mac_filename: /tmp/gnb_mac.pcap
+      ngap_enable: false
+      ngap_filename: /tmp/gnb_ngap.pcap
+      xnap_enable: true               # capture Xn so you can verify HO signalling in Wireshark
+      xnap_filename: /tmp/gnb_xnap.pcap
+
+    metrics:
+      autostart_stdout_metrics: true
+
+    remote_control:
+      bind_addr: 0.0.0.0
+      enabled: false
+      port: 8001

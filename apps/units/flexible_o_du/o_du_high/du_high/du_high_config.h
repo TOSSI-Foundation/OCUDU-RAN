@@ -120,6 +120,12 @@ struct du_high_unit_ssb_config {
   int ssb_block_power = -16;
   /// PSS EPRE to SSS EPRE for SSB, as per TS 38.213, Section 4.1.
   ssb_pss_to_sss_epre pss_to_sss_epre = ssb_pss_to_sss_epre::dB_0;
+  /// \brief offsetToPointA, as per TS 38.211, Section 4.4.4.2. If set, must be specified together with k_ssb and
+  /// coreset0_index (under pdcch.common), bypassing automatic SSB position derivation.
+  std::optional<unsigned> offset_to_point_a;
+  /// \brief k_SSB (SSB subcarrier offset), as per TS 38.211, Section 7.4.3.1. Values: {0,..,23}. If set, must be
+  /// specified together with offset_to_point_a and coreset0_index (under pdcch.common).
+  std::optional<unsigned> k_ssb;
 };
 
 /// Common uplink parameters of a cell.
