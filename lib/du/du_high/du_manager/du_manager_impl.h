@@ -12,7 +12,9 @@
 #include "ran_resource_management/du_ran_resource_manager_impl.h"
 #include "ocudu/du/du_high/du_manager/du_manager.h"
 #include "ocudu/du/du_high/du_manager/du_manager_params.h"
+#include <chrono>
 #include <condition_variable>
+#include <unordered_map>
 
 namespace ocudu {
 namespace odu {
@@ -80,6 +82,9 @@ private:
   /// Handle transition from operational to idle state.
   void handle_du_stop_request();
 
+  // TS 38.473 §8.3.5
+  void handle_bsr_periodicity_recommendation(du_ue_index_t ue_index, unsigned recommended_sf);
+
   // DU manager configuration that will be visible to all running procedures
   du_manager_params       params;
   ocudulog::basic_logger& logger;
@@ -95,6 +100,12 @@ private:
 
   std::mutex              mutex;
   std::condition_variable cvar;
+
+  struct bsr_actuation_state {
+    unsigned                              applied_sf = 0;
+    std::chrono::steady_clock::time_point last_tp{};
+  };
+  std::unordered_map<du_ue_index_t, bsr_actuation_state> bsr_actuation_states;
 
   // Handler for DU tasks.
   fifo_async_task_scheduler main_ctrl_loop;

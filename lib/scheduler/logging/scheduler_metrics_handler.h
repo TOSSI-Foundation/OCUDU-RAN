@@ -104,6 +104,11 @@ class cell_metrics_handler final : public sched_metrics_ue_configurator
     std::array<unsigned, MAX_NOF_RB_LCIDS> last_dl_bs{0};
     std::optional<float>                   last_dl_olla;
     std::optional<float>                   last_ul_olla;
+    double                                 last_dl_brate_kbps = 0.0;
+    double                                 last_ul_brate_kbps = 0.0;
+    unsigned                               last_sr_count      = 0;
+    unsigned                               last_nof_ul_grants = 0;
+    uint64_t                               last_ul_tb_bytes   = 0;
     non_persistent_data                    data;
 
     scheduler_ue_metrics compute_report(std::chrono::milliseconds metric_report_period, unsigned nof_slots_per_sf);
@@ -243,6 +248,33 @@ public:
 
   /// \brief Checks whether the metrics reporting is active.
   bool enabled() const;
+
+  /// \brief Returns the last reported DL bit rate in kbps for a given UE. Returns 0 if no report yet.
+  double get_last_dl_brate_kbps(du_ue_index_t ue_index) const
+  {
+    return ues.contains(ue_index) ? ues[ue_index].last_dl_brate_kbps : 0.0;
+  }
+
+  double get_last_ul_brate_kbps(du_ue_index_t ue_index) const
+  {
+    return ues.contains(ue_index) ? ues[ue_index].last_ul_brate_kbps : 0.0;
+  }
+
+  /// \brief Returns the SR count from the last periodic metrics report for a given UE. Returns 0 if no report yet.
+  unsigned get_last_sr_count(du_ue_index_t ue_index) const
+  {
+    return ues.contains(ue_index) ? ues[ue_index].last_sr_count : 0U;
+  }
+
+  unsigned get_last_nof_ul_grants(du_ue_index_t ue_index) const
+  {
+    return ues.contains(ue_index) ? ues[ue_index].last_nof_ul_grants : 0U;
+  }
+
+  uint64_t get_last_ul_tb_bytes(du_ue_index_t ue_index) const
+  {
+    return ues.contains(ue_index) ? ues[ue_index].last_ul_tb_bytes : 0ULL;
+  }
 
   /// \brief Called when the cell is stopped. This will trigger a cell stop report.
   void handle_cell_deactivation();

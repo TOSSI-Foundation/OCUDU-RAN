@@ -126,6 +126,7 @@ private:
   /// \brief Handle the reception of an UE Context Release Request.
   /// \param[in] msg The UE Context Release Request message.
   void handle_ue_context_release_request(const asn1::f1ap::ue_context_release_request_s& msg);
+  void handle_ue_context_modification_required(const asn1::f1ap::ue_context_mod_required_s& msg);
 
   /// \brief Handle the reception of an Access Success message from the DU.
   /// \param[in] msg The Access Success message, indicating that the UE has successfully accessed the target cell

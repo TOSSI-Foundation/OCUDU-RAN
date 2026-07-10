@@ -113,8 +113,12 @@ struct f1ap_access_success_event {
   nr_cell_global_id_t cgi;
 };
 
-/// \brief Request Command for F1AP UE CONTEXT Modification Required.
-struct f1ap_ue_context_modification_required {};
+// TS 38.473 §8.3.5
+struct f1ap_ue_context_modification_required {
+  du_ue_index_t ue_index = INVALID_DU_UE_INDEX;
+  // TS 38.331
+  byte_buffer cell_group_cfg;
+};
 
 } // namespace odu
 } // namespace ocudu

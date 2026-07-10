@@ -1,0 +1,118 @@
+f1ap:
+  cu_cp_addr: 127.0.10.1                    # The address of CU-CP
+  bind_addr: 127.0.1.2
+
+f1u:
+  socket:
+    -
+      bind_addr: 127.0.1.2
+
+hal:
+      eal_args: "--lcores (0-1)@(0,2,4) -a 0000:51:0a.0 -a 0000:51:0a.1 --iova-mode=pa --log-level=pmd.net.iavf:8 --log-level=bus.pci:8"
+
+expert_phy:
+      allow_request_on_empty_uplink_slot: true
+      max_proc_delay: 5
+
+
+ru_ofh:
+  t1a_max_cp_dl: 429
+  t1a_min_cp_dl: 285
+  t1a_max_cp_ul: 429
+  t1a_min_cp_ul: 285
+  t1a_max_up: 196
+  t1a_min_up: 96
+  ta4_max: 180
+  ta4_min: 110
+  is_prach_cp_enabled: true
+  ignore_ecpri_payload_size: false
+  ignore_ecpri_seq_id: true
+  compr_method_ul: bfp
+  compr_bitwidth_ul: 9
+  compr_method_dl: bfp
+  compr_bitwidth_dl: 9
+  compr_method_prach: bfp
+  compr_bitwidth_prach: 9
+  enable_ul_static_compr_hdr: true
+  enable_dl_static_compr_hdr: true
+  iq_scaling: 5.0
+  cells:
+    - network_interface: 0000:51:0a.0
+      ru_mac_addr: e8:c7:4f:1e:c7:3b
+      du_mac_addr: 00:11:22:33:44:55
+      #vlan_tag_cp: 564
+      #vlan_tag_up: 564
+      enable_promiscuous: true
+      prach_port_id: [4, 5, 6, 7]
+      dl_port_id: [0, 1, 2, 3]
+      ul_port_id: [0, 1, 2, 3]
+
+cell_cfg:
+  dl_arfcn: 630048
+  band: 78
+  channel_bandwidth_MHz: 100
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+  nof_antennas_dl: 4
+  nof_antennas_ul: 4
+  ssb:
+    ssb_block_power_dbm: 0
+  pdcch:
+    common:
+      coreset0_index: 11
+  prach:
+    prach_config_index: 159
+    prach_root_sequence_index: 1
+    zero_correlation_zone: 14
+    prach_frequency_start: 22
+    preamble_rx_target_pw: -100
+    preamble_trans_max: 200
+    ra_resp_window: 10
+
+  tdd_ul_dl_cfg:
+    dl_ul_tx_period: 5
+    nof_dl_slots: 3
+    nof_dl_symbols: 6
+    nof_ul_slots: 1
+    nof_ul_symbols: 4
+
+  pucch:
+    f2_max_nof_rbs: 2
+
+  pusch:
+    p0_nominal_with_grant: -96
+    msg3_delta_preamble: 2
+    olla_target_bler: 0.10
+    olla_snr_inc_step: 0.005
+    olla_max_snr_offset: 20.0
+
+  mac_cell_group:
+    bsr_cfg:
+      # Static baseline for this run. TS 38.331 BSR-Config, in subframes.
+      periodic_bsr_timer: 10
+
+expert_execution:
+  affinities:
+    main_pool_cpus: "1,2,3,4,5,6"
+    main_pool_pinning: "mask"
+  threads:
+    main_pool:
+      nof_threads: 27
+
+log:
+      filename: du.log
+      all_level: info
+      f1ap_json_enabled: true
+
+bsr_ml:
+  inference:
+    enabled: false
+    model_path: ml/models/bsr_periodicity.model
+  actuation:
+    enabled: false
+  dataset_logging:
+    enabled: true
+    output_dir: ml/datasets
+    scenario: sf10

@@ -3,7 +3,9 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "ue_link_adaptation_controller.h"
+#include "../logging/bsr_ml_dataset_logger.h"
 #include "../logging/ml_la_dataset_logger.h"
+#include "../support/bsr_periodicity_predictor.h"
 #include "../support/mcs_calculator.h"
 #include "../support/mcs_ml_predictor.h"
 
@@ -33,6 +35,14 @@ ue_link_adaptation_controller::ue_link_adaptation_controller(const cell_configur
   const ml_mcs_expert_config& ml_cfg = cell_cfg.expert_cfg.ue.ml_mcs;
   mcs_ml::predictor::instance().configure(ml_cfg);
   ml_la_dataset::configure(ml_cfg.dataset_logging_enabled, ml_cfg.dataset_output_dir, ml_cfg.dataset_scenario);
+
+  const bsr_ml_expert_config& bsr_cfg = cell_cfg.expert_cfg.ue.bsr_ml;
+  bsr_ml_dataset::configure(bsr_cfg.dataset_logging_enabled,
+                            bsr_cfg.dataset_output_dir,
+                            bsr_cfg.dataset_scenario,
+                            bsr_cfg.periodic_bsr_timer_subframes,
+                            bsr_cfg.retx_bsr_timer_subframes);
+  bsr_ml::predictor::instance().configure(bsr_cfg);
 }
 
 void ue_link_adaptation_controller::handle_dl_ack_info(bool                         ack_value,

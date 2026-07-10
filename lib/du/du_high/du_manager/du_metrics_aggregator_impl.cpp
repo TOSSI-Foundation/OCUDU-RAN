@@ -37,6 +37,16 @@ du_manager_metrics_aggregator_impl::~du_manager_metrics_aggregator_impl() = defa
 
 void du_manager_metrics_aggregator_impl::aggregate_mac_metrics_report(const mac_metric_report& report)
 {
+  if (bsr_periodicity_handler) {
+    for (const scheduler_cell_metrics& cell : report.sched.cells) {
+      for (const scheduler_ue_metrics& ue : cell.ue_metrics) {
+        if (ue.recommended_periodic_bsr_timer != 0) {
+          bsr_periodicity_handler(ue.ue_index, ue.recommended_periodic_bsr_timer);
+        }
+      }
+    }
+  }
+
   // In case the DU metrics notifier was specified, report the DU metrics.
   if (params.du_metrics != nullptr) {
     next_report.mac = report;

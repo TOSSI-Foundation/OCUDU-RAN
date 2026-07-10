@@ -165,6 +165,12 @@ public:
     // TODO
   }
 
+  void on_du_initiated_ue_context_modification_required(
+      const ocucp::f1ap_du_initiated_ue_context_modification_required& req) override
+  {
+    logger.info("Received UEContextModificationRequired");
+  }
+
   void on_access_success(const ocucp::f1ap_access_success& msg) override
   {
     logger.info("Received AccessSuccess for ue={}", msg.ue_index);

@@ -8,3 +8,11 @@
 
 /utils/gdb/python/ocudu/__pycache__
 /build/
+
+__pycache__/
+
+/ml/datasets/
+
+# Runtime logs.
+*.log
+/logs/

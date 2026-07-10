@@ -1290,6 +1290,26 @@ struct du_high_unit_qos_config {
   du_high_unit_f1u_du_config f1u_du;
 };
 
+struct du_high_unit_bsr_ml_config {
+  // TS 38.321 clause 5.4.5, TS 38.331
+  struct inference_config {
+    bool        enabled = false;
+    std::string model_path;
+  };
+  // TS 38.473 §8.3.5
+  struct actuation_config {
+    bool enabled = false;
+  };
+  struct dataset_logging_config {
+    bool        enabled    = false;
+    std::string output_dir = "ml/datasets";
+    std::string scenario   = "default";
+  };
+  inference_config       inference;
+  actuation_config       actuation;
+  dataset_logging_config dataset_logging;
+};
+
 /// ML-based UL MCS link-adaptation configuration.
 struct du_high_unit_ml_mcs_config {
   struct inference_config {
@@ -1344,6 +1364,7 @@ struct du_high_unit_config {
   std::map<srb_id_t, du_high_unit_srb_config> srb_cfg;
   /// ML-based UL MCS link-adaptation configuration.
   du_high_unit_ml_mcs_config ml_mcs;
+  du_high_unit_bsr_ml_config bsr_ml;
 
   /// Returns true if testmode is enabled, false otherwise.
   bool is_testmode_enabled() const { return test_mode_cfg.test_ue.rnti != rnti_t::INVALID_RNTI; }

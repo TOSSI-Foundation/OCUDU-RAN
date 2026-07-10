@@ -230,6 +230,7 @@ bool pdu_rx_handler::handle_mac_ce(const decoded_mac_rx_pdu& ctx, const mac_ul_s
       bsr_ind.cell_index = ctx.cell_index_rx;
       bsr_ind.ue_index   = ctx.ue_index;
       bsr_ind.rnti       = ctx.pdu_rx.rnti;
+      bsr_ind.slot_rx    = ctx.slot_rx;
       if (subpdu.lcid() == lcid_ul_sch_t::SHORT_BSR or subpdu.lcid() == lcid_ul_sch_t::SHORT_TRUNC_BSR) {
         bsr_ind.bsr_fmt =
             subpdu.lcid() == lcid_ul_sch_t::SHORT_BSR ? bsr_format::SHORT_BSR : bsr_format::SHORT_TRUNC_BSR;

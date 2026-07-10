@@ -245,7 +245,7 @@ Features (fixed order): `mcs`, `mcs_table`, `wideband_cqi`, `pusch_avg_sinr_db`,
 | `dataset_logging` | `enabled`, `output_dir`, `scenario` |
 | `online_training` | `enabled`, `interval_min`, `min_rows`, `val_window`, `floor_bler`, `revert_flag` |
 
-The scheduler and the Python sidecar read the same DU YAML: a single source of truth (no environment variables). See [`configs/ml_mcs_example.yaml`](configs/ml_mcs_example.yaml) and [`ml/README.md`](ml/README.md).
+The scheduler and the Python sidecar read the same DU YAML: a single source of truth (no environment variables). See [`configs/ml_mcs_example.yaml`](configs/ml_mcs_example.yaml) and [`ml/ML_MCS.md`](ml/ML_MCS.md).
 
 ### Layout
 

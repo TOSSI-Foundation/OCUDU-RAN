@@ -3,17 +3,18 @@
 
 
 # Example config for a locally deployed CU listening on the localhost interface for a DU connection
-
 cu_cp:
   amf:
-    addrs: 127.0.1.100
-    bind_addrs: 127.0.0.1
+    addrs: 192.168.70.132
+    bind_addrs: 192.168.1.115
     supported_tracking_areas:
-      - tac: 7
+      - tac: 1
         plmn_list:
           - plmn: "00101"
             tai_slice_support_list:
               - sst: 1
+                sd: 1
+
   f1ap:
     bind_addrs: 127.0.10.1
 
@@ -23,8 +24,8 @@ cu_up:
       - bind_addr: 127.0.10.1
 
 log:
-  filename: /tmp/cu.log
-  all_level: warning
+  filename: cu.log
+  all_level: info
 
 pcap:
   ngap_enable: false

@@ -5,6 +5,7 @@
 #include "scheduler_metrics_handler.h"
 #include "../config/cell_configuration.h"
 #include "../uci_scheduling/uci_indication_selector.h"
+#include "bsr_ml_dataset_logger.h"
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/ran/resource_allocation/rb_bitmap.h"
 #include "ocudu/ran/slot_point.h"
@@ -384,8 +385,16 @@ void cell_metrics_handler::report_metrics()
 
   const std::chrono::milliseconds report_period{data.nof_slots / last_slot_tx.nof_slots_per_subframe()};
   for (ue_metric_context& ue : ues) {
+    const unsigned nof_ul_grants  = ue.data.nof_puschs;
+    const uint64_t ul_tb_bytes    = ue.data.sum_ul_tb_bytes;
     // Compute statistics of the UE metrics and push the result to the report.
-    next_report->ue_metrics.push_back(ue.compute_report(report_period, nof_slots_per_sf));
+    scheduler_ue_metrics ue_report = ue.compute_report(report_period, nof_slots_per_sf);
+    ue.last_dl_brate_kbps          = ue_report.dl_brate_kbps;
+    ue.last_ul_brate_kbps          = ue_report.ul_brate_kbps;
+    ue.last_sr_count               = ue_report.sr_count;
+    ue.last_nof_ul_grants          = nof_ul_grants;
+    ue.last_ul_tb_bytes            = ul_tb_bytes;
+    next_report->ue_metrics.push_back(ue_report);
   }
   next_report->events.swap(pending_events);
 
@@ -540,6 +549,15 @@ void cell_metrics_handler::handle_slot_result(slot_point_extended       sl_tx,
                    u.data.max_pusch_distance_slots);
     }
     u.data.last_pusch_slot = last_slot_tx.without_hyper_sfn();
+
+    // TS 38.314 §4.2.1.2.2, TS 38.321 §5.4.5
+    if (bsr_ml_dataset::is_enabled()) {
+      const slot_point grant_slot = last_slot_tx.without_hyper_sfn();
+      bsr_ml_dataset::record_ul_grant(static_cast<uint16_t>(it->second),
+                                      static_cast<uint8_t>(ul_grant.pusch_cfg.harq_id),
+                                      grant_slot.system_slot(),
+                                      ul_grant.pusch_cfg.new_data);
+    }
   }
 
   // PUCCH resource usage.
@@ -668,6 +686,8 @@ cell_metrics_handler::ue_metric_context::compute_report(std::chrono::millisecond
         convert_slots_to_ms(data.sum_sr_to_pusch_delay_slots) / static_cast<float>(data.count_handled_sr);
     ret.max_sr_to_pusch_delay_ms = convert_slots_to_ms(data.max_sr_to_pusch_delay_slots);
   }
+
+  ret.recommended_periodic_bsr_timer = bsr_ml_dataset::get_recommended_periodic_bsr_timer(static_cast<uint16_t>(ue_index));
 
   // Reset UE stats metrics on every report.
   reset();

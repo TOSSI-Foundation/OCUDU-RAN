@@ -116,6 +116,10 @@ public:
   /// section 8.3.2.
   virtual void on_du_initiated_ue_context_release_request(const f1ap_ue_context_release_request& req) = 0;
 
+  // TS 38.473 §8.3.5
+  virtual void on_du_initiated_ue_context_modification_required(
+      const f1ap_du_initiated_ue_context_modification_required& req) = 0;
+
   /// \brief Indicates that the UE has successfully accessed a target cell during CHO execution (TS 38.473
   /// Section 8.3.8).
   virtual void on_access_success(const f1ap_access_success& msg) = 0;

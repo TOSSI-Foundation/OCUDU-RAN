@@ -221,7 +221,7 @@ TEST_F(sched_ue_removal_test,
 
   // Push BSR update for UE.
   this->push_bsr(ul_bsr_indication_message{
-      to_du_cell_index(0), ue_index, rnti, bsr_format::SHORT_BSR, ul_bsr_lcg_report_list{{uint_to_lcg_id(0), 100}}});
+      to_du_cell_index(0), ue_index, rnti, slot_point{}, bsr_format::SHORT_BSR, ul_bsr_lcg_report_list{{uint_to_lcg_id(0), 100}}});
 
   // Wait for at least one UL HARQ to be allocated.
   const ul_sched_info* alloc      = nullptr;

@@ -73,6 +73,8 @@ private:
   /// \brief Handle the reception of a F1AP UE Context Release Request and notify NGAP.
   /// \param[in] req The F1AP UE Context Release Request.
   void handle_du_initiated_ue_context_release_request(const f1ap_ue_context_release_request& request);
+  void handle_du_initiated_ue_context_modification_required(
+      const f1ap_du_initiated_ue_context_modification_required& request);
 
   /// \brief Handle the reception of an F1AP Access Success notification from the DU.
   /// \param[in] msg The Access Success message received from the DU.

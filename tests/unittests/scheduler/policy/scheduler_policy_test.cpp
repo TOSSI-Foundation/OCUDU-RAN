@@ -157,7 +157,7 @@ protected:
     // - Only one LCG is assumed to have data to send.
     // - BSR is Short BSR.
     ul_bsr_indication_message msg{
-        to_du_cell_index(0), ue_index, to_rnti(0x4601 + (unsigned)ue_index), bsr_format::SHORT_BSR, {}};
+        to_du_cell_index(0), ue_index, to_rnti(0x4601 + (unsigned)ue_index), slot_point{}, bsr_format::SHORT_BSR, {}};
     msg.reported_lcgs.push_back(ul_bsr_lcg_report{lcg_id, bytes});
 
     ues[ue_index].handle_bsr_indication(msg);

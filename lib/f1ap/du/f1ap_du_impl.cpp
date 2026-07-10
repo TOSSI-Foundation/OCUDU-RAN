@@ -341,24 +341,61 @@ void f1ap_du_impl::handle_ue_context_release_request(const f1ap_ue_context_relea
 async_task<f1ap_ue_context_modification_confirm>
 f1ap_du_impl::handle_ue_context_modification_required(const f1ap_ue_context_modification_required& msg)
 {
-  // TODO: add procedure implementation
+  // TS 38.473 §8.3.5
+  f1ap_du_ue* ue = ues.find(msg.ue_index);
+  if (ue == nullptr) {
+    logger.warning("ue={}: Skipping UEContextModificationRequired transmission. Cause: UE not found",
+                   fmt::underlying(msg.ue_index));
+    return launch_async([res = f1ap_ue_context_modification_confirm{false}](
+                            coro_context<async_task<f1ap_ue_context_modification_confirm>>& ctx) mutable {
+      CORO_BEGIN(ctx);
+      CORO_RETURN(res);
+    });
+  }
+  if (ue->context.gnb_cu_ue_f1ap_id == gnb_cu_ue_f1ap_id_t::invalid) {
+    logger.warning("ue={} du_ue_id={}: Skipping UEContextModificationRequired transmission. Cause: "
+                   "gNB-CU-UE-F1AP-ID does not exist",
+                   msg.ue_index,
+                   fmt::underlying(ue->context.gnb_du_ue_f1ap_id));
+    return launch_async([res = f1ap_ue_context_modification_confirm{false}](
+                            coro_context<async_task<f1ap_ue_context_modification_confirm>>& ctx) mutable {
+      CORO_BEGIN(ctx);
+      CORO_RETURN(res);
+    });
+  }
+  if (msg.cell_group_cfg.empty()) {
+    logger.warning("ue={} du_ue_id={}: Skipping UEContextModificationRequired transmission. Cause: empty "
+                   "CellGroupConfig",
+                   msg.ue_index,
+                   fmt::underlying(ue->context.gnb_du_ue_f1ap_id));
+    return launch_async([res = f1ap_ue_context_modification_confirm{false}](
+                            coro_context<async_task<f1ap_ue_context_modification_confirm>>& ctx) mutable {
+      CORO_BEGIN(ctx);
+      CORO_RETURN(res);
+    });
+  }
 
-  f1ap_event_manager::f1ap_ue_context_modification_outcome_t ue_ctxt_mod_resp;
+  f1ap_message f1ap_msg;
+  f1ap_msg.pdu.set_init_msg().load_info_obj(ASN1_F1AP_ID_UE_CONTEXT_MOD_REQUIRED);
+  auto& mod_req              = f1ap_msg.pdu.init_msg().value.ue_context_mod_required();
+  mod_req->gnb_du_ue_f1ap_id = gnb_du_ue_f1ap_id_to_uint(ue->context.gnb_du_ue_f1ap_id);
+  mod_req->gnb_cu_ue_f1ap_id = gnb_cu_ue_f1ap_id_to_uint(ue->context.gnb_cu_ue_f1ap_id);
 
-  return launch_async([this, ue_ctxt_mod_resp, res = f1ap_ue_context_modification_confirm{}](
+  // TS 38.473 §9.3.1
+  mod_req->du_to_cu_rrc_info_present         = true;
+  mod_req->du_to_cu_rrc_info.cell_group_cfg  = msg.cell_group_cfg.copy();
+
+  mod_req->cause.set_radio_network().value = cause_radio_network_opts::action_desirable_for_radio_reasons;
+
+  logger.info("ue={} du_ue_id={}: Sending UEContextModificationRequired (adaptive BSR periodicity).",
+              msg.ue_index,
+              fmt::underlying(ue->context.gnb_du_ue_f1ap_id));
+  ue->f1ap_msg_notifier.on_new_message(f1ap_msg);
+
+  // TS 38.473 §8.3.5.2
+  return launch_async([res = f1ap_ue_context_modification_confirm{true}](
                           coro_context<async_task<f1ap_ue_context_modification_confirm>>& ctx) mutable {
     CORO_BEGIN(ctx);
-
-    CORO_AWAIT_VALUE(ue_ctxt_mod_resp, events->f1ap_ue_context_modification_outcome);
-
-    if (ue_ctxt_mod_resp.has_value()) {
-      logger.debug("Received PDU with successful outcome");
-      res.success = true;
-    } else {
-      logger.debug("Received PDU with unsuccessful outcome");
-      res.success = false;
-    }
-
     CORO_RETURN(res);
   });
 }

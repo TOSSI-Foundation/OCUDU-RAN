@@ -247,6 +247,9 @@ void f1ap_cu_impl::handle_initiating_message(const asn1::f1ap::init_msg_s& msg)
     case asn1::f1ap::f1ap_elem_procs_o::init_msg_c::types_opts::options::ue_context_release_request:
       handle_ue_context_release_request(msg.value.ue_context_release_request());
       break;
+    case asn1::f1ap::f1ap_elem_procs_o::init_msg_c::types_opts::options::ue_context_mod_required:
+      handle_ue_context_modification_required(msg.value.ue_context_mod_required());
+      break;
     case asn1::f1ap::f1ap_elem_procs_o::init_msg_c::types_opts::options::access_success:
       handle_access_success(msg.value.access_success());
       break;
@@ -463,6 +466,33 @@ void f1ap_cu_impl::handle_ue_context_release_request(const asn1::f1ap::ue_contex
   req.cause    = asn1_to_cause(msg->cause);
 
   du_processor_notifier.on_du_initiated_ue_context_release_request(req);
+}
+
+void f1ap_cu_impl::handle_ue_context_modification_required(const asn1::f1ap::ue_context_mod_required_s& msg)
+{
+  // TS 38.473 §8.3.5
+  if (!ue_ctxt_list.contains(int_to_gnb_cu_ue_f1ap_id(msg->gnb_cu_ue_f1ap_id))) {
+    logger.warning("cu_ue={} du_ue={}: Dropping \"UeContextModificationRequired\". UE context does not exist",
+                   msg->gnb_cu_ue_f1ap_id,
+                   msg->gnb_du_ue_f1ap_id);
+    return;
+  }
+
+  f1ap_ue_context& ue_ctxt = ue_ctxt_list[int_to_gnb_cu_ue_f1ap_id(msg->gnb_cu_ue_f1ap_id)];
+
+  if (not msg->du_to_cu_rrc_info_present or msg->du_to_cu_rrc_info.cell_group_cfg.empty()) {
+    ue_ctxt.logger.log_warning(
+        "Dropping \"UeContextModificationRequired\". Cause: no CellGroupConfig in DUtoCURRCInformation");
+    return;
+  }
+
+  ue_ctxt.logger.log_debug("Received \"UeContextModificationRequired\" (adaptive BSR periodicity)");
+
+  f1ap_du_initiated_ue_context_modification_required req;
+  req.ue_index          = ue_ctxt.ue_ids.ue_index;
+  req.master_cell_group = msg->du_to_cu_rrc_info.cell_group_cfg.copy();
+
+  du_processor_notifier.on_du_initiated_ue_context_modification_required(req);
 }
 
 void f1ap_cu_impl::handle_successful_outcome(const asn1::f1ap::successful_outcome_s& outcome)

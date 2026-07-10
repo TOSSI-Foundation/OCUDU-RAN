@@ -5,6 +5,7 @@
 #include "du_manager_impl.h"
 #include "du_positioning_handler_factory.h"
 #include "procedures/cu_configuration_procedure.h"
+#include "procedures/du_bsr_periodicity_actuation_procedure.h"
 #include "procedures/du_cell_stop_procedure.h"
 #include "procedures/du_mac_ntn_param_update_procedure.h"
 #include "procedures/du_param_config_procedure.h"
@@ -34,6 +35,68 @@ du_manager_impl::du_manager_impl(const du_manager_params& params_) :
   proc_ctxt{params, ctxt, cell_mng, ue_mng, metrics, logger},
   main_ctrl_loop(128)
 {
+  const bool actuation_enabled =
+      not params.ran.cells.empty() and params.ran.cells.front().bsr_ml_actuation_enabled;
+  if (actuation_enabled) {
+    metrics.set_bsr_periodicity_recommendation_handler(
+        [this](du_ue_index_t ue_index, unsigned recommended_sf) {
+          handle_bsr_periodicity_recommendation(ue_index, recommended_sf);
+        });
+    logger.info("BSR periodicity ML actuation enabled (F1AP UE Context Modification Required, TS 38.473 §8.3.5).");
+  }
+}
+
+namespace {
+
+// TS 38.331
+constexpr unsigned VALID_PERIODIC_BSR_TIMER_SF[] = {1, 5, 10, 16, 20, 32, 40, 64, 80, 128, 160, 320, 640, 1280, 2560};
+
+int periodicity_index(unsigned sf)
+{
+  for (int i = 0; i < static_cast<int>(sizeof(VALID_PERIODIC_BSR_TIMER_SF) / sizeof(unsigned)); ++i) {
+    if (VALID_PERIODIC_BSR_TIMER_SF[i] == sf) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+constexpr unsigned BSR_ACT_HYSTERESIS_STEPS = 1;
+constexpr unsigned BSR_ACT_MIN_DWELL_SEC    = 10;
+
+}
+
+void du_manager_impl::handle_bsr_periodicity_recommendation(du_ue_index_t ue_index, unsigned recommended_sf)
+{
+  bsr_actuation_state& st = bsr_actuation_states[ue_index];
+
+  if (st.applied_sf == recommended_sf) {
+    return;
+  }
+
+  if (st.applied_sf != 0) {
+    const int cur = periodicity_index(st.applied_sf);
+    const int nw  = periodicity_index(recommended_sf);
+    if (cur >= 0 and nw >= 0) {
+      int dist = nw - cur;
+      if (dist < 0) {
+        dist = -dist;
+      }
+      if (static_cast<unsigned>(dist) <= BSR_ACT_HYSTERESIS_STEPS) {
+        return;
+      }
+    }
+  }
+
+  const auto now = std::chrono::steady_clock::now();
+  if (st.applied_sf != 0 and BSR_ACT_MIN_DWELL_SEC > 0 and
+      (now - st.last_tp) < std::chrono::seconds(BSR_ACT_MIN_DWELL_SEC)) {
+    return;
+  }
+
+  st.applied_sf = recommended_sf;
+  st.last_tp    = now;
+  ue_mng.schedule_async_task(ue_index, start_bsr_periodicity_actuation(ue_index, recommended_sf, ue_mng, params));
 }
 
 du_manager_impl::~du_manager_impl()

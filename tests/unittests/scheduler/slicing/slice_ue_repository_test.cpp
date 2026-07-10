@@ -22,7 +22,7 @@ struct test_lc_ch_cfg {
 ul_bsr_indication_message create_short_bsr(du_ue_index_t ue_idx, ul_bsr_lcg_report_list report)
 {
   return ul_bsr_indication_message{
-      to_du_cell_index(0), ue_idx, to_rnti(0x4601 + ue_idx), bsr_format::SHORT_BSR, report};
+      to_du_cell_index(0), ue_idx, to_rnti(0x4601 + ue_idx), slot_point{}, bsr_format::SHORT_BSR, report};
 }
 
 } // namespace

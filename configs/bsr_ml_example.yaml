@@ -1,0 +1,19 @@
+bsr_ml:
+  inference:
+    enabled: false
+    model_path: ml/models/bsr_periodicity.model
+  actuation:
+    enabled: false
+  dataset_logging:
+    enabled: false
+    output_dir: ml/datasets
+    scenario: default
+
+# Static periodicBSR-Timer baseline, in subframes (TS 38.331 BSR-Config).
+# Applies when inference/actuation are disabled; also the starting value the ML moves away from.
+# Valid: 1, 5, 10, 16, 20, 32, 40, 64, 80, 128, 160, 320, 640, 1280, 2560.
+#cell_cfg:
+#  mac_cell_group:
+#    bsr_cfg:
+#      periodic_bsr_timer: 40
+ 
