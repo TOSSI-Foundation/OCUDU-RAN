@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
+#include "lib/cu_cp/cell_meas_manager/cell_meas_manager_impl.h"
 #include "lib/cu_cp/metrics_handler/metrics_handler_impl.h"
 #include "lib/cu_cp/mobility_manager/mobility_manager_impl.h"
 #include "lib/cu_cp/ngap_repository.h"
@@ -15,7 +16,8 @@ using namespace ocucp;
 class dummy_ue_metrics_handler : public ue_metrics_handler,
                                  public du_repository_metrics_handler,
                                  public ngap_repository_metrics_handler,
-                                 public mobility_manager_metrics_handler
+                                 public mobility_manager_metrics_handler,
+                                 public cell_meas_metrics_handler
 {
 public:
   cu_cp_metrics_report next_metrics;
@@ -33,6 +35,11 @@ public:
   std::vector<ngap_info> handle_ngap_metrics_report_request() const override { return next_metrics.ngaps; }
 
   mobility_management_metrics handle_mobility_metrics_report_request() const override { return next_metrics.mobility; }
+
+  std::vector<cu_cp_metrics_report::cell_meas_metrics> handle_cell_meas_metrics_report_request() const override
+  {
+    return next_metrics.meas_reports;
+  }
 };
 
 class dummy_metrics_notifier : public cu_cp_metrics_report_notifier
@@ -48,7 +55,7 @@ TEST(metrics_handler_test, get_periodic_metrics_report_while_session_is_active)
   manual_task_worker       worker{16};
   timer_manager            timers{2};
   dummy_ue_metrics_handler metrics_hdlr;
-  metrics_handler_impl     metrics{worker, timers, metrics_hdlr, metrics_hdlr, metrics_hdlr, metrics_hdlr};
+  metrics_handler_impl     metrics{worker, timers, metrics_hdlr, metrics_hdlr, metrics_hdlr, metrics_hdlr, metrics_hdlr};
 
   std::chrono::milliseconds period{5};
   dummy_metrics_notifier    metrics_notifier;

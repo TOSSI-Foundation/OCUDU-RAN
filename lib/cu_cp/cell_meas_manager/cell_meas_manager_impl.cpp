@@ -382,11 +382,13 @@ static cu_cp_metrics_report::cell_meas_metrics::cell_result make_meas_cell_resul
 }
 
 static cu_cp_metrics_report::cell_meas_metrics build_meas_report_metrics(cu_cp_ue_index_t        ue_index,
+                                                                         rnti_t                  rnti,
                                                                          const meas_context_t&   meas_ctxt,
                                                                          const rrc_meas_results& meas_results)
 {
   cu_cp_metrics_report::cell_meas_metrics m;
   m.ue_index    = cu_cp_ue_index_to_uint(ue_index);
+  m.rnti        = static_cast<uint16_t>(rnti);
   m.serving_nci = meas_ctxt.nci.value();
   m.serving_pci = static_cast<int>(meas_ctxt.pci);
   for (const auto& serv_mo : meas_results.meas_result_serving_mo_list) {
@@ -472,7 +474,9 @@ void cell_meas_manager::report_measurement(cu_cp_ue_index_t ue_index, const rrc_
   // Log a per-UE table with the serving and neighbour cell measurements reported by this UE.
   log_measurement_report(logger, ue_index, meas_ctxt, meas_results);
 
-  latest_meas_reports[ue_index] = build_meas_report_metrics(ue_index, meas_ctxt, meas_results);
+  cu_cp_ue* ue   = ue_mng.find_ue(ue_index);
+  rnti_t    rnti = ue != nullptr ? ue->get_c_rnti() : rnti_t::INVALID_RNTI;
+  latest_meas_reports[ue_index] = build_meas_report_metrics(ue_index, rnti, meas_ctxt, meas_results);
 
   // Handle periodic measurement results.
   if (cfg.cells.at(meas_ctxt.nci).periodic_report_cfg_id.has_value() &&

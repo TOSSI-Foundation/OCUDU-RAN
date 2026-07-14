@@ -143,6 +143,7 @@ void to_json(nlohmann::json& json, const cu_cp_metrics_report::cell_meas_metrics
 void to_json(nlohmann::json& json, const cu_cp_metrics_report::cell_meas_metrics& metrics)
 {
   json["ue"]          = metrics.ue_index;
+  json["rnti"]        = metrics.rnti;
   json["serving_nci"] = metrics.serving_nci;
   json["serving_pci"] = metrics.serving_pci;
   json["serving"]     = metrics.serving_cells;

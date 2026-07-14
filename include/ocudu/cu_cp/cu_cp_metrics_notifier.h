@@ -54,6 +54,7 @@ struct cu_cp_metrics_report {
       std::optional<float> csi_sinr_db;
     };
     uint64_t                 ue_index;
+    uint16_t                 rnti = 0; // C-RNTI: join key to the scheduler's per-UE metrics
     uint64_t                 serving_nci;
     int                      serving_pci = -1;
     std::vector<cell_result> serving_cells;

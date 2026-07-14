@@ -141,6 +141,26 @@ void scheduler_cell_metrics_consumer_stdout::handle_metric(const std::optional<s
 
       fmt::print("\n");
     }
+
+    unsigned cell_dl_prbs = 0, cell_ul_prbs = 0;
+    for (const auto& ue : cell.ue_metrics) {
+      cell_dl_prbs += ue.tot_pdsch_prbs_used;
+      cell_ul_prbs += ue.tot_pusch_prbs_used;
+    }
+    double dl_util = (cell.nof_prbs && cell.nof_dl_slots)
+                         ? 100.0 * cell_dl_prbs / (static_cast<double>(cell.nof_prbs) * cell.nof_dl_slots)
+                         : 0.0;
+    double ul_util = (cell.nof_prbs && cell.nof_ul_slots)
+                         ? 100.0 * cell_ul_prbs / (static_cast<double>(cell.nof_prbs) * cell.nof_ul_slots)
+                         : 0.0;
+    double load = std::max(dl_util, ul_util);
+    fmt::print(">> CONGESTION pci={} PRB_util: DL={:.1f}% UL={:.1f}% load={:.1f}% ues={} -> {}\n",
+               cell.pci,
+               dl_util,
+               ul_util,
+               load,
+               cell.ue_metrics.size(),
+               load >= 80.0 ? "CONGESTED" : "ok");
   }
 }
 
@@ -277,6 +297,23 @@ void scheduler_cell_metrics_consumer_log::handle_metric(const std::optional<sche
     }
     log_chan("{}", to_c_str(buffer));
     buffer.clear();
+
+    {
+      double dl_util = (cell.nof_prbs && cell.nof_dl_slots)
+                           ? 100.0 * sum_pdsch_rbs / (static_cast<double>(cell.nof_prbs) * cell.nof_dl_slots)
+                           : 0.0;
+      double ul_util = (cell.nof_prbs && cell.nof_ul_slots)
+                           ? 100.0 * sum_pusch_rbs / (static_cast<double>(cell.nof_prbs) * cell.nof_ul_slots)
+                           : 0.0;
+      double load = std::max(dl_util, ul_util);
+      log_chan("CONGESTION pci={} PRB_util DL={:.1f}% UL={:.1f}% load={:.1f}% ues={} -> {}",
+               cell.pci,
+               dl_util,
+               ul_util,
+               load,
+               cell.ue_metrics.size(),
+               load >= 80.0 ? "CONGESTED" : "ok");
+    }
 
     // log ue-specific metrics
     for (const auto& ue : cell.ue_metrics) {

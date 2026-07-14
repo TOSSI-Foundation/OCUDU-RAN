@@ -47,7 +47,8 @@ void to_json(nlohmann::json& json, const scheduler_ue_metrics& metrics)
   json["dl_ri"] = metrics.dl_ri_stats.get_nof_observations() > 0 ? metrics.dl_ri_stats.get_mean() : 1;
   json["ul_ri"] = metrics.ul_ri_stats.get_nof_observations() > 0 ? metrics.ul_ri_stats.get_mean() : 1;
 
-  json["dl_mcs"]     = metrics.dl_mcs.value();
+  json["dl_mcs"]              = metrics.dl_mcs.value();
+  json["tot_pdsch_prbs_used"] = metrics.tot_pdsch_prbs_used;
   json["dl_brate"]   = metrics.dl_brate_kbps * 1e3;
   json["dl_nof_ok"]  = metrics.dl_nof_ok;
   json["dl_nof_nok"] = metrics.dl_nof_nok;
@@ -73,6 +74,7 @@ void to_json(nlohmann::json& json, const scheduler_ue_metrics& metrics)
   json["srs_ta_ns"] =
       (metrics.srs_ta_stats.get_nof_observations() > 0) ? std::optional{metrics.srs_ta_stats.get_mean() * 1e9} : 0.0f;
   json["ul_mcs"]                       = metrics.ul_mcs.value();
+  json["tot_pusch_prbs_used"]          = metrics.tot_pusch_prbs_used;
   json["ul_brate"]                     = metrics.ul_brate_kbps * 1e3;
   json["ul_nof_ok"]                    = metrics.ul_nof_ok;
   json["ul_nof_nok"]                   = metrics.ul_nof_nok;
@@ -108,6 +110,9 @@ void to_json(nlohmann::json& json, const scheduler_cell_metrics& metrics)
   // Cell metrics.
   auto& cell_json                       = json["cell_metrics"];
   cell_json["pci"]                      = metrics.pci;
+  cell_json["nof_prbs"]                 = metrics.nof_prbs;
+  cell_json["nof_dl_slots"]             = metrics.nof_dl_slots;
+  cell_json["nof_ul_slots"]             = metrics.nof_ul_slots;
   cell_json["error_indication_count"]   = metrics.nof_error_indications;
   cell_json["average_latency"]          = metrics.average_decision_latency.count();
   cell_json["max_latency"]              = metrics.max_decision_latency.count();
