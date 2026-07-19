@@ -1,0 +1,5 @@
+
+
+add_executable(sionna_channel_test sionna_channel_test.cpp)
+target_link_libraries(sionna_channel_test ocudu_channel_sionna ocudu_support gtest gtest_main)
+add_test(sionna_channel_test sionna_channel_test)

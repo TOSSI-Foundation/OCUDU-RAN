@@ -10,6 +10,15 @@
 
 namespace ocudu {
 
+/// \brief Returns true when the given RF device driver is a simulated radio (no hardware timing).
+///
+/// Simulation drivers require blocking-mode operation, sequential lower PHY execution and slot-sized
+/// baseband buffers instead of the real-time profiles used with hardware radios.
+inline bool is_simulation_driver(const std::string& device_driver)
+{
+  return device_driver == "zmq" || device_driver == "sionna";
+}
+
 /// Expert SDR Radio Unit configuration.
 struct ru_sdr_unit_expert_config {
   /// System time-based throttling. See \ref lower_phy_configuration::system_time_throttling for more information.

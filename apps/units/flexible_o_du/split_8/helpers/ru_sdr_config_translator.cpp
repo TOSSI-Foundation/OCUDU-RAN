@@ -52,7 +52,7 @@ static lower_phy_configuration generate_lower_phy_config(const flexible_o_du_ru_
   out_cfg.max_nof_prach_concurrent_requests = max_processing_delay_slot + 2;
 
   // Select RX buffer size policy.
-  if (ru_cfg.device_driver == "zmq") {
+  if (is_simulation_driver(ru_cfg.device_driver)) {
     out_cfg.baseband_rx_buffer_size_policy = lower_phy_baseband_buffer_size_policy::slot;
   } else if (ru_cfg.expert_execution_cfg.threads.execution_profile == lower_phy_thread_profile::single) {
     // For single executor, the same executor processes uplink and downlink. In this case, the processing is blocked
@@ -188,7 +188,7 @@ static void generate_radio_config(radio_configuration::radio&                   
       tx_ch_config.gain_dB = ru_cfg.tx_gain_dB;
 
       // Add the TX ports.
-      if (ru_cfg.device_driver == "zmq") {
+      if (is_simulation_driver(ru_cfg.device_driver)) {
         if (sector_id * cell.nof_tx_antennas + port_id >= zmq_tx_addr.size()) {
           report_error("ZMQ transmission channel arguments out of bounds\n");
         }
@@ -212,7 +212,7 @@ static void generate_radio_config(radio_configuration::radio&                   
       rx_ch_config.gain_dB = ru_cfg.rx_gain_dB;
 
       // Add the RX ports.
-      if (ru_cfg.device_driver == "zmq") {
+      if (is_simulation_driver(ru_cfg.device_driver)) {
         if (sector_id * cell.nof_rx_antennas + port_id >= zmq_rx_addr.size()) {
           report_error("ZMQ reception channel arguments out of bounds\n");
         }
@@ -249,7 +249,7 @@ void ocudu::fill_sdr_worker_manager_config(worker_manager_config& config, const 
   auto& sdr_cfg = config.ru_sdr_cfg.emplace();
 
   sdr_cfg.nof_cells = ru_cfg.expert_execution_cfg.cell_affinities.size();
-  sdr_cfg.profile   = (ru_cfg.device_driver != "zmq")
+  sdr_cfg.profile   = !is_simulation_driver(ru_cfg.device_driver)
                           ? static_cast<worker_manager_config::ru_sdr_config::lower_phy_thread_profile>(
                               ru_cfg.expert_execution_cfg.threads.execution_profile)
                           : worker_manager_config::ru_sdr_config::lower_phy_thread_profile::sequential;
