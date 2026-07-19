@@ -21,6 +21,10 @@ if (ZEROMQ_FOUND AND ENABLE_ZEROMQ)
     add_subdirectory(zmq)
     list(APPEND OCUDU_RADIO_DEFINITIONS -DENABLE_ZMQ)
     list(APPEND OCUDU_RADIO_LIBRARIES ocudu_radio_zmq)
+
+    add_subdirectory(sionna)
+    list(APPEND OCUDU_RADIO_DEFINITIONS -DENABLE_SIONNA)
+    list(APPEND OCUDU_RADIO_LIBRARIES ocudu_radio_sionna)
 endif (ZEROMQ_FOUND AND ENABLE_ZEROMQ)
 
 add_definitions(${OCUDU_RADIO_DEFINITIONS})

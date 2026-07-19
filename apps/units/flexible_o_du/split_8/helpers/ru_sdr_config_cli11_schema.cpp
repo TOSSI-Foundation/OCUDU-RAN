@@ -294,8 +294,8 @@ void ocudu::autoderive_ru_sdr_parameters_after_parsing(CLI::App&           app,
     parsed_cfg.expert_execution_cfg.cell_affinities.resize(nof_cells);
   }
 
-  // Set the lower PHY to blocking for ZMQ.
-  if (parsed_cfg.device_driver == "zmq") {
+  // Set the lower PHY to blocking for simulation drivers.
+  if (is_simulation_driver(parsed_cfg.device_driver)) {
     parsed_cfg.expert_execution_cfg.threads.execution_profile = lower_phy_thread_profile::blocking;
   }
 }
