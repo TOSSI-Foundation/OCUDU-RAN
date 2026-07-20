@@ -26,6 +26,7 @@ build_cu_cp_metrics_config(std::vector<app_services::metrics_config>&   cu_cp_se
                            app_services::metrics_notifier&              metrics_notifier,
                            app_services::remote_server_metrics_gateway* remote_metrics_gateway,
                            const cu_cp_unit_metrics_config&             cu_cp_metrics_cfg,
+                           const cu_cp_unit_mobility_config&            mobility_cfg,
                            bool                                         e2_enabled,
                            e2_cu_metrics_notifier&                      e2_notifier)
 {
@@ -42,7 +43,8 @@ build_cu_cp_metrics_config(std::vector<app_services::metrics_config>&   cu_cp_se
   if (unit_metrics_cfg.enable_json_metrics) {
     report_error_if_not(remote_metrics_gateway,
                         "Invalid remote server gateway for sending JSON metrics. Check that remote server is enabled");
-    metrics_service_cfg.consumers.push_back(std::make_unique<cu_cp_metrics_consumer_json>(*remote_metrics_gateway));
+    metrics_service_cfg.consumers.push_back(
+        std::make_unique<cu_cp_metrics_consumer_json>(*remote_metrics_gateway, mobility_cfg));
   }
   if (cu_cp_metrics_cfg.common_metrics_cfg.enable_log_metrics) {
     metrics_service_cfg.consumers.push_back(
@@ -79,6 +81,7 @@ o_cu_cp_unit ocudu::build_o_cu_cp(const o_cu_cp_unit_config& unit_cfg, o_cu_cp_u
                                                           *dependencies.metrics_notifier,
                                                           dependencies.remote_metrics_gateway,
                                                           unit_cfg.cucp_cfg.metrics,
+                                                          unit_cfg.cucp_cfg.mobility_config,
                                                           unit_cfg.e2_cfg.base_config.enable_unit_e2,
                                                           e2_metric_connectors->get_e2_metric_notifier(0));
 
@@ -130,7 +133,6 @@ o_cu_cp_unit ocudu::build_o_cu_cp(const o_cu_cp_unit_config& unit_cfg, o_cu_cp_u
   ocucp.commands.cmdline.commands.push_back(
       std::make_unique<release_app_command>(ocucp.unit->get_cu_cp().get_command_handler()));
 
-  // Create remote commands.
   ocucp.commands.remote.push_back(
       std::make_unique<handover_remote_command>(ocucp.unit->get_cu_cp().get_command_handler()));
 

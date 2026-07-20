@@ -7,6 +7,7 @@
 #include "apps/services/metrics/metrics_consumer.h"
 #include "apps/units/o_cu_cp/cu_cp/metrics/consumers/ngap_metrics_consumers.h"
 #include "apps/units/o_cu_cp/cu_cp/metrics/consumers/rrc_metrics_consumers.h"
+#include "external/nlohmann/json.hpp"
 #include "ocudu/ocudulog/log_channel.h"
 #include "ocudu/support/ocudu_assert.h"
 
@@ -17,18 +18,21 @@ class remote_server_metrics_gateway;
 } // namespace app_services
 
 class e2_cu_metrics_notifier;
+struct cu_cp_unit_mobility_config;
 
 /// Consumer for the json CU-CP metrics.
 class cu_cp_metrics_consumer_json : public app_services::metrics_consumer
 {
 public:
-  explicit cu_cp_metrics_consumer_json(app_services::remote_server_metrics_gateway& gateway_) : gateway(gateway_) {}
+  cu_cp_metrics_consumer_json(app_services::remote_server_metrics_gateway& gateway_,
+                              const cu_cp_unit_mobility_config&            mobility_cfg);
 
   // See interface for documentation.
   void handle_metric(const app_services::metrics_set& metric) override;
 
 private:
   app_services::remote_server_metrics_gateway& gateway;
+  const nlohmann::json neighbours;
 };
 
 /// Consumer for the log CU-CP metrics.
