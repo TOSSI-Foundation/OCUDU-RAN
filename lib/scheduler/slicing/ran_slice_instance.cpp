@@ -39,7 +39,8 @@ void ran_slice_instance::slot_indication(slot_point slot_tx)
 
   // Recompute rate of UL allocation for slice and clear PUSCH RB count in previous slot.
   auto& pusch_slot_to_clear =
-      pusch_rb_count_per_slot[(slot_tx + min_k2 - 1).to_uint() % pusch_rb_count_per_slot.size()];
+      pusch_rb_count_per_slot[(slot_tx + min_k2 - 1 + cell_cfg->ntn_cs_koffset).to_uint() %
+                              pusch_rb_count_per_slot.size()];
   avg_pusch_rbs_per_slot += exp_avg_coeff * (pusch_slot_to_clear - avg_pusch_rbs_per_slot);
   pusch_slot_to_clear = 0;
 

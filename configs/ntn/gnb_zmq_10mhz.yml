@@ -1,0 +1,141 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+
+
+# Complete gNB configuration for a transparent-GEO NTN scenario over ZMQ, tuned for
+# an OAI nr-uesoftmodem. Run configs/ntn/geo_buffered_relay.py alongside it.
+# epoch_timestamp must be set to the current UTC time before every run.
+cu_cp:
+  amf:
+    addr: 192.168.1.115
+    port: 38412
+    bind_addr: 192.168.1.117
+    supported_tracking_areas:
+      - tac: 1
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+  inactivity_timer: 7200
+  request_pdu_session_timeout: 120
+  rrc:
+    rrc_procedure_guard_time_ms: 12800
+
+cu_up:
+  ngu:
+    socket:
+      - bind_addr: 192.168.1.117
+        ext_addr: 192.168.1.117
+ru_sdr:
+  device_driver: zmq
+  device_args: tx_port=tcp://127.0.0.1:2000,rx_port=tcp://127.0.0.1:2001
+  srate: 15.36
+  tx_gain: 0
+  rx_gain: 0
+
+cell_cfg:
+  dl_arfcn: 437000
+  band: 256
+  channel_bandwidth_MHz: 10
+  common_scs: 15
+  plmn: "00101"
+  tac: 1
+  nof_antennas_dl: 1
+  nof_antennas_ul: 1
+  sib:
+    t300: 2000
+    t301: 2000
+    t311: 3000
+    t319: 2000
+    si_window_length: 40
+    si_sched_info:
+      - si_period: 16
+        sib_mapping: 2
+      - si_period: 16
+        sib_mapping: 19
+        si_window_position: 2
+    sib2:
+      q_hyst: 3
+      thresh_serving_low_p: 0
+      cell_reselection_priority: 6
+      q_rx_lev_min: -140
+      s_intra_search_p: 62
+      t_reselection_nr: 1
+  pucch:
+    resource_set_size: 7
+    nof_cell_res_set_configs: 1
+    f1_nof_cyclic_shifts: 1
+    f1_enable_occ: true
+    nof_cell_sr_res: 7
+    nof_cell_csi_res: 7
+    sr_period_ms: 80
+    max_consecutive_kos: 100000
+  csi:
+    csi_rs_period: 80
+  mac_cell_group:
+    sr_cfg:
+      sr_prohibit_timer: 128
+      sr_trans_max: 64
+  pdsch:
+    harq_retx_timeout: 500
+    nof_harqs: 16
+    max_nof_harq_retxs: 0
+    harq_feedback_disabled: true
+  pusch:
+    harq_retx_timeout: 500
+    max_nof_harq_retxs: 0
+    harq_mode_b: true
+  prach:
+    prach_config_index: 44
+    max_msg3_harq_retx: 0
+  ta:
+    ta_cmd_offset_threshold: 1
+    ta_measurement_slot_period: 40
+    ta_measurement_slot_prohibit_period: 250
+    ta_target: 0
+  ntn:
+    epoch_timestamp: '2026-01-01T00:00:00'
+    propagator_type: keplerian
+    cell_specific_koffset: 240
+    ntn_ul_sync_validity_dur: 240
+    use_state_vector: true
+    ephemeris_info_ecef:
+      pos_x: -28105880
+      pos_y: 31509747
+      pos_z: -1691895
+      vel_x: 34
+      vel_y: 9
+      vel_z: -385
+
+srbs:
+  - srb_id: 1
+    mac:
+      triggered_ul_grant:
+        delay: 16
+    rlc:
+      tx:
+        sn: 12
+        t-poll-retransmit: 1000
+        max-retx-threshold: 32
+        poll-pdu: -1
+        poll-byte: -1
+      rx:
+        sn: 12
+        t-reassembly: 200
+        t-status-prohibit: 10
+  - srb_id: 2
+    rlc:
+      tx:
+        sn: 12
+        t-poll-retransmit: 1000
+        max-retx-threshold: 32
+        poll-pdu: -1
+        poll-byte: -1
+      rx:
+        sn: 12
+        t-reassembly: 200
+        t-status-prohibit: 10
+
+log:
+  filename: gnb_ntn.log
+  all_level: info
