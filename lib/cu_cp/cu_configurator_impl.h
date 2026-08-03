@@ -11,14 +11,19 @@
 
 namespace ocudu {
 
+namespace ocucp {
+class mobility_manager;
+}
+
 class cu_configurator_impl : public cu_configurator
 {
 public:
   cu_configurator_impl(ocucp::mobility_manager_cu_cp_notifier& mobility_notif_,
                        ocucp::du_processor_repository&         du_db_,
                        ocucp::ngap_repository&                 ngap_db_,
-                       ocucp::ue_manager&                      ue_mng_) :
-    mobility_notif(mobility_notif_), du_db(du_db_), ngap_db(ngap_db_), ue_mng(ue_mng_)
+                       ocucp::ue_manager&                      ue_mng_,
+                       ocucp::mobility_manager&                mobility_mng_) :
+    mobility_notif(mobility_notif_), du_db(du_db_), ngap_db(ngap_db_), ue_mng(ue_mng_), mobility_mng(mobility_mng_)
   {
   }
 
@@ -40,6 +45,9 @@ public:
   trigger_handover(const cu_cp_du_index_t&                       source_du_index,
                    const ocucp::cu_cp_intra_cu_handover_request& handover_req) override;
 
+  async_task<ocucp::cu_cp_intra_cu_handover_response>
+  trigger_inter_cu_handover(const cu_cp_ue_index_t& ue_index, const nr_cell_global_id_t& target_cgi) override;
+
 private:
   async_task<ocucp::cu_cp_intra_cu_handover_response> return_handover_response(bool ack);
 
@@ -47,6 +55,7 @@ private:
   ocucp::du_processor_repository&         du_db;
   ocucp::ngap_repository&                 ngap_db;
   ocucp::ue_manager&                      ue_mng;
+  ocucp::mobility_manager&                mobility_mng;
 };
 
 } // namespace ocudu

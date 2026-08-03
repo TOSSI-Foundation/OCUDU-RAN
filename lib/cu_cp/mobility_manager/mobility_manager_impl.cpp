@@ -273,6 +273,40 @@ void mobility_manager::handle_neighbor_better_than_spcell(cu_cp_ue_index_t     u
   handle_handover(ue_index, neighbor_gnb_id, neighbor_nci, neighbor_pci, neighbor_plmn, neighbor_tac);
 }
 
+void mobility_manager::trigger_handover_by_cgi(cu_cp_ue_index_t ue_index, const nr_cell_global_id_t& target_cgi)
+{
+  std::optional<cell_meas_config> target_cfg = cell_meas_mng.get_cell_config(target_cgi.nci);
+  if (not target_cfg.has_value()) {
+    logger.error("ue={}: Cannot trigger handover. Target cell nci={} is not a configured neighbour cell",
+                 ue_index,
+                 target_cgi.nci.value());
+    return;
+  }
+
+  const serving_cell_meas_config& target_cell = target_cfg.value().serving_cell_cfg;
+  if (not target_cell.pci.has_value()) {
+    logger.error("ue={}: Cannot trigger handover. No PCI configured for target cell nci={}",
+                 ue_index,
+                 target_cgi.nci.value());
+    return;
+  }
+
+  cu_cp_du_index_t target_du = du_db.find_du(target_cell.pci.value());
+  if (target_du == cu_cp_du_index_t::invalid and not target_cell.tac.has_value()) {
+    logger.error("ue={}: Cannot trigger inter-CU handover. No TAC configured for target cell nci={}",
+                 ue_index,
+                 target_cgi.nci.value());
+    return;
+  }
+
+  handle_handover(ue_index,
+                  target_cgi.nci.gnb_id(target_cell.gnb_id_bit_length),
+                  target_cgi.nci,
+                  target_cell.pci.value(),
+                  target_cell.plmn,
+                  target_cell.tac);
+}
+
 void mobility_manager::handle_handover(cu_cp_ue_index_t     ue_index,
                                        gnb_id_t             neighbor_gnb_id,
                                        nr_cell_identity     neighbor_nci,

@@ -73,6 +73,10 @@ public:
   /// This path is only active when enabled in gNB config.
   void trigger_auto_conditional_handover(cu_cp_ue_index_t ue_index);
 
+  /// \brief Trigger handover of a UE to a target cell identified by its NR CGI.
+  /// The target PCI, gNB-ID and TAC are resolved from the configured neighbour cell relations.
+  void trigger_handover_by_cgi(cu_cp_ue_index_t ue_index, const nr_cell_global_id_t& target_cgi);
+
   void handle_neighbor_better_than_spcell(cu_cp_ue_index_t     ue_index,
                                           gnb_id_t             neighbor_gnb_id,
                                           nr_cell_identity     neighbor_nci,

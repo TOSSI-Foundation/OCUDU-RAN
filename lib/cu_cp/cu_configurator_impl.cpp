@@ -4,6 +4,7 @@
 
 #include "cu_configurator_impl.h"
 #include "du_processor/du_processor_repository.h"
+#include "mobility_manager/mobility_manager_impl.h"
 
 using namespace ocudu;
 using namespace ocucp;
@@ -81,5 +82,22 @@ cu_configurator_impl::trigger_handover(const cu_cp_du_index_t&                so
   }
 
   // Only confirm that the HO request was accepted, no info about the HO outcome.
+  return return_handover_response(true);
+}
+
+async_task<cu_cp_intra_cu_handover_response>
+cu_configurator_impl::trigger_inter_cu_handover(const cu_cp_ue_index_t& ue_index, const nr_cell_global_id_t& target_cgi)
+{
+  cu_cp_ue* u = ue_mng.find_du_ue(ue_index);
+  if (not u) {
+    return return_handover_response(false);
+  }
+
+  if (u->get_ue_context().reconfiguration_disabled) {
+    return return_handover_response(false);
+  }
+
+  mobility_mng.trigger_handover_by_cgi(ue_index, target_cgi);
+
   return return_handover_response(true);
 }

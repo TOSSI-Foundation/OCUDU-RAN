@@ -137,10 +137,25 @@ e2sm_rc_control_action_3_1_cu_executor::execute_ric_control_action(const e2sm_ri
   handover_req.target_pci      = cu_param_configurator.get_pci(ho_ctrl_cfg.target_cell_id);
 
   if (handover_req.target_du_index == cu_cp_du_index_t::invalid) {
-    logger.error("Ignoring Handover Request. Cause: Couldn't find DU index for CGI=[plmn: {}, nci: {}]",
-                 ho_ctrl_cfg.target_cell_id.plmn_id.to_string(),
-                 ho_ctrl_cfg.target_cell_id.nci.value());
-    return return_ctrl_failure(req);
+    logger.info("Executing E2SM-RC Handover Request. Target CGI=[plmn: {}, nci: {}] is not served by a local DU, "
+                "triggering inter-CU handover for ue={}",
+                ho_ctrl_cfg.target_cell_id.plmn_id.to_string(),
+                ho_ctrl_cfg.target_cell_id.nci.value(),
+                ue_index);
+
+    return launch_async([this, ue_index, target_cgi = ho_ctrl_cfg.target_cell_id](
+                            coro_context<async_task<e2sm_ric_control_response>>& ctx) {
+      ocucp::cu_cp_intra_cu_handover_response cu_cp_response;
+      CORO_BEGIN(ctx);
+      CORO_AWAIT_VALUE(cu_cp_response, cu_param_configurator.trigger_inter_cu_handover(ue_index, target_cgi));
+
+      e2sm_ric_control_response e2sm_response;
+      e2sm_response.success = cu_cp_response.success;
+      if (!e2sm_response.success) {
+        e2sm_response.cause.set_misc().value = cause_misc_e::options::unspecified;
+      }
+      CORO_RETURN(e2sm_response);
+    });
   }
   if (handover_req.target_pci == INVALID_PCI) {
     logger.error("ue={}: Ignoring Handover Request. Couldn't find PCI for CGI=[plmn: {}, nci: {}]",

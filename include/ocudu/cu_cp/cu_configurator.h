@@ -51,6 +51,10 @@ public:
   virtual async_task<ocucp::cu_cp_intra_cu_handover_response>
   trigger_handover(const cu_cp_du_index_t&                       source_du_index,
                    const ocucp::cu_cp_intra_cu_handover_request& handover_req) = 0;
+
+  /// Trigger UE Handover to a target cell that is not served by this CU-CP.
+  virtual async_task<ocucp::cu_cp_intra_cu_handover_response>
+  trigger_inter_cu_handover(const cu_cp_ue_index_t& ue_index, const nr_cell_global_id_t& target_cgi) = 0;
 };
 
 } // namespace ocudu

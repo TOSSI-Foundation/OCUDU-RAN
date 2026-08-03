@@ -993,6 +993,15 @@ public:
       CORO_RETURN(ocucp::cu_cp_intra_cu_handover_response{true});
     });
   }
+
+  async_task<ocucp::cu_cp_intra_cu_handover_response>
+  trigger_inter_cu_handover(const cu_cp_ue_index_t& ue_index, const nr_cell_global_id_t& target_cgi) override
+  {
+    return launch_async([](coro_context<async_task<ocucp::cu_cp_intra_cu_handover_response>>& ctx) {
+      CORO_BEGIN(ctx);
+      CORO_RETURN(ocucp::cu_cp_intra_cu_handover_response{true});
+    });
+  }
 };
 
 /// Wraps a manual_event so test fixtures can fire it directly while satisfying e2_node_component_config_provider.
