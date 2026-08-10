@@ -36,6 +36,11 @@ radio_session_zmq_impl::radio_session_zmq_impl(const radio_configuration::radio&
   // Debug log level is only available if verbose keyword is in the device arguments.
   bool allow_log_level_debug = (config.args.find("verbose") != std::string::npos);
 
+  const bool realtime_pacing = (config.args.find("realtime") != std::string::npos);
+  if (realtime_pacing) {
+    logger.info("ZMQ real-time pacing enabled at {:.3f} Msps.", config.sampling_rate_Hz / 1e6);
+  }
+
   // ZMQ logging in debug is extremely verbose. The following lines avoid debug level unless set to paranoid.
   ocudulog::basic_levels log_level = config.log_level;
   if (!allow_log_level_debug && (log_level >= ocudulog::basic_levels::debug)) {
@@ -64,7 +69,9 @@ radio_session_zmq_impl::radio_session_zmq_impl(const radio_configuration::radio&
         .log_level         = log_level,
         .trx_timeout_ms    = DEFAULT_TRX_TIMEOUT_MS,
         .linger_timeout_ms = DEFAULT_LINGER_TIMEOUT_MS,
-        .buffer_size       = DEFAULT_STREAM_BUFFER_SIZE};
+        .buffer_size       = DEFAULT_STREAM_BUFFER_SIZE,
+        .srate_Hz          = config.sampling_rate_Hz,
+        .realtime_pacing   = realtime_pacing};
 
     const radio_configuration::stream& rx_radio_stream_config = config.rx_streams[stream_id];
 

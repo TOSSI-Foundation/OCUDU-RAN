@@ -9,6 +9,9 @@
 #include "ocudu/gateways/baseband/baseband_gateway_transmitter.h"
 #include "ocudu/radio/radio_constants.h"
 #include <array>
+#include <atomic>
+#include <chrono>
+#include <cstdint>
 #include <memory>
 
 namespace ocudu {
@@ -26,6 +29,17 @@ class radio_zmq_tx_stream : public baseband_gateway_transmitter, public radio_zm
   std::vector<cf_t> cf_buffer;
   /// Per-channel linear amplitude gains. Atomic for lock-free concurrent set/read.
   std::array<std::atomic<float>, RADIO_MAX_NOF_CHANNELS> channel_gains;
+
+  double pace_sample_period_s = 0.0;
+  bool pace_enabled = false;
+  std::chrono::steady_clock::time_point pace_origin_tp;
+  baseband_gateway_timestamp pace_origin_ts = 0;
+  bool pace_origin_valid = false;
+  std::chrono::nanoseconds pace_max_slip{0};
+  uint64_t pace_late_count = 0;
+  uint64_t pace_total_count = 0;
+
+  void pace_to_timestamp(baseband_gateway_timestamp ts);
 
 public:
   /// Describes the necessary parameters to create a ZMQ Tx stream.
@@ -46,6 +60,8 @@ public:
     unsigned linger_timeout_ms;
     /// Indicates the channel buffer size.
     unsigned buffer_size;
+    double srate_Hz;
+    bool realtime_pacing;
   };
 
   radio_zmq_tx_stream(void*                     zmq_context,

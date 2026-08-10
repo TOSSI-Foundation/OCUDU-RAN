@@ -144,6 +144,14 @@ struct formatter<ocudu::channel_state_information> {
         // SINR is not available.
         helper.format_always(ctx, "sinr=na");
       }
+      std::optional<ocudu::phy_time_unit> ta_short = csi.get_time_alignment();
+      if (ta_short.has_value()) {
+        helper.format_always(ctx, "t_align={:.2f}us", ta_short->to_seconds() * 1e6);
+      }
+      std::optional<float> cfo_short = csi.get_cfo_Hz();
+      if (cfo_short.has_value()) {
+        helper.format_always(ctx, "cfo={:+.0f}Hz", *cfo_short);
+      }
     }
     return ctx.out();
   }

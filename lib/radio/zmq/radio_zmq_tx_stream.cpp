@@ -5,6 +5,8 @@
 #include "ocudu/gateways/baseband/buffer/baseband_gateway_buffer_reader.h"
 #include "ocudu/ocuduvec/conversion.h"
 #include "ocudu/ocuduvec/sc_prod.h"
+#include <cmath>
+#include <thread>
 
 using namespace ocudu;
 
@@ -19,6 +21,11 @@ radio_zmq_tx_stream::radio_zmq_tx_stream(void*                     zmq_context,
                                          radio_event_notifier&     notification_handler_) :
   notification_handler(notification_handler_), cf_buffer(config.buffer_size)
 {
+  if (config.realtime_pacing && std::isfinite(config.srate_Hz) && config.srate_Hz > 0.0) {
+    pace_sample_period_s = 1.0 / config.srate_Hz;
+    pace_enabled         = true;
+  }
+
   channels.reserve(config.address.size());
   // For each channel...
   for (unsigned channel_id = 0, channel_id_end = config.address.size(); channel_id != channel_id_end; ++channel_id) {
@@ -56,6 +63,21 @@ void radio_zmq_tx_stream::start(ocudu::baseband_gateway_timestamp init_time)
 
 void radio_zmq_tx_stream::stop()
 {
+  if (pace_enabled && pace_total_count != 0) {
+    ocudulog::basic_logger& logger   = ocudulog::fetch_basic_logger("RF", false);
+    const double            late_pct = 100.0 * static_cast<double>(pace_late_count) / pace_total_count;
+    const double            slip_ms  = std::chrono::duration<double, std::milli>(pace_max_slip).count();
+    if (pace_late_count != 0) {
+      logger.warning("ZMQ real-time pacing: {} of {} transmit blocks were late ({:.1f}%), worst slip {:.3f} ms.",
+                     pace_late_count,
+                     pace_total_count,
+                     late_pct,
+                     slip_ms);
+    } else {
+      logger.info("ZMQ real-time pacing: held real time for all {} transmit blocks.", pace_total_count);
+    }
+  }
+
   for (auto& channel : channels) {
     channel->stop();
   }
@@ -71,9 +93,45 @@ bool radio_zmq_tx_stream::align(baseband_gateway_timestamp timestamp, std::chron
   return timestamp_passed;
 }
 
+void radio_zmq_tx_stream::pace_to_timestamp(baseband_gateway_timestamp ts)
+{
+  if (!pace_origin_valid) {
+    pace_origin_tp    = std::chrono::steady_clock::now();
+    pace_origin_ts    = ts;
+    pace_origin_valid = true;
+    return;
+  }
+
+  if (ts <= pace_origin_ts) {
+    return;
+  }
+
+  const double  elapsed_s = static_cast<double>(ts - pace_origin_ts) * pace_sample_period_s;
+  const auto    deadline  = pace_origin_tp + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                                              std::chrono::duration<double>(elapsed_s));
+  const auto now = std::chrono::steady_clock::now();
+
+  ++pace_total_count;
+
+  if (now >= deadline) {
+    const auto slip = std::chrono::duration_cast<std::chrono::nanoseconds>(now - deadline);
+    if (slip > pace_max_slip) {
+      pace_max_slip = slip;
+    }
+    ++pace_late_count;
+    return;
+  }
+
+  std::this_thread::sleep_until(deadline);
+}
+
 void radio_zmq_tx_stream::transmit(const baseband_gateway_buffer_reader&        data,
                                    const baseband_gateway_transmitter_metadata& md)
 {
+  if (pace_enabled) {
+    pace_to_timestamp(md.ts);
+  }
+
   report_fatal_error_if_not(data.get_nof_channels() == channels.size(),
                             "Invalid number of channels ({}) expected {}.",
                             data.get_nof_channels(),
