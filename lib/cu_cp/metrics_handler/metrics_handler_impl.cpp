@@ -92,6 +92,10 @@ cu_cp_metrics_report metrics_handler_impl::create_report() const
   report.mobility     = mobility_handler.handle_mobility_metrics_report_request();
   report.meas_reports = meas_handler.handle_cell_meas_metrics_report_request();
 
+  for (auto& meas_report : report.meas_reports) {
+    meas_report.amf_ue_ngap_id = ngap_handler.handle_amf_ue_id_lookup(uint_to_ue_index(meas_report.ue_index));
+  }
+
   // TODO: Get metrics of connected CU-CP/AMF nodes.
 
   return report;

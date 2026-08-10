@@ -9,6 +9,7 @@
 #include "ocudu/cu_cp/cu_cp_configuration.h"
 #include "ocudu/ngap/ngap.h"
 #include "ocudu/ran/plmn_identity.h"
+#include <optional>
 
 namespace ocudu::ocucp {
 
@@ -20,6 +21,9 @@ public:
 
   /// \brief Handle new metrics request for all the AMF nodes connected to the CU-CP.
   virtual std::vector<ngap_info> handle_ngap_metrics_report_request() const = 0;
+
+  /// \brief Look up the AMF-UE-NGAP-ID of a UE across all connected AMFs.
+  virtual std::optional<uint64_t> handle_amf_ue_id_lookup(cu_cp_ue_index_t ue_index) = 0;
 };
 
 struct cu_cp_configuration;
@@ -63,6 +67,8 @@ public:
   size_t get_nof_ngaps() const { return ngap_db.size(); }
 
   std::vector<ngap_info> handle_ngap_metrics_report_request() const override;
+
+  std::optional<uint64_t> handle_amf_ue_id_lookup(cu_cp_ue_index_t ue_index) override;
 
   /// Number of UEs managed by the CU-CP.
   size_t get_nof_ngap_ues();

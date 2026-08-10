@@ -105,6 +105,17 @@ std::vector<ngap_info> ngap_repository::handle_ngap_metrics_report_request() con
   return ngap_reports;
 }
 
+std::optional<uint64_t> ngap_repository::handle_amf_ue_id_lookup(cu_cp_ue_index_t ue_index)
+{
+  for (auto& ngap : ngap_db) {
+    amf_ue_id_t amf_ue_id = ngap.second.ngap->get_ngap_ue_id_translator().get_amf_ue_id(ue_index);
+    if (amf_ue_id != amf_ue_id_t::invalid) {
+      return amf_ue_id_to_uint(amf_ue_id);
+    }
+  }
+  return std::nullopt;
+}
+
 size_t ngap_repository::get_nof_ngap_ues()
 {
   size_t nof_ues = 0;

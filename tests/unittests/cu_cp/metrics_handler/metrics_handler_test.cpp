@@ -34,6 +34,8 @@ public:
 
   std::vector<ngap_info> handle_ngap_metrics_report_request() const override { return next_metrics.ngaps; }
 
+  std::optional<uint64_t> handle_amf_ue_id_lookup(cu_cp_ue_index_t ue_index) override { return std::nullopt; }
+
   mobility_management_metrics handle_mobility_metrics_report_request() const override { return next_metrics.mobility; }
 
   std::vector<cu_cp_metrics_report::cell_meas_metrics> handle_cell_meas_metrics_report_request() const override
