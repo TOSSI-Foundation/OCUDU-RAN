@@ -1177,6 +1177,14 @@ static scheduler_expert_config generate_scheduler_expert_config(const du_high_un
   // TS 38.331, TS 38.321 clause 5.4.5
   out_cfg.ue.bsr_ml.periodic_bsr_timer_subframes = cell.mcg_cfg.bsr_cfg.periodic_bsr_timer;
   out_cfg.ue.bsr_ml.retx_bsr_timer_subframes     = cell.mcg_cfg.bsr_cfg.retx_bsr_timer;
+  out_cfg.ue.csi_ml.inference_enabled         = config.csi_ml.inference.enabled;
+  out_cfg.ue.csi_ml.inference_model_type      = config.csi_ml.inference.model_type;
+  out_cfg.ue.csi_ml.inference_wiener_model_path = config.csi_ml.inference.wiener_model_path;
+  out_cfg.ue.csi_ml.inference_gru_model_path  = config.csi_ml.inference.gru_model_path;
+  out_cfg.ue.csi_ml.inference_apply_to_mcs    = config.csi_ml.inference.apply_to_mcs;
+  out_cfg.ue.csi_ml.dataset_logging_enabled   = config.csi_ml.dataset_logging.enabled;
+  out_cfg.ue.csi_ml.dataset_output_dir        = config.csi_ml.dataset_logging.output_dir;
+  out_cfg.ue.csi_ml.dataset_scenario          = config.csi_ml.dataset_logging.scenario;
   out_cfg.ue.pdsch_crb_limits                 = {pdsch.start_rb, pdsch.end_rb};
   out_cfg.ue.pdsch_interleaving_bundle_size   = pdsch.interleaving_bundle_size;
   out_cfg.ue.pusch_crb_limits                 = {pusch.start_rb, pusch.end_rb};

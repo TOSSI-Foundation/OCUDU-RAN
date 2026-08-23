@@ -6,6 +6,7 @@
 #include "../config/cell_configuration.h"
 #include "../uci_scheduling/uci_indication_selector.h"
 #include "bsr_ml_dataset_logger.h"
+#include "csi_ml_dataset_logger.h"
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/ran/resource_allocation/rb_bitmap.h"
 #include "ocudu/ran/slot_point.h"
@@ -395,6 +396,24 @@ void cell_metrics_handler::report_metrics()
     ue.last_nof_ul_grants          = nof_ul_grants;
     ue.last_ul_tb_bytes            = ul_tb_bytes;
     next_report->ue_metrics.push_back(ue_report);
+
+    if (csi_ml_dataset::is_kpi_enabled()) {
+      csi_ml_dataset::kpi_sample ks{};
+      ks.slot          = last_slot_tx.without_hyper_sfn().system_slot();
+      ks.rnti          = static_cast<uint16_t>(ue_report.rnti);
+      ks.ue_index      = static_cast<uint16_t>(ue_report.ue_index);
+      ks.dl_brate_kbps = ue_report.dl_brate_kbps;
+      ks.dl_nof_ok     = ue_report.dl_nof_ok;
+      ks.dl_nof_nok    = ue_report.dl_nof_nok;
+      ks.dl_mcs        = static_cast<uint8_t>(ue_report.dl_mcs.value());
+      ks.mean_cqi      = ue_report.cqi_stats.get_nof_observations() > 0
+                             ? static_cast<float>(ue_report.cqi_stats.get_mean())
+                             : std::numeric_limits<float>::quiet_NaN();
+      ks.dl_ri = ue_report.dl_ri_stats.get_nof_observations() > 0
+                     ? static_cast<float>(ue_report.dl_ri_stats.get_mean())
+                     : std::numeric_limits<float>::quiet_NaN();
+      csi_ml_dataset::log_kpi_sample(ks);
+    }
   }
   next_report->events.swap(pending_events);
 

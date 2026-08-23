@@ -4,6 +4,7 @@
 
 #include "ue_event_manager.h"
 #include "../logging/bsr_ml_dataset_logger.h"
+#include "../logging/csi_ml_dataset_logger.h"
 #include "../logging/scheduler_event_logger.h"
 #include "../logging/scheduler_metrics_handler.h"
 #include "../srs/srs_scheduler.h"
@@ -359,6 +360,7 @@ void ue_cell_event_manager::handle_ue_deletion(ue_config_delete_event ev)
     slice_sched.rem_ue(ue_idx);
 
     bsr_ml_dataset::remove_ue(static_cast<uint16_t>(ue_idx));
+    csi_ml_dataset::remove_ue(static_cast<uint16_t>(ue_idx));
 
     // Schedule UE removal from repository.
     ue_db.schedule_ue_rem(std::move(ev));
@@ -956,7 +958,7 @@ void ue_cell_event_manager::handle_harq_ind(ue_cell&                            
 void ue_cell_event_manager::handle_csi(ue_cell& ue_cc, slot_point sl_rx, const csi_report_data& csi_rep)
 {
   // Forward CSI bits to UE.
-  ue_cc.handle_csi_report(csi_rep);
+  ue_cc.handle_csi_report(sl_rx, csi_rep);
 
   // Log event.
   ev_logger.enqueue(scheduler_event_logger::csi_report_event{ue_cc.ue_index, ue_cc.rnti(), sl_rx, csi_rep});

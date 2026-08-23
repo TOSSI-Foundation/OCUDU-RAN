@@ -177,6 +177,34 @@ static void configure_cli11_bsr_ml_args(CLI::App& app, du_high_unit_bsr_ml_confi
       ->capture_default_str();
 }
 
+static void configure_cli11_csi_ml_args(CLI::App& app, du_high_unit_csi_ml_config& config)
+{
+  CLI::App* inference_subcmd = add_subcommand(app, "inference", "CSI prediction inference parameters")->configurable();
+  add_option(*inference_subcmd, "--enabled", config.inference.enabled, "Enable ML-based CSI (effective-CQI) prediction")
+      ->capture_default_str();
+  add_option(*inference_subcmd, "--model_type", config.inference.model_type, "Predictor to run: 'wiener' or 'gru'")
+      ->capture_default_str()
+      ->check(CLI::IsMember({"wiener", "gru"}));
+  add_option(*inference_subcmd, "--wiener_model_path", config.inference.wiener_model_path,
+             "Path to the runtime Wiener model file")
+      ->capture_default_str();
+  add_option(*inference_subcmd, "--gru_model_path", config.inference.gru_model_path,
+             "Path to the runtime GRU model file")
+      ->capture_default_str();
+  add_option(*inference_subcmd, "--apply_to_mcs", config.inference.apply_to_mcs,
+             "Stage-3 promotion: apply the prediction to DL MCS selection. Default false = shadow-only "
+             "(prediction logged, scheduler behaviour unchanged).")
+      ->capture_default_str();
+
+  CLI::App* logging_subcmd = add_subcommand(app, "dataset_logging", "CSI ML dataset logging parameters")->configurable();
+  add_option(*logging_subcmd, "--enabled", config.dataset_logging.enabled, "Enable CSI dataset CSV logging")
+      ->capture_default_str();
+  add_option(*logging_subcmd, "--output_dir", config.dataset_logging.output_dir, "Directory for CSI dataset CSV output")
+      ->capture_default_str();
+  add_option(*logging_subcmd, "--scenario", config.dataset_logging.scenario, "Scenario tag written into each CSV row")
+      ->capture_default_str();
+}
+
 static void configure_cli11_ml_mcs_args(CLI::App& app, du_high_unit_ml_mcs_config& config)
 {
   CLI::App* inference_subcmd = add_subcommand(app, "inference", "ML MCS inference parameters")->configurable();
@@ -2727,6 +2755,9 @@ void ocudu::configure_cli11_with_du_high_config_schema(CLI::App& app, du_high_pa
 
   CLI::App* bsr_ml_subcmd = add_subcommand(app, "bsr_ml", "BSR ML dataset logging configuration")->configurable();
   configure_cli11_bsr_ml_args(*bsr_ml_subcmd, parsed_cfg.config.bsr_ml);
+
+  CLI::App* csi_ml_subcmd = add_subcommand(app, "csi_ml", "CSI ML dataset logging configuration")->configurable();
+  configure_cli11_csi_ml_args(*csi_ml_subcmd, parsed_cfg.config.csi_ml);
 
   // Cell section.
   add_option_cell(

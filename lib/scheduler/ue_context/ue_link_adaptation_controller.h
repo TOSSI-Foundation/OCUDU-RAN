@@ -53,6 +53,8 @@ public:
   /// \brief Get the wideband CQI.
   unsigned get_wideband_cqi() const { return ue_ch_st.get_wideband_cqi().value(); }
 
+  void set_predicted_dl_effective_cqi(std::optional<float> v) const { predicted_dl_effective_cqi = v; }
+
 private:
   /// \brief Get the value of UL SNR after applying the link adaptation SNR offset.
   float get_effective_snr() const;
@@ -75,6 +77,8 @@ private:
 
   std::optional<olla_algorithm> dl_olla;
   std::optional<olla_algorithm> ul_olla;
+
+  mutable std::optional<float> predicted_dl_effective_cqi;
 };
 
 } // namespace ocudu

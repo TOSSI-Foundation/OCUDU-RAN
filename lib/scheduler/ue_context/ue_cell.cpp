@@ -3,8 +3,10 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "ue_cell.h"
+#include "../logging/csi_ml_dataset_logger.h"
 #include "../logging/ml_la_dataset_logger.h"
 #include "../support/dmrs_helpers.h"
+#include "../support/csi_ml_predictor.h"
 #include "../support/mcs_calculator.h"
 #include "../support/mcs_ml_predictor.h"
 #include "../support/pdcch_aggregation_level_calculator.h"
@@ -268,11 +270,68 @@ void ue_cell::handle_srs_channel_matrix(const srs_channel_matrix& channel_matrix
   components.channel_state->update_srs_channel_matrix(channel_matrix, ue_cfg->get_pusch_codebook_config());
 }
 
-void ue_cell::handle_csi_report(const csi_report_data& csi_report)
+void ue_cell::handle_csi_report(slot_point sl_rx, const csi_report_data& csi_report)
 {
   apply_link_adaptation_procedures(csi_report);
   if (not components.channel_state->handle_csi_report(csi_report)) {
     logger.warning("ue={} rnti={}: Invalid CSI report received", fmt::underlying(ue_index), rnti());
+  }
+
+  const csi_ml::predictor& csi_pred = csi_ml::predictor::instance();
+  const bool               csi_log  = csi_ml_dataset::is_enabled();
+  if (csi_log or csi_pred.enabled()) {
+    auto&       cs         = channel_state_manager();
+    const auto& lac        = link_adaptation_controller();
+    const float effective  = lac.get_effective_cqi();
+    auto&       window     = cs.csi_history_window();
+    const bool  window_full = window.full();
+    std::vector<float> win_vec = window.to_vector();
+
+    std::optional<float> pred;
+    if (csi_pred.enabled() and window_full) {
+      pred = csi_pred.predict_next(win_vec);
+    }
+
+    if (csi_log) {
+      csi_ml_dataset::csi_sample s;
+      s.slot             = sl_rx.system_slot();
+      s.sfn              = static_cast<uint16_t>(sl_rx.sfn());
+      s.subframe         = static_cast<uint8_t>(sl_rx.subframe_index());
+      s.slot_in_frame    = static_cast<uint8_t>(sl_rx.slot_index());
+      s.numerology       = static_cast<uint8_t>(sl_rx.numerology());
+      s.rnti             = static_cast<uint16_t>(rnti());
+      s.ue_index         = static_cast<uint16_t>(ue_index);
+      s.valid            = csi_report.valid ? 1 : 0;
+      s.wideband_cqi     = static_cast<uint8_t>(cs.get_wideband_cqi().value());
+      s.dl_ri            = csi_report.ri.has_value() ? static_cast<int16_t>(csi_report.ri->value()) : int16_t{-1};
+      s.dl_cri           = csi_report.cri.has_value() ? static_cast<int16_t>(csi_report.cri.value()) : int16_t{-1};
+      s.dl_cqi_offset_db = lac.dl_cqi_offset();
+      s.effective_cqi    = effective;
+      s.dl_olla_enabled  = lac.is_dl_olla_enabled() ? 1 : 0;
+      s.has_window       = window_full;
+      for (unsigned i = 0; i != 4; ++i) {
+        s.window[i] = (window_full and i < win_vec.size()) ? win_vec[i] : 0.0F;
+      }
+      s.pred_kind  = 0;
+      s.pred_value = 0.0F;
+      if (pred.has_value()) {
+        s.pred_kind  = (csi_pred.kind() == csi_ml::model_kind::gru) ? 2 : 1;
+        s.pred_value = pred.value();
+      }
+      csi_ml_dataset::log_csi_sample(s);
+    }
+
+    if (effective > 0.0F) {
+      window.push(effective);
+    }
+
+    if (csi_pred.enabled()) {
+      std::optional<float> next_pred;
+      if (window.full()) {
+        next_pred = csi_pred.predict_next(window.to_vector());
+      }
+      lac.set_predicted_dl_effective_cqi(next_pred);
+    }
   }
 
   if (csi_report.valid and csi_report.first_tb_wideband_cqi == csi_report_data::wideband_cqi_type{0}) {

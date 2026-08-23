@@ -1335,6 +1335,23 @@ struct du_high_unit_ml_mcs_config {
   online_training_config  online_training;
 };
 
+struct du_high_unit_csi_ml_config {
+  struct inference_config {
+    bool        enabled           = false;
+    std::string model_type        = "wiener";
+    std::string wiener_model_path = "ml/models/csi_wiener_seed.model";
+    std::string gru_model_path    = "ml/models/csi_gru_seed.model";
+    bool apply_to_mcs = false;
+  };
+  struct dataset_logging_config {
+    bool        enabled    = false;
+    std::string output_dir = "ml/datasets";
+    std::string scenario   = "default";
+  };
+  inference_config       inference;
+  dataset_logging_config dataset_logging;
+};
+
 /// DU high configuration.
 struct du_high_unit_config {
   bool warn_on_drop = false;
@@ -1365,6 +1382,7 @@ struct du_high_unit_config {
   /// ML-based UL MCS link-adaptation configuration.
   du_high_unit_ml_mcs_config ml_mcs;
   du_high_unit_bsr_ml_config bsr_ml;
+  du_high_unit_csi_ml_config csi_ml;
 
   /// Returns true if testmode is enabled, false otherwise.
   bool is_testmode_enabled() const { return test_mode_cfg.test_ue.rnti != rnti_t::INVALID_RNTI; }

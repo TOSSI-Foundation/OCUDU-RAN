@@ -148,6 +148,18 @@ struct bsr_ml_expert_config {
   unsigned retx_bsr_timer_subframes = 80;
 };
 
+struct csi_ml_expert_config {
+  bool inference_enabled = false;
+  std::string inference_model_type = "wiener";
+  std::string inference_wiener_model_path;
+  std::string inference_gru_model_path;
+  bool inference_apply_to_mcs = false;
+
+  bool        dataset_logging_enabled = false;
+  std::string dataset_output_dir      = "ml/datasets";
+  std::string dataset_scenario        = "default";
+};
+
 /// \brief UE scheduling statically configurable expert parameters.
 struct scheduler_ue_expert_config {
   /// Range of allowed MCS indices for DL UE scheduling. To use a fixed mcs, set the minimum mcs equal to the maximum.
@@ -237,6 +249,7 @@ struct scheduler_ue_expert_config {
   /// ML-based UL MCS link-adaptation configuration.
   ml_mcs_expert_config ml_mcs;
   bsr_ml_expert_config bsr_ml;
+  csi_ml_expert_config csi_ml;
 };
 
 /// \brief System Information scheduling statically configurable expert parameters.

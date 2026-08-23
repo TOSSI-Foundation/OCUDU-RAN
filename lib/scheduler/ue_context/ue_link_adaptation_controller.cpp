@@ -4,7 +4,9 @@
 
 #include "ue_link_adaptation_controller.h"
 #include "../logging/bsr_ml_dataset_logger.h"
+#include "../logging/csi_ml_dataset_logger.h"
 #include "../logging/ml_la_dataset_logger.h"
+#include "../support/csi_ml_predictor.h"
 #include "../support/bsr_periodicity_predictor.h"
 #include "../support/mcs_calculator.h"
 #include "../support/mcs_ml_predictor.h"
@@ -43,6 +45,10 @@ ue_link_adaptation_controller::ue_link_adaptation_controller(const cell_configur
                             bsr_cfg.periodic_bsr_timer_subframes,
                             bsr_cfg.retx_bsr_timer_subframes);
   bsr_ml::predictor::instance().configure(bsr_cfg);
+
+  const csi_ml_expert_config& csi_cfg = cell_cfg.expert_cfg.ue.csi_ml;
+  csi_ml_dataset::configure(csi_cfg.dataset_logging_enabled, csi_cfg.dataset_output_dir, csi_cfg.dataset_scenario);
+  csi_ml::predictor::instance().configure(csi_cfg);
 }
 
 void ue_link_adaptation_controller::handle_dl_ack_info(bool                         ack_value,
@@ -119,10 +125,14 @@ std::optional<sch_mcs_index> ue_link_adaptation_controller::calculate_dl_mcs(pds
   }
 
   // Derive MCS using the combination of CQI + outer loop link adaptation.
-  const float eff_cqi = get_effective_cqi();
+  float eff_cqi = get_effective_cqi();
   if (eff_cqi <= 0.0F) {
     // Special case, where reported CQI==0.
     return std::nullopt;
+  }
+
+  if (csi_ml::predictor::instance().apply_to_mcs() && predicted_dl_effective_cqi.has_value()) {
+    eff_cqi = std::min(std::max(1.0F, predicted_dl_effective_cqi.value()), static_cast<float>(cqi_value::max()));
   }
 
   // There are fewer CQIs than MCS values, so we perform a linear interpolation.

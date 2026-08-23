@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "../support/csi_ml_window.h"
 #include "ocudu/ocudulog/logger.h"
 #include "ocudu/ran/csi_report/csi_report_data.h"
 #include "ocudu/ran/pusch/pusch_tpmi_select.h"
@@ -84,6 +85,9 @@ public:
 
   void on_scheduled_aperiodic_srs(slot_point srs_slot) { last_aperiodic_srs_slot = srs_slot; }
 
+  csi_ml::csi_history_window&       csi_history_window() { return csi_hist_window; }
+  const csi_ml::csi_history_window& csi_history_window() const { return csi_hist_window; }
+
   /// Slot of the latest aperiodic SRS report scheduled.
   slot_point last_aperiodic_srs_slot;
 
@@ -129,6 +133,8 @@ private:
   ///
   /// Set to \c std::nullopt if no SRS channel coefficients have been reported.
   std::optional<pusch_tpmi_select_info> last_pusch_tpmi_select_info;
+
+  csi_ml::csi_history_window csi_hist_window{4};
 };
 
 } // namespace ocudu

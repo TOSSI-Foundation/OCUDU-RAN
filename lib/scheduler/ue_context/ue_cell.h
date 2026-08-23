@@ -142,7 +142,7 @@ public:
   void handle_srs_channel_matrix(const srs_channel_matrix& channel_matrix);
 
   /// Update UE with the latest CSI report for a given cell.
-  void handle_csi_report(const csi_report_data& csi_report);
+  void handle_csi_report(slot_point sl_rx, const csi_report_data& csi_report);
 
   sch_mcs_index get_ul_mcs(pusch_mcs_table mcs_table, bool use_transform_precoder) const
   {

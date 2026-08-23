@@ -422,7 +422,7 @@ TEST_P(fallback_scheduler_tester, successfully_allocated_resources_for_srb1_pdu_
   csi_report_data csi_report{};
   csi_report.first_tb_wideband_cqi.emplace(0);
   csi_report.valid = true;
-  test_ue.get_pcell().handle_csi_report(csi_report);
+  test_ue.get_pcell().handle_csi_report(current_slot, csi_report);
   // Notify about SRB1 message in DL of size 320 bytes.
   const unsigned mac_srb1_sdu_size = 320;
   push_buffer_state_to_dl_ue(ue_idx, current_slot, mac_srb1_sdu_size, false);
