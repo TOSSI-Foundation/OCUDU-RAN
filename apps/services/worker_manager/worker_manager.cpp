@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
+#include <cstdlib>
 #include "worker_manager.h"
 #include "ocudu/adt/byte_buffer.h"
 #include "ocudu/adt/mpmc_queue.h"
@@ -554,8 +555,19 @@ void worker_manager::create_lower_phy_executors(const worker_manager_config::ru_
   switch (config.profile) {
     case worker_manager_config::ru_sdr_config::lower_phy_thread_profile::sequential: {
       fmt::print("Lower PHY in executor sequential baseband mode.\n");
-      std::string    exec_name = "phy_exec";
-      task_executor* phy_exec  = exec_mng.executors().at(exec_name);
+      task_executor* phy_exec = nullptr;
+      if (auto it = exec_mng.executors().find("phy_exec"); it != exec_mng.executors().end()) {
+        phy_exec = it->second;
+      } else {
+        create_prio_worker("ru_phy_worker",
+                           "ru_phy_exec",
+                           task_worker_queue_size,
+                           concurrent_queue_policy::locking_mpsc,
+                           std::nullopt,
+                           main_pool_affinity_mng.calcute_affinity_mask(sched_affinity_mask_types::main),
+                           os_thread_realtime_priority::no_realtime());
+        phy_exec = exec_mng.executors().at("ru_phy_exec");
+      }
 
       ru_sdr_executor_mapper_sequential_configuration ru_sdr_exec_map_config;
       ru_sdr_exec_map_config.asynchronous_exec = exec_mng.executors().at("radio_exec");

@@ -1,0 +1,70 @@
+cu_cp:
+  amf:
+    addr: 192.168.1.115
+    port: 38412
+    bind_addr: 192.168.1.117
+    supported_tracking_areas:
+      - tac: 1
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+                sd: "010203"
+  inactivity_timer: 7200
+
+cu_up:
+  ngu:
+    socket:
+      - bind_addr: 192.168.1.117
+        ext_addr: 192.168.1.117
+
+ru_sdr:
+  device_driver: rfsimulator
+  device_args: serverport=4043
+  srate: 122.88
+  tx_gain: 0
+  rx_gain: 0
+  amplitude_control:
+    tx_gain_backoff: 30
+
+cell_cfg:
+  dl_arfcn: 632628
+  band: 78
+  channel_bandwidth_MHz: 100
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+  slicing:
+    - sst: 1
+      sd: 66051
+  tdd_ul_dl_cfg:
+    dl_ul_tx_period: 5
+    nof_dl_slots: 3
+    nof_dl_symbols: 10
+    nof_ul_slots: 1
+    nof_ul_symbols: 2
+  csi:
+    csi_rs_enabled: true
+  pucch:
+    nof_cell_csi_res: 8
+
+metrics:
+  enable_log: true
+  layers:
+    enable_sched_ue: true
+  periodicity:
+    du_report_period: 1000
+
+log:
+  filename: /tmp/gnb.log
+  all_level: info
+  hex_max_size: 0
+
+  gtpu_level: debug
+  pdcp_level: debug
+pcap:
+  mac_enable: false
+  mac_filename: /tmp/gnb_mac.pcap
+  ngap_enable: false
+  ngap_filename: /tmp/gnb_ngap.pcap

@@ -93,8 +93,8 @@ static bool validate_ru_sdr_appconfig(const ru_sdr_unit_config&                 
     return false;
   }
 
-  if (discontinuous_transmission && (config.device_driver == "zmq")) {
-    fmt::print("Discontinuous transmission modes cannot be used with ZMQ.\n");
+  if (discontinuous_transmission && is_blocking_radio_driver(config.device_driver)) {
+    fmt::print("Discontinuous transmission modes cannot be used with the '{}' driver.\n", config.device_driver);
 
     return false;
   }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
+#include <cstdlib>
 #include "dynamic_o_du_translators.h"
 #include "apps/services/worker_manager/worker_manager_config.h"
 #include "apps/units/flexible_o_du/o_du_high/o_du_high_unit_config_translators.h"
@@ -66,7 +67,7 @@ void ocudu::fill_dynamic_du_worker_manager_config(worker_manager_config&        
 {
   bool is_blocking_mode_enable = false;
   if (std::holds_alternative<ru_sdr_unit_config>(unit_cfg.ru_cfg)) {
-    is_blocking_mode_enable = std::get<ru_sdr_unit_config>(unit_cfg.ru_cfg).device_driver == "zmq";
+    is_blocking_mode_enable = is_blocking_radio_driver(std::get<ru_sdr_unit_config>(unit_cfg.ru_cfg).device_driver);
   }
   fill_o_du_high_worker_manager_config(config, unit_cfg.odu_high_cfg, is_blocking_mode_enable);
   std::vector<du_low_cell_config> cell_params;
@@ -83,7 +84,11 @@ void ocudu::fill_dynamic_du_worker_manager_config(worker_manager_config&        
         .ul_ratio = derive_ul_ratio(cell.cell.tdd_ul_dl_cfg),
     });
   }
-  fill_du_low_worker_manager_config(config, unit_cfg.du_low_cfg, is_blocking_mode_enable, cell_params);
+  bool du_low_sequential = is_blocking_mode_enable;
+  if (const char* e = ::getenv("OCUDU_DU_LOW_PARALLEL"); e != nullptr && e[0] == '1') {
+    du_low_sequential = false;
+  }
+  fill_du_low_worker_manager_config(config, unit_cfg.du_low_cfg, du_low_sequential, cell_params);
 
   if (const auto* ru_sdr = std::get_if<ru_sdr_unit_config>(&unit_cfg.ru_cfg)) {
     fill_sdr_worker_manager_config(config, *ru_sdr);

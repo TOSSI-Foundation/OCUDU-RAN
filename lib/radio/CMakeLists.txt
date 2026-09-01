@@ -12,6 +12,12 @@ set(OCUDU_RADIO_LIBRARIES "")
 add_subdirectory(realtime_loopback)
 list(APPEND OCUDU_RADIO_LIBRARIES ocudu_radio_realtime_loopback)
 
+if (ENABLE_RFSIM)
+    add_subdirectory(rfsimulator)
+    list(APPEND OCUDU_RADIO_DEFINITIONS -DENABLE_RFSIMULATOR)
+    list(APPEND OCUDU_RADIO_LIBRARIES ocudu_radio_rfsimulator)
+endif (ENABLE_RFSIM)
+
 if (UHD_FOUND AND ENABLE_UHD)
     # The UHD library uses RTTI
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti")

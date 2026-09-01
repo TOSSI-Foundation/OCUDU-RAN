@@ -100,8 +100,9 @@ o_cu_cp_unit ocudu::build_o_cu_cp(const o_cu_cp_unit_config& unit_cfg, const o_c
                                                                      dependencies.executor_mapper->n2_rx_executor())));
   }
 
-  for (unsigned i = 0, e = n2_clients.size(); i != e; ++i) {
-    cu_cp_cfg.ngap.n2_gws[i] = n2_clients[i].get();
+  cu_cp_cfg.ngap.n2_gws.clear();
+  for (const auto& n2_client : n2_clients) {
+    cu_cp_cfg.ngap.n2_gws.push_back(n2_client.get());
   }
 
   ocucp::o_cu_cp_dependencies ocu_dependencies;

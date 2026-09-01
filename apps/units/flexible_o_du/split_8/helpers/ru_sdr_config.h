@@ -113,6 +113,11 @@ struct ru_sdr_unit_metrics_config {
   bool enable_ru_metrics = false;
 };
 
+inline bool is_blocking_radio_driver(const std::string& device_driver)
+{
+  return (device_driver == "zmq") || (device_driver == "rfsimulator");
+}
+
 /// SDR Radio Unit configuration.
 struct ru_sdr_unit_config {
   /// Sampling frequency in MHz.

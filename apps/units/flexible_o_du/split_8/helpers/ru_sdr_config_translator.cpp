@@ -54,7 +54,7 @@ static lower_phy_configuration generate_lower_phy_config(const flexible_o_du_ru_
   out_cfg.max_nof_prach_concurrent_requests = max_processing_delay_slot + 2;
 
   // Select RX buffer size policy.
-  if (ru_cfg.device_driver == "zmq") {
+  if (is_blocking_radio_driver(ru_cfg.device_driver)) {
     out_cfg.baseband_rx_buffer_size_policy = lower_phy_baseband_buffer_size_policy::slot;
   } else if (ru_cfg.expert_execution_cfg.threads.execution_profile == lower_phy_thread_profile::single) {
     // For single executor, the same executor processes uplink and downlink. In this case, the processing is blocked
@@ -251,7 +251,7 @@ void ocudu::fill_sdr_worker_manager_config(worker_manager_config& config, const 
   auto& sdr_cfg = config.ru_sdr_cfg.emplace();
 
   sdr_cfg.nof_cells = ru_cfg.expert_execution_cfg.cell_affinities.size();
-  sdr_cfg.profile   = (ru_cfg.device_driver != "zmq")
+  sdr_cfg.profile   = (!is_blocking_radio_driver(ru_cfg.device_driver))
                           ? static_cast<worker_manager_config::ru_sdr_config::lower_phy_thread_profile>(
                               ru_cfg.expert_execution_cfg.threads.execution_profile)
                           : worker_manager_config::ru_sdr_config::lower_phy_thread_profile::sequential;

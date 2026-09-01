@@ -11,6 +11,10 @@
 #include "uhd/radio_uhd_impl.h"
 #endif // ENABLE_UHD
 
+#ifdef ENABLE_RFSIMULATOR
+#include "rfsimulator/radio_factory_rfsimulator_impl.h"
+#endif
+
 #ifdef ENABLE_ZMQ
 #include "zmq/radio_factory_zmq_impl.h"
 #endif // ENABLE_ZMQ
@@ -36,6 +40,9 @@ static const std::vector<radio_factory_entry> radio_factory_available_factories 
 #ifdef ENABLE_UHD
     {"uhd", []() { return std::make_unique<radio_factory_uhd_impl>(); }},
 #endif // ENABLE_UHD
+#ifdef ENABLE_RFSIMULATOR
+    {"rfsimulator", []() { return std::make_unique<radio_factory_rfsimulator_impl>(); }},
+#endif
 #ifdef ENABLE_ZMQ
     {"zmq", []() { return std::make_unique<radio_factory_zmq_impl>(); }},
 #endif // ENABLE_ZMQ
