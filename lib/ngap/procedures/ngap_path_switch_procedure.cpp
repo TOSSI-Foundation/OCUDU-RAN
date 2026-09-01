@@ -216,7 +216,11 @@ bool ngap_path_switch_procedure::asn1_to_path_switch_request_ack(
     asn1::cbit_ref                     bref{asn1_switched_item.path_switch_request_ack_transfer};
     path_switch_request_ack_transfer_s path_switch_request_ack_transfer;
     if (path_switch_request_ack_transfer.unpack(bref) != asn1::OCUDUASN_SUCCESS) {
-      return false;
+      ue_ctxt.logger.log_warning(
+          "Could not decode Path Switch Request Ack Transfer for {}. Keeping the uplink tunnel in use",
+          switched_item.pdu_session_id);
+      res.pdu_session_res_switched_list.push_back(switched_item);
+      continue;
     }
 
     // Convert UL NGU UP TNL info if present.

@@ -1,0 +1,114 @@
+gnb_id: 411
+ran_node_name: gnb1
+
+cu_cp:
+  amf:
+    addr: 192.168.1.115
+    port: 38412
+    bind_addr: 192.168.1.117
+    supported_tracking_areas:
+      - tac: 1
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+                sd: "010203"
+  inactivity_timer: 7200
+
+  xnap:
+    gateways:
+      - bind_addrs:
+          - 127.0.0.1
+        connections:
+          - peer_addrs:
+              - 127.0.0.2
+
+  mobility:
+    trigger_handover_from_measurements: false
+    cells:
+      - nr_cell_id: 0x66C000
+        periodic_report_cfg_id: 1
+        ncells:
+          - nr_cell_id: 0x670000
+            report_configs: [2]
+      - nr_cell_id: 0x670000
+        ncells:
+          - nr_cell_id: 0x66C000
+            report_configs: [2]
+        gnb_id_bit_length: 22
+        pci: 2
+        plmn: "00101"
+        tac: 1
+        ssb_arfcn: 631680
+        band: 78
+        ssb_scs: 30
+        ssb_period: 10
+        ssb_offset: 0
+        ssb_duration: 5
+    report_configs:
+      - report_cfg_id: 1
+        report_type: periodical
+        report_interval_ms: 1024
+      - report_cfg_id: 2
+        report_type: event_triggered
+        event_triggered_report_type: a3
+        meas_trigger_quantity: rsrp
+        meas_trigger_quantity_offset_db: 3
+        hysteresis_db: 0
+        time_to_trigger_ms: 100
+        report_interval_ms: 1024
+
+cu_up:
+  ngu:
+    socket:
+      - bind_addr: 192.168.1.117
+        ext_addr: 192.168.1.117
+
+ru_sdr:
+  device_driver: rfsimulator
+  device_args: serveraddr=127.0.0.1,serverport=4043
+  srate: 61.44
+  tx_gain: 0
+  rx_gain: 0
+  amplitude_control:
+    tx_gain_backoff: 30
+
+cell_cfg:
+  dl_arfcn: 632628
+  band: 78
+  channel_bandwidth_MHz: 40
+  common_scs: 30
+  plmn: "00101"
+  tac: 1
+  pci: 1
+  slicing:
+    - sst: 1
+      sd: 66051
+  tdd_ul_dl_cfg:
+    dl_ul_tx_period: 5
+    nof_dl_slots: 3
+    nof_dl_symbols: 10
+    nof_ul_slots: 1
+    nof_ul_symbols: 2
+  csi:
+    csi_rs_enabled: true
+
+metrics:
+  enable_log: true
+  layers:
+    enable_sched_ue: true
+  periodicity:
+    du_report_period: 1000
+
+log:
+  filename: /tmp/gnb1.log
+  all_level: info
+  hex_max_size: 0
+
+pcap:
+  mac_enable: false
+  mac_filename: /tmp/gnb1_mac.pcap
+  ngap_enable: true
+  ngap_filename: /tmp/gnb1_ngap.pcap
+  xnap_enable: true
+  xnap_filename: /tmp/gnb1_xnap.pcap
