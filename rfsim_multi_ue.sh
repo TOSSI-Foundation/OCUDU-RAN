@@ -57,7 +57,10 @@ subscriber settings, passed in the environment because they belong to the core:
   IMSI_FMT   printf format for the IMSI      (default 00101%010d)
   IMSI_BASE  added to the UE index           (default 0, so ue1 is ...0000001)
   UE_KEY     subscriber key (Ki)             UE_OPC   operator key
-  NSSAI_SST  slice type                      NSSAI_SD slice differentiator
+  NSSAI_SST  slice type                      (default 1)
+  NSSAI_SD   slice differentiator, only passed to the UE when set. Leave it
+             unset for the OAI core, which refuses to register when an sd is
+             offered at all, even sd 0.
   DNN        data network name               (default oai)
 
 Start the gNB first, then:
@@ -127,7 +130,7 @@ IMSI_BASE=${IMSI_BASE:-0}
 UE_KEY=${UE_KEY:-}
 UE_OPC=${UE_OPC:-}
 NSSAI_SST=${NSSAI_SST:-1}
-NSSAI_SD=${NSSAI_SD:-1}
+NSSAI_SD=${NSSAI_SD:-}
 DNN=${DNN:-oai}
 STOP=no
 
@@ -292,13 +295,15 @@ run_ue() {
         local cred=()
         [ -n "$UE_KEY" ] && cred+=(--uicc0.key "$UE_KEY")
         [ -n "$UE_OPC" ] && cred+=(--uicc0.opc "$UE_OPC")
+        local slice=()
+        [ -n "$NSSAI_SD" ] && slice+=(--uicc0.nssai_sd "$NSSAI_SD" --uicc0.pdu_sessions.[0].nssai_sd "$NSSAI_SD")
         "${pin[@]}" ./nr-uesoftmodem -r "$PRB" --numerology 1 --band "$BAND" -C "$FREQ" --ssb "$SSB" \
             --rfsim --rfsimulator.serveraddr "10.$((200 + n)).1.100" --rfsimulator.serverport "$SRV_PORT" \
             --uecap_file "$UECAP" \
             --uicc0.imsi "$(printf "$IMSI_FMT" "$((IMSI_BASE + n))")" \
             "${cred[@]}" \
-            --uicc0.nssai_sst "$NSSAI_SST" --uicc0.nssai_sd "$NSSAI_SD" \
-            --uicc0.pdu_sessions.[0].nssai_sst "$NSSAI_SST" --uicc0.pdu_sessions.[0].nssai_sd "$NSSAI_SD" \
+            --uicc0.nssai_sst "$NSSAI_SST" --uicc0.pdu_sessions.[0].nssai_sst "$NSSAI_SST" \
+            "${slice[@]}" \
             --uicc0.pdu_sessions.[0].dnn "$DNN" && break
         echo "ue$n exited on attempt $attempt of $RETRIES, retrying"
         sleep 5

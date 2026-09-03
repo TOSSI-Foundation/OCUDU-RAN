@@ -12,7 +12,6 @@ cu_cp:
           - plmn: "00101"
             tai_slice_support_list:
               - sst: 1
-                sd: 1
   inactivity_timer: 7200
 
 ru_sdr:
@@ -34,7 +33,6 @@ cell_cfg:
   pci: 1
   slicing:
     - sst: 1
-      sd: 1
   tdd_ul_dl_cfg:
     dl_ul_tx_period: 5
     nof_dl_slots: 3
