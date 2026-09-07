@@ -114,7 +114,8 @@ static error_type<std::string> validate_rach_cfg_common(const sched_cell_configu
 
 static error_type<std::string> validade_pusch_td_res_list(span<const pusch_time_domain_resource_allocation> pusch_lst,
                                                           const std::optional<tdd_ul_dl_config_common>&     tdd_cfg,
-                                                          uint8_t                                           min_k2)
+                                                          uint8_t                                           min_k2,
+                                                          bool enable_mapping_type_b)
 {
   using res_t = pusch_time_domain_resource_allocation;
 
@@ -126,7 +127,8 @@ static error_type<std::string> validade_pusch_td_res_list(span<const pusch_time_
 
   // The list needs to be a subset of the auto-generated based on the TDD pattern and min k2.
   const auto superset_lst =
-      time_domain_resource_helper::generate_dedicated_pusch_td_res_list(tdd_cfg, cyclic_prefix::NORMAL, min_k2);
+      time_domain_resource_helper::generate_dedicated_pusch_td_res_list(
+          tdd_cfg, cyclic_prefix::NORMAL, min_k2, enable_mapping_type_b);
   for (const auto& pusch : pusch_lst) {
     const auto it = std::find_if(
         superset_lst.begin(), superset_lst.end(), [&pusch](const pusch_time_domain_resource_allocation& res) {
@@ -167,7 +169,10 @@ static error_type<std::string> validate_pusch_cfg_common(const sched_cell_config
 
   const auto& pusch_lst = msg.ran.ul_cfg_common.init_ul_bwp.pusch_cfg_common.value().pusch_td_alloc_list;
   HANDLE_CODE(
-      validade_pusch_td_res_list(pusch_lst, msg.ran.tdd_ul_dl_cfg_common, msg.ran.init_bwp_builder.pusch.min_k2));
+      validade_pusch_td_res_list(pusch_lst,
+                                 msg.ran.tdd_ul_dl_cfg_common,
+                                 msg.ran.init_bwp_builder.pusch.min_k2,
+                                 msg.ran.init_bwp_builder.pusch.enable_pusch_mapping_type_b));
 
   return {};
 }

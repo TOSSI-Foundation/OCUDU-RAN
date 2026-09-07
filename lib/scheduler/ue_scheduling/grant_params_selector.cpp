@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "grant_params_selector.h"
+#include "../slicing/ran_slice_id.h"
 #include "../slicing/slice_ue_repository.h"
 #include "../support/csi_report_helpers.h"
 #include "../support/dmrs_helpers.h"
@@ -11,6 +12,9 @@
 #include "../ue_context/ue_cell.h"
 #include "ocudu/ran/csi_rs/csi_report_config.h"
 #include "ocudu/ran/transform_precoding/transform_precoding_helpers.h"
+#include "ocudu/ocudulog/ocudulog.h"
+#include <array>
+#include <atomic>
 #include <variant>
 
 using namespace ocudu;
@@ -180,6 +184,36 @@ static std::optional<mcs_prbs_selection> compute_newtx_required_mcs_and_prbs(con
   return mcs_prbs_selection{mcs, nof_prbs};
 }
 
+// TS 38.214 Table 5.1.2.1-1
+static bool slice_prefers_short_pdsch(const slice_ue& u, const cell_configuration& cell_cfg)
+{
+  const ran_slice_id_t slice_id = u.ran_slice_id();
+  if (slice_id == SRB_RAN_SLICE_ID or slice_id == DEFAULT_DRB_RAN_SLICE_ID) {
+    return false;
+  }
+  const auto idx = static_cast<size_t>(slice_id.value()) - 2;
+  if (idx >= cell_cfg.rrm_policy_members.size()) {
+    return false;
+  }
+  return cell_cfg.rrm_policy_members[idx].prefer_short_pdsch;
+}
+
+static void log_type_b_pdsch_selected_once(ran_slice_id_t slice_id, rnti_t crnti, uint8_t nof_symbols)
+{
+  static std::array<std::atomic<bool>, 256> logged{};
+  const size_t                              idx = slice_id.value();
+  if (logged[idx].exchange(true, std::memory_order_relaxed)) {
+    return;
+  }
+  ocudulog::fetch_basic_logger("SCHED").info(
+      "slice={}: rnti={}: Selected mapping type B (mini-slot, TS38.214 Table 5.1.2.1-1) PDSCH row with L={} "
+      "symbols for a latency-sensitive slice. This message is logged once per slice to confirm the feature is "
+      "active; it is not repeated for subsequent grants.",
+      slice_id.value(),
+      crnti,
+      nof_symbols);
+}
+
 static std::optional<dl_sched_context> get_dl_sched_context(const slice_ue&               u,
                                                             slot_point                    pdcch_slot,
                                                             slot_point                    pdsch_slot,
@@ -223,30 +257,30 @@ static std::optional<dl_sched_context> get_dl_sched_context(const slice_ue&     
     return std::nullopt;
   }
 
-  for (unsigned pdsch_td_index = 0, e = ss.pdsch_time_domain_list.size(); pdsch_td_index != e; ++pdsch_td_index) {
+  auto row_is_eligible = [&](unsigned pdsch_td_index) {
     const pdsch_time_domain_resource_allocation& pdsch_td_res = ss.pdsch_time_domain_list[pdsch_td_index];
 
     // Check that k0 matches the chosen PDSCH slot
     if (pdcch_slot + pdsch_td_res.k0 != pdsch_slot) {
-      continue;
+      return false;
     }
-
     // If it is a retx, we need to ensure we use a time_domain_resource with the same number of symbols as used for
     // the first transmission.
     if (h_dl != nullptr and pdsch_td_res.symbols.length() != h_dl->get_grant_params().nof_symbols) {
-      continue;
+      return false;
     }
-
     // Check whether PDSCH time domain resource last symbol is lower than the total number of DL symbols of the slot.
     if (slot_nof_symbols < pdsch_td_res.symbols.stop()) {
-      continue;
+      return false;
     }
-
     // Check whether PDSCH time domain resource does not overlap with CORESET.
     if (pdsch_td_res.symbols.start() < ss.cfg->get_first_symbol_index() + ss.coreset->cfg().duration()) {
-      continue;
+      return false;
     }
+    return true;
+  };
 
+  auto build_ctxt_for_row = [&](unsigned pdsch_td_index) -> std::optional<dl_sched_context> {
     // Compute recommended number of layers, MCS and PRBs.
     unsigned      nof_layers;
     unsigned      nof_rbs;
@@ -280,9 +314,39 @@ static std::optional<dl_sched_context> get_dl_sched_context(const slice_ue&     
     ctxt.expected_nof_rbs   = nof_rbs;
     ctxt.pending_bytes      = units::bytes{pending_bytes};
     return ctxt;
+  };
+
+  std::optional<dl_sched_context> first_match_ctxt;
+  for (unsigned pdsch_td_index = 0, e = ss.pdsch_time_domain_list.size(); pdsch_td_index != e; ++pdsch_td_index) {
+    if (not row_is_eligible(pdsch_td_index)) {
+      continue;
+    }
+    first_match_ctxt = build_ctxt_for_row(pdsch_td_index);
+    break;
   }
 
-  return std::nullopt;
+  if (not slice_prefers_short_pdsch(u, cell_cfg)) {
+    return first_match_ctxt;
+  }
+
+  // TS 38.214 Section 5.1.2.1, Table 5.1.2.1-1
+  for (unsigned pdsch_td_index = ss.pdsch_time_domain_list.size(); pdsch_td_index-- > 0;) {
+    const pdsch_time_domain_resource_allocation& pdsch_td_res = ss.pdsch_time_domain_list[pdsch_td_index];
+    if (pdsch_td_res.map_type != sch_mapping_type::typeB) {
+      continue;
+    }
+    if (not row_is_eligible(pdsch_td_index)) {
+      continue;
+    }
+    std::optional<dl_sched_context> short_ctxt = build_ctxt_for_row(pdsch_td_index);
+    if (not short_ctxt.has_value()) {
+      continue;
+    }
+    log_type_b_pdsch_selected_once(u.ran_slice_id(), u.crnti(), pdsch_td_res.symbols.length());
+    return short_ctxt;
+  }
+
+  return first_match_ctxt;
 }
 
 std::optional<dl_sched_context> sched_helper::get_newtx_dl_sched_context(const slice_ue& u,
@@ -304,10 +368,49 @@ std::optional<dl_sched_context> sched_helper::get_retx_dl_sched_context(const sl
 }
 
 static vrb_interval
-find_available_vrbs(const dl_sched_context& space_cfg, const vrb_bitmap& used_vrbs, unsigned max_rbs = MAX_NOF_PRBS)
+find_best_overlapping_interval(const vrb_bitmap& used_vrbs, const vrb_bitmap& preferred, unsigned nof_rbs)
+{
+  if (nof_rbs == 0 or used_vrbs.size() < nof_rbs) {
+    return {};
+  }
+
+  vrb_interval best;
+  unsigned     best_overlap = 0;
+  for (unsigned start = 0, last_start = used_vrbs.size() - nof_rbs; start <= last_start; ++start) {
+    if (used_vrbs.any(start, start + nof_rbs)) {
+      continue;
+    }
+    unsigned overlap = 0;
+    for (unsigned pos = start, e = start + nof_rbs; pos != e; ++pos) {
+      if (pos < preferred.size() and preferred.test(pos)) {
+        ++overlap;
+      }
+    }
+    if (best.empty() or overlap > best_overlap) {
+      best         = vrb_interval{start, start + nof_rbs};
+      best_overlap = overlap;
+      if (best_overlap == nof_rbs) {
+        break;
+      }
+    }
+  }
+  return best;
+}
+
+static vrb_interval find_available_vrbs(const dl_sched_context& space_cfg,
+                                        const vrb_bitmap&       used_vrbs,
+                                        unsigned                max_rbs   = MAX_NOF_PRBS,
+                                        const vrb_bitmap*       preferred = nullptr)
 {
   // Compute recommended number of layers, MCS and PRBs.
   unsigned nof_rbs = std::min(space_cfg.expected_nof_rbs, max_rbs);
+
+  if (preferred != nullptr and preferred->any()) {
+    vrb_interval steered = find_best_overlapping_interval(used_vrbs, *preferred, nof_rbs);
+    if (steered.length() == nof_rbs) {
+      return steered;
+    }
+  }
 
   // Compute PRB allocation interval.
   return rb_helper::find_empty_interval_of_length(used_vrbs, nof_rbs);
@@ -315,9 +418,10 @@ find_available_vrbs(const dl_sched_context& space_cfg, const vrb_bitmap& used_vr
 
 vrb_interval sched_helper::compute_newtx_dl_vrbs(const dl_sched_context& decision_ctxt,
                                                  const vrb_bitmap&       used_vrbs,
-                                                 unsigned                max_nof_rbs)
+                                                 unsigned                max_nof_rbs,
+                                                 const vrb_bitmap*       preferred)
 {
-  return find_available_vrbs(decision_ctxt, used_vrbs, max_nof_rbs);
+  return find_available_vrbs(decision_ctxt, used_vrbs, max_nof_rbs, preferred);
 }
 
 vrb_interval sched_helper::compute_retx_dl_vrbs(const dl_sched_context& decision_ctxt, const vrb_bitmap& used_vrbs)

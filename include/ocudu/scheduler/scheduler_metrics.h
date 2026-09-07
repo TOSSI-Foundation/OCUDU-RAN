@@ -117,6 +117,22 @@ struct scheduler_slice_metrics {
   unsigned ded_prbs_ul = 0;
   float avg_dl_rbs_per_slot = 0.0f;
   float avg_ul_rbs_per_slot = 0.0f;
+
+  double dl_brate_kbps_sum = 0.0;
+  double ul_brate_kbps_sum = 0.0;
+  uint64_t dl_bs_sum = 0;
+  uint64_t bsr_sum = 0;
+  float ssr_embb = -1.0f;
+  float ssr_urllc = -1.0f;
+
+  bool has_power_stats = false;
+  double power_committed_w = 0.0;
+  double power_remaining_w = 0.0;
+  uint64_t power_pairs_rejected_unit_taken = 0;
+  uint64_t power_pairs_rejected_infeasible = 0;
+  uint64_t power_pairs_rejected_no_demand = 0;
+  uint64_t power_decode_steps_taken = 0;
+  uint64_t power_decode_steps_total = 0;
 };
 
 /// \brief Event that occurred in the cell of the scheduler.

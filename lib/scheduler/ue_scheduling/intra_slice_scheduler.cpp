@@ -143,6 +143,7 @@ intra_slice_scheduler::intra_slice_scheduler(const scheduler_ue_expert_config& e
   newtx_candidates.reserve(MAX_NOF_DU_UES);
   pending_dl_newtxs.reserve(MAX_UE_PDUS_PER_SLOT);
   pending_ul_newtxs.reserve(MAX_UE_PDUS_PER_SLOT);
+  pending_dl_preferred_vrbs.reserve(MAX_UE_PDUS_PER_SLOT);
 
   // Pre-reserve memory for slice context.
   constexpr unsigned max_expected_ran_slices = 8;
@@ -475,6 +476,7 @@ unsigned intra_slice_scheduler::schedule_dl_newtx_candidates(dl_ran_slice_candid
       auto& grant_builder = result.value();
       rb_count += std::min(grant_builder.context().expected_nof_rbs, max_rbs_per_grant);
       pending_dl_newtxs.push_back(std::move(grant_builder));
+      pending_dl_preferred_vrbs.push_back(ue_candidate.preferred_vrbs);
       if (rb_count >= rbs_to_alloc) {
         // Enough UEs have been allocated to ensure that the grid is filled. Move to stage 2.
         break;
@@ -519,7 +521,10 @@ unsigned intra_slice_scheduler::schedule_dl_newtx_candidates(dl_ran_slice_candid
     ocudu_assert(max_grant_size > 0, "Invalid grant size.");
 
     // Derive recommended parameters for the DL newTx grant.
-    vrb_interval alloc_vrbs = grant_builder.recommended_vrbs(used_dl_vrbs, max_grant_size);
+    // TS 38.211 clause 7.3.1.6
+    const vrb_bitmap* preferred_vrbs =
+        enable_pdsch_interleaving ? nullptr : &pending_dl_preferred_vrbs[alloc_count];
+    vrb_interval alloc_vrbs = grant_builder.recommended_vrbs(used_dl_vrbs, max_grant_size, preferred_vrbs);
     if (alloc_vrbs.empty()) {
       logger.warning("ue={} c-rnti={}: Failed to allocate RBs for PDSCH grant at slot={}",
                      fmt::underlying(grant_builder.ue().ue_index()),
@@ -557,6 +562,7 @@ unsigned intra_slice_scheduler::schedule_dl_newtx_candidates(dl_ran_slice_candid
   // Clear grant builders.
   const unsigned alloc_count = pending_dl_newtxs.size();
   pending_dl_newtxs.clear();
+  pending_dl_preferred_vrbs.clear();
 
   // Update policy with final allocation results.
   const auto& pdschs = cell_alloc[pdsch_slot].result.dl.ue_grants;

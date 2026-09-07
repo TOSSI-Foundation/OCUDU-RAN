@@ -308,6 +308,12 @@ inline std::optional<pdsch_config> make_pdsch_config(const ran_cell_config& cell
   pdsch_cfg.pdsch_mapping_type_a_dmrs.emplace();
   pdsch_cfg.pdsch_mapping_type_a_dmrs->additional_positions = cell_cfg.init_bwp_builder.pdsch.additional_positions;
 
+  // TS 38.214 Section 5.1.6.2, TS 38.331 PDSCH-Config
+  if (cell_cfg.init_bwp_builder.pdsch.enable_pdsch_mapping_type_b) {
+    pdsch_cfg.pdsch_mapping_type_b_dmrs.emplace();
+    pdsch_cfg.pdsch_mapping_type_b_dmrs->additional_positions = cell_cfg.init_bwp_builder.pdsch.additional_positions;
+  }
+
   pdsch_cfg.tci_states.push_back(tci_state{
       .state_id  = static_cast<tci_state_id_t>(0),
       .qcl_type1 = {.ref_sig  = {.type = qcl_info::reference_signal::reference_signal_type::ssb,

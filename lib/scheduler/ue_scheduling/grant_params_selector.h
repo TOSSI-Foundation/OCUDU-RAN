@@ -49,7 +49,8 @@ std::optional<dl_sched_context> get_retx_dl_sched_context(const slice_ue&       
 /// Select DL VRBs to allocate for a newTx.
 vrb_interval compute_newtx_dl_vrbs(const dl_sched_context& decision_ctxt,
                                    const vrb_bitmap&       used_vrbs,
-                                   unsigned                max_nof_rbs = MAX_NOF_PRBS);
+                                   unsigned                max_nof_rbs = MAX_NOF_PRBS,
+                                   const vrb_bitmap*       preferred   = nullptr);
 
 /// Select DL VRBs to allocate for a reTx.
 vrb_interval compute_retx_dl_vrbs(const dl_sched_context& decision_ctxt, const vrb_bitmap& used_vrbs);

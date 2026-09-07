@@ -124,10 +124,12 @@ public:
                           bool                                         enable_interleaving);
 
     /// For a given max number of RBs and a bitmap of used VRBs, returns the recommended parameters for the PDSCH grant.
-    vrb_interval recommended_vrbs(const vrb_bitmap& used_vrbs, unsigned max_nof_rbs = MAX_NOF_PRBS) const
+    vrb_interval recommended_vrbs(const vrb_bitmap& used_vrbs,
+                                  unsigned          max_nof_rbs = MAX_NOF_PRBS,
+                                  const vrb_bitmap* preferred   = nullptr) const
     {
       const dl_grant_info& grant = grant_info();
-      return compute_newtx_dl_vrbs(grant.cfg, used_vrbs, max_nof_rbs);
+      return compute_newtx_dl_vrbs(grant.cfg, used_vrbs, max_nof_rbs, preferred);
     }
 
     /// Getters for grant immutable parameters.

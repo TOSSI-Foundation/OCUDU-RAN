@@ -191,7 +191,8 @@ dl_config_common ocudu::config_helpers::make_default_dl_config_common(const cell
       params.tdd_ul_dl_cfg_common,
       cfg.init_dl_bwp.generic_params.cp,
       time_domain_resource_helper::calculate_minimum_pdsch_symbol(cfg.init_dl_bwp.pdcch_common,
-                                                                  make_ue_dedicated_pdcch_config(params)));
+                                                                  make_ue_dedicated_pdcch_config(params)),
+      params.enable_pdsch_mapping_type_b);
 
   // Configure PCCH.
   cfg.pcch_cfg.default_paging_cycle = paging_cycle::rf128;
@@ -264,7 +265,10 @@ ul_config_common ocudu::config_helpers::make_default_ul_config_common(const cell
   // DCI Format 0_1.
   cfg.init_ul_bwp.pusch_cfg_common->pusch_td_alloc_list =
       time_domain_resource_helper::generate_dedicated_pusch_td_res_list(
-          params.tdd_ul_dl_cfg_common, cfg.init_ul_bwp.generic_params.cp, params.min_k2);
+          params.tdd_ul_dl_cfg_common,
+          cfg.init_ul_bwp.generic_params.cp,
+          params.min_k2,
+          params.enable_pusch_mapping_type_b);
 
   cfg.init_ul_bwp.pucch_cfg_common.emplace();
   cfg.init_ul_bwp.pucch_cfg_common->pucch_resource_common        = 11;
@@ -565,6 +569,11 @@ pdsch_config ocudu::config_helpers::make_default_pdsch_config(const cell_config_
   pdsch_cfg.pdsch_mapping_type_a_dmrs.emplace();
   dmrs_downlink_config& dmrs_type_a = pdsch_cfg.pdsch_mapping_type_a_dmrs.value();
   dmrs_type_a.additional_positions  = dmrs_additional_positions::pos2;
+  if (params.enable_pdsch_mapping_type_b) {
+    pdsch_cfg.pdsch_mapping_type_b_dmrs.emplace();
+    dmrs_downlink_config& dmrs_type_b = pdsch_cfg.pdsch_mapping_type_b_dmrs.value();
+    dmrs_type_b.additional_positions  = dmrs_additional_positions::pos2;
+  }
   pdsch_cfg.tci_states.push_back(tci_state{
       .state_id  = static_cast<tci_state_id_t>(0),
       .qcl_type1 = {.ref_sig  = {.type = qcl_info::reference_signal::reference_signal_type::ssb,

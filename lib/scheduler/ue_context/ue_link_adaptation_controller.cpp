@@ -5,6 +5,7 @@
 #include "ue_link_adaptation_controller.h"
 #include "../logging/bsr_ml_dataset_logger.h"
 #include "../logging/csi_ml_dataset_logger.h"
+#include "../logging/slice_ml_dataset_logger.h"
 #include "../logging/ml_la_dataset_logger.h"
 #include "../support/csi_ml_predictor.h"
 #include "../support/bsr_periodicity_predictor.h"
@@ -49,6 +50,13 @@ ue_link_adaptation_controller::ue_link_adaptation_controller(const cell_configur
   const csi_ml_expert_config& csi_cfg = cell_cfg.expert_cfg.ue.csi_ml;
   csi_ml_dataset::configure(csi_cfg.dataset_logging_enabled, csi_cfg.dataset_output_dir, csi_cfg.dataset_scenario);
   csi_ml::predictor::instance().configure(csi_cfg);
+
+  const slice_ml_expert_config& slice_cfg = cell_cfg.expert_cfg.ue.slice_ml;
+  slice_ml_dataset::configure(slice_cfg.dataset_logging_enabled,
+                              slice_cfg.dataset_output_dir,
+                              slice_cfg.dataset_scenario,
+                              slice_cfg.target_dl_rate_kbps,
+                              slice_cfg.delay_budget_ms);
 }
 
 void ue_link_adaptation_controller::handle_dl_ack_info(bool                         ack_value,
@@ -131,6 +139,10 @@ std::optional<sch_mcs_index> ue_link_adaptation_controller::calculate_dl_mcs(pds
     return std::nullopt;
   }
 
+  // Stage-3 (CSI ML promotion): when apply_to_mcs is enabled and the predictor has a valid
+  // anticipation of the next report's effective_cqi, source the MCS from the predicted value
+  // instead of the held-constant last-reported one (paper's channel-aging compensation). Falls
+  // back unconditionally to the ZOH eff_cqi above when disabled or no prediction — never worse.
   if (csi_ml::predictor::instance().apply_to_mcs() && predicted_dl_effective_cqi.has_value()) {
     eff_cqi = std::min(std::max(1.0F, predicted_dl_effective_cqi.value()), static_cast<float>(cqi_value::max()));
   }

@@ -205,6 +205,102 @@ static void configure_cli11_csi_ml_args(CLI::App& app, du_high_unit_csi_ml_confi
       ->capture_default_str();
 }
 
+static void configure_cli11_slice_ml_args(CLI::App& app, du_high_unit_slice_ml_config& config)
+{
+  CLI::App* inference_subcmd =
+      add_subcommand(app, "inference", "Slice ML controller (SliceManager) inference parameters")->configurable();
+  add_option(*inference_subcmd,
+             "--enabled",
+             config.inference.enabled,
+             "Run the Slice-ML actor once per metrics report period. On its own this only logs the "
+             "decision; see --apply")
+      ->capture_default_str();
+  add_option(*inference_subcmd,
+             "--model_path",
+             config.inference.model_path,
+             "Runtime-loadable actor model (hot-swappable). Empty uses the compiled seed, which is "
+             "untrained and always selects the default action")
+      ->capture_default_str();
+  add_option(*inference_subcmd,
+             "--apply",
+             config.inference.apply,
+             "Actuate the selected action as an RRM policy ratio change. When false the controller "
+             "runs in shadow mode and reconfigures nothing")
+      ->capture_default_str();
+  add_option(*inference_subcmd,
+             "--default_action_idx",
+             config.inference.default_action_idx,
+             "Action menu index used before the first inference and when a safety gate blocks a change")
+      ->capture_default_str()
+      ->check(CLI::Range(0, 18));
+  add_option(*inference_subcmd,
+             "--min_urllc_prb_ratio",
+             config.inference.min_urllc_prb_ratio,
+             "Floor on the URLLC slice's reserved PRB ratio in percent; actions below it are refused")
+      ->capture_default_str()
+      ->check(CLI::Range(0, 100));
+  add_option(*inference_subcmd,
+             "--max_total_min_ratio",
+             config.inference.max_total_min_ratio,
+             "Cap on the sum of the slices' reserved ratios in percent. 100 permits a fully "
+             "orthogonal split")
+      ->capture_default_str()
+      ->check(CLI::Range(0, 100));
+  add_option(*inference_subcmd,
+             "--switch_hysteresis_periods",
+             config.inference.switch_hysteresis_periods,
+             "Consecutive periods the actor must re-select a new action before it is applied. 1 "
+             "disables hysteresis")
+      ->capture_default_str()
+      ->check(CLI::PositiveNumber);
+  add_option(*inference_subcmd,
+             "--min_periods_between_switches",
+             config.inference.min_periods_between_switches,
+             "Minimum number of periods between two applied changes (control churn rate limit)")
+      ->capture_default_str();
+  add_option(*inference_subcmd, "--plmn", config.inference.plmn, "PLMN used to address the RRM policy members")
+      ->capture_default_str();
+  add_option(*inference_subcmd, "--embb_sst", config.inference.embb_sst, "SST identifying the eMBB slice")
+      ->capture_default_str()
+      ->check(CLI::Range(0, 255));
+  add_option(*inference_subcmd, "--embb_sd", config.inference.embb_sd,
+             "SD of the eMBB slice; must match cell_cfg.slicing or the reconfiguration is dropped")
+      ->capture_default_str();
+  add_option(*inference_subcmd, "--urllc_sst", config.inference.urllc_sst, "SST identifying the URLLC slice")
+      ->capture_default_str()
+      ->check(CLI::Range(0, 255));
+  add_option(*inference_subcmd, "--urllc_sd", config.inference.urllc_sd,
+             "SD of the URLLC slice; must match cell_cfg.slicing or the reconfiguration is dropped")
+      ->capture_default_str();
+
+  CLI::App* logging_subcmd =
+      add_subcommand(app, "dataset_logging", "Slice ML dataset logging parameters")->configurable();
+  add_option(*logging_subcmd,
+             "--enabled",
+             config.dataset_logging.enabled,
+             "Enable Slice ML dataset CSV logging (per-UE and per-slice/SliceManager files)")
+      ->capture_default_str();
+  add_option(*logging_subcmd,
+             "--output_dir",
+             config.dataset_logging.output_dir,
+             "Directory for Slice ML dataset CSV output")
+      ->capture_default_str();
+  add_option(*logging_subcmd, "--scenario", config.dataset_logging.scenario, "Scenario tag written into each CSV row")
+      ->capture_default_str();
+  add_option(*logging_subcmd,
+             "--target_dl_rate_kbps",
+             config.dataset_logging.target_dl_rate_kbps,
+             "Per-UE DL rate (kbps) required to count towards a slice's rate-satisfaction ratio. 0 disables it.")
+      ->capture_default_str()
+      ->check(CLI::NonNegativeNumber);
+  add_option(*logging_subcmd,
+             "--delay_budget_ms",
+             config.dataset_logging.delay_budget_ms,
+             "Per-UE delay (ms) required to count towards a slice's delay-satisfaction ratio. 0 disables it.")
+      ->capture_default_str()
+      ->check(CLI::NonNegativeNumber);
+}
+
 static void configure_cli11_ml_mcs_args(CLI::App& app, du_high_unit_ml_mcs_config& config)
 {
   CLI::App* inference_subcmd = add_subcommand(app, "inference", "ML MCS inference parameters")->configurable();
@@ -526,6 +622,12 @@ static void configure_cli11_pdsch_args(CLI::App& app, du_high_unit_pdsch_config&
              pdsch_params.enable_csi_rs_pdsch_multiplexing,
              "Enable multiplexing of CSI-RS and PDSCH")
       ->capture_default_str();
+  add_option(app,
+             "--enable_mapping_type_b",
+             pdsch_params.enable_pdsch_mapping_type_b,
+             "Enable PDSCH mapping type B (mini-slot) time-domain resources, letting the scheduler offer short, "
+             "low-latency PDSCH allocations. See TS38.214 Table 5.1.2.1-1.")
+      ->capture_default_str();
 }
 
 static void configure_cli11_du_args(CLI::App& app, bool& warn_on_drop)
@@ -799,6 +901,42 @@ static void configure_cli11_scheduler_policy_args(CLI::App& app, std::optional<s
     if (rr_sched_sub_cmd->count() != 0) {
       policy_cfg = time_rr_scheduler_config{};
     }
+  });
+
+  auto      attn_cfg = std::make_shared<attention_ml_scheduler_config>();
+  auto      attn_role = std::make_shared<std::string>("embb");
+  CLI::App* attn_subcmd =
+      add_subcommand(app, "attention_ml", "ML attention scheduler policy configuration")->configurable();
+  add_option(*attn_subcmd, "--model_path", attn_cfg->model_path, "Path to the exported attention scheduler .model");
+  add_option(*attn_subcmd, "--role", *attn_role, "Which scheduler model role this slice runs")
+      ->capture_default_str()
+      ->check(CLI::IsMember({"embb", "urllc"}));
+  add_option(*attn_subcmd,
+             "--prb_group",
+             attn_cfg->prb_group,
+             "PRBs per allocation unit. Must match the prb_group the model was trained at")
+      ->capture_default_str()
+      ->check(CLI::Range(1, 273));
+  add_option(*attn_subcmd,
+             "--max_inference_us",
+             attn_cfg->max_inference_us,
+             "Per-slot rollout deadline. 0 uses the model's default period for the role (143 us URLLC, 1000 us "
+             "eMBB), clamped to the slot duration. A slot that overruns falls back to the QoS policy")
+      ->capture_default_str()
+      ->check(CLI::Range(0, 100000));
+  add_option(*attn_subcmd,
+             "--max_deadline_misses",
+             attn_cfg->max_deadline_misses,
+             "Consecutive overruns after which the model is switched off for the rest of the run")
+      ->capture_default_str()
+      ->check(CLI::Range(1, 1000));
+  attn_subcmd->parse_complete_callback([&policy_cfg, attn_cfg, attn_role, attn_subcmd]() {
+    if (attn_subcmd->count() == 0) {
+      return;
+    }
+    attn_cfg->role = *attn_role == "urllc" ? attention_ml_scheduler_config::role_type::urllc
+                                           : attention_ml_scheduler_config::role_type::embb;
+    policy_cfg     = *attn_cfg;
   });
 }
 
@@ -1088,6 +1226,12 @@ static void configure_cli11_pusch_args(CLI::App& app, du_high_unit_pusch_config&
   add_option(app, "--min_k2", pusch_params.min_k2, "Minimum value of K2 (difference in slots between PDCCH and PUSCH).")
       ->capture_default_str()
       ->check(CLI::Range(1, 4));
+  add_option(app,
+             "--enable_mapping_type_b",
+             pusch_params.enable_pusch_mapping_type_b,
+             "Enable PUSCH mapping type B (mini-slot) time-domain resources, letting the scheduler use the trailing "
+             "UL symbols of a TDD special slot. See TS38.214 Table 6.1.2.1-1.")
+      ->capture_default_str();
   add_option_function<std::string>(
       app,
       "--dc_offset",
@@ -2250,6 +2394,13 @@ static void configure_cli11_slicing_scheduling_args(CLI::App&                   
              " scheduler allocates no resources)")
       ->capture_default_str()
       ->check(CLI::IsMember({"UNLOCKED", "LOCKED"}));
+  add_option(app,
+             "--prefer_short_pdsch",
+             slice_sched_params.prefer_short_pdsch,
+             "Prefer short (mapping type B / mini-slot, TS 38.214 Table 5.1.2.1-1) PDSCH time-domain rows for this "
+             "slice's DL grants when one is eligible, instead of the longest matching row. Requires "
+             "enable_pdsch_mapping_type_b to also be set for the cell; otherwise this has no effect")
+      ->capture_default_str();
 
   // Scheduler policy configuration.
   CLI::App* policy_cfg_cmd =
@@ -2758,6 +2909,10 @@ void ocudu::configure_cli11_with_du_high_config_schema(CLI::App& app, du_high_pa
 
   CLI::App* csi_ml_subcmd = add_subcommand(app, "csi_ml", "CSI ML dataset logging configuration")->configurable();
   configure_cli11_csi_ml_args(*csi_ml_subcmd, parsed_cfg.config.csi_ml);
+
+  CLI::App* slice_ml_subcmd =
+      add_subcommand(app, "slice_ml", "Slice ML dataset logging and SliceManager controller configuration")->configurable();
+  configure_cli11_slice_ml_args(*slice_ml_subcmd, parsed_cfg.config.slice_ml);
 
   // Cell section.
   add_option_cell(

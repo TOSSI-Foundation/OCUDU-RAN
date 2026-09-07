@@ -6,6 +6,7 @@
 
 #include "../config/cell_configuration.h"
 #include "pdsch/pdsch_dmrs_symbol_mask.h"
+#include "pusch/pusch_dmrs_symbol_mask.h"
 #include "ocudu/ran/dmrs/dmrs.h"
 #include "ocudu/ran/pdsch/pdsch_antenna_ports_mapping.h"
 #include "ocudu/scheduler/result/dmrs_info.h"
@@ -50,7 +51,12 @@ inline dmrs_information make_dmrs_info_common(const pdsch_time_domain_resource_a
     dmrs.dmrs_symb_pos                        = pdsch_dmrs_symbol_mask_mapping_type_A_single_get(dmrscfg);
 
   } else {
-    ocudu_terminate("Mapping type B not supported");
+    // TS 38.211 Section 7.4.1.1.2, Table 7.4.1.1.2-3
+    pdsch_dmrs_symbol_mask_mapping_type_B_single_configuration dmrscfg{};
+    dmrscfg.start_symbol        = pdsch_td_cfg.symbols.start();
+    dmrscfg.duration            = pdsch_td_cfg.symbols.length();
+    dmrscfg.additional_position = dmrs_additional_positions::pos2;
+    dmrs.dmrs_symb_pos          = pdsch_dmrs_symbol_mask_mapping_type_B_single_get(dmrscfg);
   }
 
   dmrs.config_type = dmrs_config_type::type1;
@@ -99,7 +105,12 @@ inline dmrs_information make_dmrs_info_dedicated(const pdsch_time_domain_resourc
     dmrs.dmrs_symb_pos                        = pdsch_dmrs_symbol_mask_mapping_type_A_single_get(dmrscfg);
 
   } else {
-    ocudu_terminate("Mapping type B not supported");
+    // TS 38.211 Section 7.4.1.1.2, Table 7.4.1.1.2-3
+    pdsch_dmrs_symbol_mask_mapping_type_B_single_configuration dmrscfg{};
+    dmrscfg.start_symbol        = pdsch_td_cfg.symbols.start();
+    dmrscfg.duration            = pdsch_td_cfg.symbols.length();
+    dmrscfg.additional_position = dmrs_dl_cfg_ded.additional_positions;
+    dmrs.dmrs_symb_pos          = pdsch_dmrs_symbol_mask_mapping_type_B_single_get(dmrscfg);
   }
 
   dmrs.config_type = dmrs_dl_cfg_ded.is_dmrs_type2 ? dmrs_config_type::type2 : dmrs_config_type::type1;
@@ -162,7 +173,12 @@ inline dmrs_information make_dmrs_info_common(const pusch_time_domain_resource_a
     dmrs.dmrs_symb_pos                        = pdsch_dmrs_symbol_mask_mapping_type_A_single_get(dmrscfg);
 
   } else {
-    ocudu_terminate("Mapping type B not supported");
+    // TS 38.211 Section 6.4.1.1.3, Table 6.4.1.1.3-3
+    pusch_dmrs_symbol_mask_mapping_type_B_single_configuration dmrscfg{};
+    dmrscfg.start_symbol        = pusch_td_cfg.symbols.start();
+    dmrscfg.duration            = pusch_td_cfg.symbols.length();
+    dmrscfg.additional_position = dmrs_additional_positions::pos2;
+    dmrs.dmrs_symb_pos          = pusch_dmrs_symbol_mask_mapping_type_B_single_get(dmrscfg);
   }
 
   dmrs.config_type = dmrs_config_type::type1;
@@ -196,8 +212,9 @@ inline dmrs_information make_dmrs_info_dedicated(const pusch_time_domain_resourc
 {
   dmrs_information dmrs{};
 
-  // See TS 38.211, 6.4.1.1.3.
-  if (dmrs_ul_cfg.additional_positions == dmrs_additional_positions::pos3 and
+  // TS 38.211, 6.4.1.1.3
+  if (pusch_td_cfg.map_type == sch_mapping_type::typeA and
+      dmrs_ul_cfg.additional_positions == dmrs_additional_positions::pos3 and
       dmrs_typeA_pos != dmrs_typeA_position::pos2) {
     ocudu_assertion_failure("Invalid PUSCH DMRS configuration. Cause: DMRS Additional Position of pos3 is only "
                             "supported when DMRS TypeA position is equal to pos2.");
@@ -214,7 +231,12 @@ inline dmrs_information make_dmrs_info_dedicated(const pusch_time_domain_resourc
     dmrs.dmrs_symb_pos                        = pdsch_dmrs_symbol_mask_mapping_type_A_single_get(dmrscfg);
 
   } else {
-    ocudu_terminate("Mapping type B not supported");
+    // TS 38.211 Section 6.4.1.1.3, Table 6.4.1.1.3-3
+    pusch_dmrs_symbol_mask_mapping_type_B_single_configuration dmrscfg{};
+    dmrscfg.start_symbol        = pusch_td_cfg.symbols.start();
+    dmrscfg.duration            = pusch_td_cfg.symbols.length();
+    dmrscfg.additional_position = dmrs_ul_cfg.additional_positions;
+    dmrs.dmrs_symb_pos          = pusch_dmrs_symbol_mask_mapping_type_B_single_get(dmrscfg);
   }
 
   dmrs.config_type = dmrs_ul_cfg.is_dmrs_type2 ? dmrs_config_type::type2 : dmrs_config_type::type1;

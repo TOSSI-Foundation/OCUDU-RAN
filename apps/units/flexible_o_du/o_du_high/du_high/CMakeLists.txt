@@ -11,6 +11,8 @@ set(SOURCES
         du_high_config_validator.cpp
         du_high_config_yaml_writer.cpp
         commands/du_high_remote_commands.cpp
+        slice_ml/slice_ml_controller.cpp
+        slice_ml/slice_ml_metrics_consumer.cpp
         ntn/du_high_ntn_config_cli11_schema.cpp
         ntn/du_high_ntn_config_yaml_writer.h
         ntn/du_high_ntn_config_yaml_writer.cpp

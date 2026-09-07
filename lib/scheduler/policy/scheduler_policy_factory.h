@@ -14,6 +14,7 @@ class cell_configuration;
 
 /// Creatre intra-cell, intra-slice scheduler policy.
 std::unique_ptr<scheduler_policy> create_scheduler_strategy(const scheduler_policy_config& policy_cfg,
-                                                            const cell_configuration&      cell_cfg);
+                                                            const cell_configuration&      cell_cfg,
+                                                            unsigned                       slice_dedicated_rbs = 0);
 
 } // namespace ocudu

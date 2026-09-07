@@ -122,4 +122,93 @@ INSTANTIATE_TEST_SUITE_P(PuschDmrsSymbolMaskTypeASingle,
                                                               dmrs_additional_positions::pos2,
                                                               dmrs_additional_positions::pos3)));
 
+// TS 38.211 Table 6.4.1.1.3-3
+using PuschDmrsSymbolMaskTypeBParams = std::tuple<unsigned, unsigned, dmrs_additional_positions>;
+
+class PuschDmrsSymbolMaskTypeBFixture : public ::testing::TestWithParam<PuschDmrsSymbolMaskTypeBParams>
+{};
+
+const std::map<std::tuple<unsigned, dmrs_additional_positions>, static_vector<unsigned, 4>>
+    pusch_dmrs_symbol_mask_typeB_single_table = {
+        {{1, dmrs_additional_positions::pos0}, {0}},          {{1, dmrs_additional_positions::pos1}, {0}},
+        {{1, dmrs_additional_positions::pos2}, {0}},          {{1, dmrs_additional_positions::pos3}, {0}},
+        {{2, dmrs_additional_positions::pos0}, {0}},          {{2, dmrs_additional_positions::pos1}, {0}},
+        {{2, dmrs_additional_positions::pos2}, {0}},          {{2, dmrs_additional_positions::pos3}, {0}},
+        {{3, dmrs_additional_positions::pos0}, {0}},          {{3, dmrs_additional_positions::pos1}, {0}},
+        {{3, dmrs_additional_positions::pos2}, {0}},          {{3, dmrs_additional_positions::pos3}, {0}},
+        {{4, dmrs_additional_positions::pos0}, {0}},          {{4, dmrs_additional_positions::pos1}, {0}},
+        {{4, dmrs_additional_positions::pos2}, {0}},          {{4, dmrs_additional_positions::pos3}, {0}},
+        {{5, dmrs_additional_positions::pos0}, {0}},          {{5, dmrs_additional_positions::pos1}, {0, 4}},
+        {{5, dmrs_additional_positions::pos2}, {0, 4}},       {{5, dmrs_additional_positions::pos3}, {0, 4}},
+        {{6, dmrs_additional_positions::pos0}, {0}},          {{6, dmrs_additional_positions::pos1}, {0, 4}},
+        {{6, dmrs_additional_positions::pos2}, {0, 4}},       {{6, dmrs_additional_positions::pos3}, {0, 4}},
+        {{7, dmrs_additional_positions::pos0}, {0}},          {{7, dmrs_additional_positions::pos1}, {0, 4}},
+        {{7, dmrs_additional_positions::pos2}, {0, 4}},       {{7, dmrs_additional_positions::pos3}, {0, 4}},
+        {{8, dmrs_additional_positions::pos0}, {0}},          {{8, dmrs_additional_positions::pos1}, {0, 6}},
+        {{8, dmrs_additional_positions::pos2}, {0, 3, 6}},    {{8, dmrs_additional_positions::pos3}, {0, 3, 6}},
+        {{9, dmrs_additional_positions::pos0}, {0}},          {{9, dmrs_additional_positions::pos1}, {0, 6}},
+        {{9, dmrs_additional_positions::pos2}, {0, 3, 6}},    {{9, dmrs_additional_positions::pos3}, {0, 3, 6}},
+        {{10, dmrs_additional_positions::pos0}, {0}},         {{10, dmrs_additional_positions::pos1}, {0, 8}},
+        {{10, dmrs_additional_positions::pos2}, {0, 4, 8}},   {{10, dmrs_additional_positions::pos3}, {0, 3, 6, 9}},
+        {{11, dmrs_additional_positions::pos0}, {0}},         {{11, dmrs_additional_positions::pos1}, {0, 8}},
+        {{11, dmrs_additional_positions::pos2}, {0, 4, 8}},   {{11, dmrs_additional_positions::pos3}, {0, 3, 6, 9}},
+        {{12, dmrs_additional_positions::pos0}, {0}},         {{12, dmrs_additional_positions::pos1}, {0, 10}},
+        {{12, dmrs_additional_positions::pos2}, {0, 5, 10}},  {{12, dmrs_additional_positions::pos3}, {0, 3, 6, 9}},
+        {{13, dmrs_additional_positions::pos0}, {0}},         {{13, dmrs_additional_positions::pos1}, {0, 10}},
+        {{13, dmrs_additional_positions::pos2}, {0, 5, 10}},  {{13, dmrs_additional_positions::pos3}, {0, 3, 6, 9}},
+        {{14, dmrs_additional_positions::pos0}, {0}},         {{14, dmrs_additional_positions::pos1}, {0, 10}},
+        {{14, dmrs_additional_positions::pos2}, {0, 5, 10}},  {{14, dmrs_additional_positions::pos3}, {0, 3, 6, 9}}};
+
+TEST_P(PuschDmrsSymbolMaskTypeBFixture, BNormal)
+{
+  unsigned                  start_symbol        = std::get<0>(GetParam());
+  unsigned                  l_d                 = std::get<1>(GetParam());
+  dmrs_additional_positions additional_position = std::get<2>(GetParam());
+
+  // TS 38.214 Table 6.1.2.1-1
+  if (start_symbol + l_d > 14) {
+    GTEST_SKIP();
+  }
+
+  pusch_dmrs_symbol_mask_mapping_type_B_single_configuration config;
+  config.start_symbol        = start_symbol;
+  config.duration            = l_d;
+  config.additional_position = additional_position;
+
+  dmrs_symbol_mask mask = pusch_dmrs_symbol_mask_mapping_type_B_single_get(config);
+
+  ASSERT_TRUE(pusch_dmrs_symbol_mask_typeB_single_table.count({l_d, additional_position}));
+  static_vector<unsigned, 4> offset_list = pusch_dmrs_symbol_mask_typeB_single_table.at({l_d, additional_position});
+
+  dmrs_symbol_mask expected(14);
+  for (unsigned offset : offset_list) {
+    expected.set(start_symbol + offset);
+  }
+
+  ASSERT_EQ(mask, expected);
+}
+
+INSTANTIATE_TEST_SUITE_P(PuschDmrsSymbolMaskTypeBSingle,
+                         PuschDmrsSymbolMaskTypeBFixture,
+                         ::testing::Combine(::testing::Values(0U, 4U, 10U),
+                                            ::testing::Range(1U, 15U),
+                                            ::testing::Values(dmrs_additional_positions::pos0,
+                                                              dmrs_additional_positions::pos1,
+                                                              dmrs_additional_positions::pos2,
+                                                              dmrs_additional_positions::pos3)));
+
+// TS 38.214 Table 6.1.2.1-1
+TEST(PuschDmrsSymbolMaskTypeBBounds, OutOfSlotAllocationAsserts)
+{
+  pusch_dmrs_symbol_mask_mapping_type_B_single_configuration config;
+  config.start_symbol        = 13;
+  config.duration            = 2;
+  config.additional_position = dmrs_additional_positions::pos0;
+
+#if ASSERTS_ENABLED
+  ASSERT_DEATH({ pusch_dmrs_symbol_mask_mapping_type_B_single_get(config); },
+               R"(PUSCH mapping type B allocation S=13 L=2 does not fit in the slot)");
+#endif // ASSERTS_ENABLED
+}
+
 } // namespace

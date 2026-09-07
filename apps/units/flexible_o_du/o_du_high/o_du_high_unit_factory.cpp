@@ -14,6 +14,7 @@
 #include "du_high/metrics/du_metrics.h"
 #include "du_high/metrics/du_metrics_consumers.h"
 #include "du_high/metrics/du_metrics_producer.h"
+#include "du_high/slice_ml/slice_ml_metrics_consumer.h"
 #include "e2/o_du_high_e2_config_translators.h"
 #include "o_du_high_unit_config.h"
 #include "ocudu/du/du_high/du_high.h"
@@ -155,7 +156,8 @@ build_du_metrics(std::vector<app_services::metrics_config>& metrics,
                  app_services::metrics_notifier&              metrics_notifier,
                  app_services::remote_server_metrics_gateway* remote_metrics_gateway,
                  const o_du_high_unit_config&                 o_du_high_unit_cfg,
-                 e2_du_metrics_notifier&                      e2_notifier)
+                 e2_du_metrics_notifier&                      e2_notifier,
+                 du_metrics_consumer_slice_ml**               slice_ml_consumer_out)
 {
   const du_high_unit_config& du_hi_cfg = o_du_high_unit_cfg.du_high_cfg.config;
 
@@ -197,6 +199,37 @@ build_du_metrics(std::vector<app_services::metrics_config>& metrics,
     du_metrics_cfg.consumers.push_back(std::make_unique<du_metrics_consumer_e2>(e2_notifier));
   }
 
+  if (du_hi_cfg.slice_ml.inference.enabled) {
+    const auto& inf  = du_hi_cfg.slice_ml.inference;
+    auto        plmn = plmn_identity::parse(inf.plmn);
+    if (!plmn) {
+      report_error("Invalid PLMN '{}' in slice_ml.inference; the Slice-ML controller cannot address "
+                   "its RRM policy members without one",
+                   inf.plmn);
+    }
+    slice_ml_expert_config sml_cfg;
+    sml_cfg.inference_enabled            = inf.enabled;
+    sml_cfg.inference_model_path         = inf.model_path;
+    sml_cfg.inference_apply              = inf.apply;
+    sml_cfg.default_action_idx           = inf.default_action_idx;
+    sml_cfg.min_urllc_prb_ratio          = inf.min_urllc_prb_ratio;
+    sml_cfg.max_total_min_ratio          = inf.max_total_min_ratio;
+    sml_cfg.switch_hysteresis_periods    = inf.switch_hysteresis_periods;
+    sml_cfg.min_periods_between_switches = inf.min_periods_between_switches;
+
+    auto slice_ml_consumer = std::make_unique<du_metrics_consumer_slice_ml>(
+        sml_cfg,
+        plmn.value(),
+        static_cast<uint8_t>(inf.embb_sst),
+        static_cast<uint32_t>(inf.embb_sd),
+        static_cast<uint8_t>(inf.urllc_sst),
+        static_cast<uint32_t>(inf.urllc_sd));
+    if (slice_ml_consumer_out != nullptr) {
+      *slice_ml_consumer_out = slice_ml_consumer.get();
+    }
+    du_metrics_cfg.consumers.push_back(std::move(slice_ml_consumer));
+  }
+
   return out;
 }
 
@@ -236,12 +269,15 @@ o_du_high_unit ocudu::make_o_du_high_unit(const o_du_high_unit_config&  o_du_hig
   // DU high metrics.
   o_du_high_unit odu_unit;
 
+  du_metrics_consumer_slice_ml* slice_ml_consumer = nullptr;
+
   du_hi_deps.du_notifier = build_du_metrics(odu_unit.metrics,
                                             odu_unit.commands.cmdline.metrics_subcommands,
                                             dependencies.metrics_notifier,
                                             dependencies.remote_metrics_gateway,
                                             o_du_high_unit_cfg,
-                                            dependencies.e2_metric_connectors.get_e2_metric_notifier(0));
+                                            dependencies.e2_metric_connectors.get_e2_metric_notifier(0),
+                                            &slice_ml_consumer);
 
   du_hi_deps.rlc_metrics_notif = build_rlc_du_metrics(odu_unit.metrics,
                                                       dependencies.metrics_notifier,
@@ -280,6 +316,10 @@ o_du_high_unit ocudu::make_o_du_high_unit(const o_du_high_unit_config&  o_du_hig
       std::make_unique<ssb_modify_remote_command>(odu_unit.o_du_hi->get_du_high().get_du_configurator()));
   odu_unit.commands.remote.push_back(
       std::make_unique<rrm_policy_ratio_remote_command>(odu_unit.o_du_hi->get_du_high().get_du_configurator()));
+
+  if (slice_ml_consumer != nullptr) {
+    slice_ml_consumer->set_configurator(odu_unit.o_du_hi->get_du_high().get_du_configurator());
+  }
 
   return odu_unit;
 }

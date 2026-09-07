@@ -337,6 +337,8 @@ generate_du_slicing_rrm_policy_config(span<const std::string>                   
       }
       // TS 28.541
       rrm_policy_cfgs.back().administrative_unlocked = (cfg.sched_cfg.administrative_state != "LOCKED");
+      // TS 38.214 Section 5.1.2.1, Table 5.1.2.1-1
+      rrm_policy_cfgs.back().prefer_short_pdsch = cfg.sched_cfg.prefer_short_pdsch;
       rrm_policy_cfgs.back().policy_sched_cfg = cfg.sched_cfg.slice_policy_cfg.value_or(default_policy_sched_cfg);
     }
   }
@@ -531,6 +533,8 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
     param.max_nof_layers     = base_cell.pdsch_cfg.max_rank;
     param.min_k1             = base_cell.pucch_cfg.min_k1;
     param.min_k2             = base_cell.pusch_cfg.min_k2;
+    param.enable_pusch_mapping_type_b = base_cell.pusch_cfg.enable_pusch_mapping_type_b;
+    param.enable_pdsch_mapping_type_b = base_cell.pdsch_cfg.enable_pdsch_mapping_type_b;
     param.cs0_index          = base_cell.pdcch_cfg.common.coreset0_index;
     param.ss0_index          = base_cell.pdcch_cfg.common.ss0_index;
     if (base_cell.ssb_cfg.offset_to_point_a.has_value()) {
@@ -678,9 +682,13 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
     out_cell.ran.init_bwp_builder.pdsch.mcs_table                 = base_cell.pdsch_cfg.mcs_table;
     out_cell.ran.init_bwp_builder.pdsch.additional_positions =
         uint_to_dmrs_additional_positions(base_cell.pdsch_cfg.dmrs_add_pos);
+    out_cell.ran.init_bwp_builder.pdsch.enable_pdsch_mapping_type_b =
+        base_cell.pdsch_cfg.enable_pdsch_mapping_type_b;
     out_cell.ran.init_bwp_builder.pdsch.interleaving_bundle_size = base_cell.pdsch_cfg.interleaving_bundle_size;
     // > PUSCH
     out_cell.ran.init_bwp_builder.pusch.min_k2                      = base_cell.pusch_cfg.min_k2;
+    out_cell.ran.init_bwp_builder.pusch.enable_pusch_mapping_type_b =
+        base_cell.pusch_cfg.enable_pusch_mapping_type_b;
     out_cell.ran.init_bwp_builder.pusch.transform_precoding_enabled = base_cell.pusch_cfg.enable_transform_precoding;
     out_cell.ran.init_bwp_builder.pusch.mcs_table                   = base_cell.pusch_cfg.mcs_table;
     out_cell.ran.init_bwp_builder.pusch.additional_positions =
@@ -804,7 +812,8 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
             out_cell.ran.tdd_ul_dl_cfg_common,
             out_cell.ran.dl_cfg_common.init_dl_bwp.generic_params.cp,
             time_domain_resource_helper::calculate_minimum_pdsch_symbol(
-                out_cell.ran.dl_cfg_common.init_dl_bwp.pdcch_common, out_cell.ran.init_bwp_builder.pdcch_cfg));
+                out_cell.ran.dl_cfg_common.init_dl_bwp.pdcch_common, out_cell.ran.init_bwp_builder.pdcch_cfg),
+            base_cell.pdsch_cfg.enable_pdsch_mapping_type_b);
 
     // Parameters for PUCCH-Config builder (these parameters will be used later on to generate the PUCCH resources).
     pucch_resource_builder_params&   du_pucch_cfg                  = out_cell.ran.init_bwp_builder.pucch.resources;
@@ -1185,6 +1194,19 @@ static scheduler_expert_config generate_scheduler_expert_config(const du_high_un
   out_cfg.ue.csi_ml.dataset_logging_enabled   = config.csi_ml.dataset_logging.enabled;
   out_cfg.ue.csi_ml.dataset_output_dir        = config.csi_ml.dataset_logging.output_dir;
   out_cfg.ue.csi_ml.dataset_scenario          = config.csi_ml.dataset_logging.scenario;
+  out_cfg.ue.slice_ml.dataset_logging_enabled = config.slice_ml.dataset_logging.enabled;
+  out_cfg.ue.slice_ml.dataset_output_dir      = config.slice_ml.dataset_logging.output_dir;
+  out_cfg.ue.slice_ml.dataset_scenario        = config.slice_ml.dataset_logging.scenario;
+  out_cfg.ue.slice_ml.target_dl_rate_kbps     = config.slice_ml.dataset_logging.target_dl_rate_kbps;
+  out_cfg.ue.slice_ml.delay_budget_ms         = config.slice_ml.dataset_logging.delay_budget_ms;
+  out_cfg.ue.slice_ml.inference_enabled       = config.slice_ml.inference.enabled;
+  out_cfg.ue.slice_ml.inference_model_path    = config.slice_ml.inference.model_path;
+  out_cfg.ue.slice_ml.inference_apply         = config.slice_ml.inference.apply;
+  out_cfg.ue.slice_ml.default_action_idx      = config.slice_ml.inference.default_action_idx;
+  out_cfg.ue.slice_ml.min_urllc_prb_ratio     = config.slice_ml.inference.min_urllc_prb_ratio;
+  out_cfg.ue.slice_ml.max_total_min_ratio     = config.slice_ml.inference.max_total_min_ratio;
+  out_cfg.ue.slice_ml.switch_hysteresis_periods    = config.slice_ml.inference.switch_hysteresis_periods;
+  out_cfg.ue.slice_ml.min_periods_between_switches = config.slice_ml.inference.min_periods_between_switches;
   out_cfg.ue.pdsch_crb_limits                 = {pdsch.start_rb, pdsch.end_rb};
   out_cfg.ue.pdsch_interleaving_bundle_size   = pdsch.interleaving_bundle_size;
   out_cfg.ue.pusch_crb_limits                 = {pusch.start_rb, pusch.end_rb};

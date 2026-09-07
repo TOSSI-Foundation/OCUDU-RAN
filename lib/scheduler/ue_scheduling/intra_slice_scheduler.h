@@ -141,6 +141,7 @@ private:
   // Grants being built for the current slice.
   std::vector<ue_cell_grid_allocator::dl_newtx_grant_builder> pending_dl_newtxs;
   std::vector<ue_cell_grid_allocator::ul_newtx_grant_builder> pending_ul_newtxs;
+  std::vector<vrb_bitmap> pending_dl_preferred_vrbs;
 };
 
 } // namespace ocudu

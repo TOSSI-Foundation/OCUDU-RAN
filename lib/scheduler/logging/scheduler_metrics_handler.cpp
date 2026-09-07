@@ -7,11 +7,15 @@
 #include "../uci_scheduling/uci_indication_selector.h"
 #include "bsr_ml_dataset_logger.h"
 #include "csi_ml_dataset_logger.h"
+#include "slice_ml_dataset_logger.h"
 #include "ocudu/ocudulog/ocudulog.h"
 #include "ocudu/ran/resource_allocation/rb_bitmap.h"
 #include "ocudu/ran/slot_point.h"
 #include "ocudu/scheduler/result/sched_result.h"
 #include "ocudu/scheduler/scheduler_rach_handler.h"
+#include <cmath>
+#include <map>
+#include <utility>
 
 using namespace ocudu;
 
@@ -385,6 +389,41 @@ void cell_metrics_handler::report_metrics()
   auto next_report = notifier.get_builder();
 
   const std::chrono::milliseconds report_period{data.nof_slots / last_slot_tx.nof_slots_per_subframe()};
+
+  const bool     slice_ml_on      = slice_ml_dataset::is_ue_enabled() or slice_ml_dataset::is_slicemanager_enabled();
+  const uint64_t slice_ml_period  = slice_ml_on ? slice_ml_dataset::next_period_index() : 0;
+  const uint32_t slice_ml_slot    = last_slot_tx.without_hyper_sfn().system_slot();
+  const auto     slice_ml_period_ms = static_cast<uint32_t>(report_period.count());
+
+  struct slice_accum {
+    uint32_t nof_ues           = 0;
+    double   dl_brate_sum      = 0.0;
+    double   ul_brate_sum      = 0.0;
+    uint64_t dl_bs_sum         = 0;
+    uint64_t bsr_sum           = 0;
+    uint64_t dl_ok             = 0;
+    uint64_t dl_nok            = 0;
+    uint64_t ul_ok             = 0;
+    uint64_t ul_nok            = 0;
+    double   cqi_sum           = 0.0;
+    unsigned cqi_n             = 0;
+    double   dl_mcs_sum        = 0.0;
+    double   ul_mcs_sum        = 0.0;
+    unsigned mcs_n             = 0;
+    double   snr_sum           = 0.0;
+    unsigned snr_n             = 0;
+    double   sr_delay_sum      = 0.0;
+    unsigned sr_delay_n        = 0;
+    float    sr_delay_max      = 0.0f;
+    bool     has_sr_delay_max  = false;
+    unsigned embb_ok           = 0;
+    unsigned urllc_ok          = 0;
+  };
+  std::map<std::pair<uint8_t, uint32_t>, slice_accum> slice_accums;
+
+  const float slice_ml_target_rate = slice_ml_dataset::configured_target_dl_rate_kbps();
+  const float slice_ml_budget_ms   = slice_ml_dataset::configured_delay_budget_ms();
+
   for (ue_metric_context& ue : ues) {
     const unsigned nof_ul_grants  = ue.data.nof_puschs;
     const uint64_t ul_tb_bytes    = ue.data.sum_ul_tb_bytes;
@@ -397,6 +436,9 @@ void cell_metrics_handler::report_metrics()
     ue.last_ul_tb_bytes            = ul_tb_bytes;
     next_report->ue_metrics.push_back(ue_report);
 
+    // Measurement-only: mirror this UE's periodic DL link-adaptation KPIs (throughput / BLER / MCS)
+    // into the CSI-ML KPI dataset when enabled, so a ZOH-vs-ML A/B run can be compared on delivered
+    // performance rather than prediction error alone. Reads the report just built; changes nothing.
     if (csi_ml_dataset::is_kpi_enabled()) {
       csi_ml_dataset::kpi_sample ks{};
       ks.slot          = last_slot_tx.without_hyper_sfn().system_slot();
@@ -413,6 +455,122 @@ void cell_metrics_handler::report_metrics()
                      ? static_cast<float>(ue_report.dl_ri_stats.get_mean())
                      : std::numeric_limits<float>::quiet_NaN();
       csi_ml_dataset::log_kpi_sample(ks);
+    }
+
+    if (slice_ml_on) {
+      const uint8_t  sst = ue_report.s_nssai.sst.value();
+      const uint32_t sd  = ue_report.s_nssai.sd.value();
+
+      const bool  has_cqi  = ue_report.cqi_stats.get_nof_observations() > 0;
+      const float mean_cqi = has_cqi ? ue_report.cqi_stats.get_mean() : 0.0f;
+      const bool  has_dlri = ue_report.dl_ri_stats.get_nof_observations() > 0;
+      const bool  has_ulri = ue_report.ul_ri_stats.get_nof_observations() > 0;
+
+      if (slice_ml_dataset::is_ue_enabled()) {
+        slice_ml_dataset::ue_sample us{};
+        us.period_idx = slice_ml_period;
+        us.slot       = slice_ml_slot;
+        us.period_ms  = slice_ml_period_ms;
+        us.rnti       = static_cast<uint16_t>(ue_report.rnti);
+        us.ue_index   = static_cast<uint16_t>(ue_report.ue_index);
+        us.sst        = sst;
+        us.sd         = sd;
+
+        us.dl_brate_kbps = ue_report.dl_brate_kbps;
+        us.ul_brate_kbps = ue_report.ul_brate_kbps;
+        us.dl_nof_ok     = ue_report.dl_nof_ok;
+        us.dl_nof_nok    = ue_report.dl_nof_nok;
+        us.ul_nof_ok     = ue_report.ul_nof_ok;
+        us.ul_nof_nok    = ue_report.ul_nof_nok;
+
+        us.tot_pdsch_prbs_used = ue_report.tot_pdsch_prbs_used;
+        us.tot_pusch_prbs_used = ue_report.tot_pusch_prbs_used;
+
+        us.dl_mcs       = static_cast<uint8_t>(ue_report.dl_mcs.value());
+        us.ul_mcs       = static_cast<uint8_t>(ue_report.ul_mcs.value());
+        us.has_mean_cqi = has_cqi;
+        us.mean_cqi     = mean_cqi;
+        us.has_dl_ri    = has_dlri;
+        us.dl_ri        = has_dlri ? ue_report.dl_ri_stats.get_mean() : 0.0f;
+        us.has_ul_ri    = has_ulri;
+        us.ul_ri        = has_ulri ? ue_report.ul_ri_stats.get_mean() : 0.0f;
+        us.pusch_snr_db = ue_report.pusch_snr_db;
+        us.pusch_rsrp_db = ue_report.pusch_rsrp_db;
+        us.pucch_snr_db  = ue_report.pucch_snr_db;
+
+        us.bsr      = ue_report.bsr;
+        us.dl_bs    = ue_report.dl_bs;
+        us.sr_count = ue_report.sr_count;
+
+        us.has_avg_sr_to_pusch_delay_ms = ue_report.avg_sr_to_pusch_delay_ms.has_value();
+        us.avg_sr_to_pusch_delay_ms     = us.has_avg_sr_to_pusch_delay_ms ? *ue_report.avg_sr_to_pusch_delay_ms : 0.0f;
+        us.has_max_sr_to_pusch_delay_ms = ue_report.max_sr_to_pusch_delay_ms.has_value();
+        us.max_sr_to_pusch_delay_ms     = us.has_max_sr_to_pusch_delay_ms ? *ue_report.max_sr_to_pusch_delay_ms : 0.0f;
+        us.has_avg_crc_delay_ms         = ue_report.avg_crc_delay_ms.has_value();
+        us.avg_crc_delay_ms             = us.has_avg_crc_delay_ms ? *ue_report.avg_crc_delay_ms : 0.0f;
+        us.has_max_crc_delay_ms         = ue_report.max_crc_delay_ms.has_value();
+        us.max_crc_delay_ms             = us.has_max_crc_delay_ms ? *ue_report.max_crc_delay_ms : 0.0f;
+        us.has_avg_pusch_harq_delay_ms  = ue_report.avg_pusch_harq_delay_ms.has_value();
+        us.avg_pusch_harq_delay_ms      = us.has_avg_pusch_harq_delay_ms ? *ue_report.avg_pusch_harq_delay_ms : 0.0f;
+        us.has_max_pusch_harq_delay_ms  = ue_report.max_pusch_harq_delay_ms.has_value();
+        us.max_pusch_harq_delay_ms      = us.has_max_pusch_harq_delay_ms ? *ue_report.max_pusch_harq_delay_ms : 0.0f;
+        us.has_avg_pucch_harq_delay_ms  = ue_report.avg_pucch_harq_delay_ms.has_value();
+        us.avg_pucch_harq_delay_ms      = us.has_avg_pucch_harq_delay_ms ? *ue_report.avg_pucch_harq_delay_ms : 0.0f;
+        us.has_max_pucch_harq_delay_ms  = ue_report.max_pucch_harq_delay_ms.has_value();
+        us.max_pucch_harq_delay_ms      = us.has_max_pucch_harq_delay_ms ? *ue_report.max_pucch_harq_delay_ms : 0.0f;
+        us.has_avg_ce_delay_ms          = ue_report.avg_ce_delay_ms.has_value();
+        us.avg_ce_delay_ms              = us.has_avg_ce_delay_ms ? *ue_report.avg_ce_delay_ms : 0.0f;
+        us.has_max_ce_delay_ms          = ue_report.max_ce_delay_ms.has_value();
+        us.max_ce_delay_ms              = us.has_max_ce_delay_ms ? *ue_report.max_ce_delay_ms : 0.0f;
+
+        us.has_last_phr     = ue_report.last_phr.has_value();
+        us.last_phr         = us.has_last_phr ? *ue_report.last_phr : 0;
+        us.has_last_dl_olla = ue_report.last_dl_olla.has_value();
+        us.last_dl_olla     = us.has_last_dl_olla ? *ue_report.last_dl_olla : 0.0f;
+        us.has_last_ul_olla = ue_report.last_ul_olla.has_value();
+        us.last_ul_olla     = us.has_last_ul_olla ? *ue_report.last_ul_olla : 0.0f;
+
+        slice_ml_dataset::log_ue_sample(us);
+      }
+
+      if (slice_ml_dataset::is_slicemanager_enabled()) {
+        slice_accum& acc = slice_accums[{sst, sd}];
+        ++acc.nof_ues;
+        acc.dl_brate_sum += ue_report.dl_brate_kbps;
+        acc.ul_brate_sum += ue_report.ul_brate_kbps;
+        acc.dl_bs_sum += ue_report.dl_bs;
+        acc.bsr_sum += ue_report.bsr;
+        acc.dl_ok += ue_report.dl_nof_ok;
+        acc.dl_nok += ue_report.dl_nof_nok;
+        acc.ul_ok += ue_report.ul_nof_ok;
+        acc.ul_nok += ue_report.ul_nof_nok;
+        if (has_cqi) {
+          acc.cqi_sum += mean_cqi;
+          ++acc.cqi_n;
+        }
+        acc.dl_mcs_sum += ue_report.dl_mcs.value();
+        acc.ul_mcs_sum += ue_report.ul_mcs.value();
+        ++acc.mcs_n;
+        if (std::isfinite(ue_report.pusch_snr_db)) {
+          acc.snr_sum += ue_report.pusch_snr_db;
+          ++acc.snr_n;
+        }
+        if (ue_report.dl_bs == 0 or (slice_ml_target_rate > 0.0f and ue_report.dl_brate_kbps >= slice_ml_target_rate)) {
+          ++acc.embb_ok;
+        }
+        if (ue_report.dl_bs == 0 and ue_report.bsr == 0) {
+          ++acc.urllc_ok;
+        }
+        if (ue_report.max_sr_to_pusch_delay_ms.has_value()) {
+          const float d        = *ue_report.max_sr_to_pusch_delay_ms;
+          acc.sr_delay_max     = acc.has_sr_delay_max ? std::max(acc.sr_delay_max, d) : d;
+          acc.has_sr_delay_max = true;
+        }
+        if (ue_report.avg_sr_to_pusch_delay_ms.has_value()) {
+          acc.sr_delay_sum += *ue_report.avg_sr_to_pusch_delay_ms;
+          ++acc.sr_delay_n;
+        }
+      }
     }
   }
   next_report->events.swap(pending_events);
@@ -475,6 +633,97 @@ void cell_metrics_handler::report_metrics()
   }
   for (unsigned& rb_count : dl_prbs_used_per_tdd_slot_idx) {
     rb_count = 0;
+  }
+
+  for (scheduler_slice_metrics& sm : last_slice_snapshot) {
+    auto acc_it = slice_accums.find({sm.sst, sm.sd});
+    if (acc_it == slice_accums.end()) {
+      continue;
+    }
+    const slice_accum& acc = acc_it->second;
+    sm.dl_brate_kbps_sum   = acc.dl_brate_sum;
+    sm.ul_brate_kbps_sum   = acc.ul_brate_sum;
+    sm.dl_bs_sum           = acc.dl_bs_sum;
+    sm.bsr_sum             = acc.bsr_sum;
+    sm.ssr_embb  = acc.nof_ues > 0 ? static_cast<float>(acc.embb_ok) / static_cast<float>(acc.nof_ues) : -1.0f;
+    sm.ssr_urllc = acc.nof_ues > 0 ? static_cast<float>(acc.urllc_ok) / static_cast<float>(acc.nof_ues) : -1.0f;
+  }
+
+  if (slice_ml_dataset::is_slicemanager_enabled()) {
+    const uint32_t cell_prbs = cell_cfg.nof_dl_prbs;
+    for (const scheduler_slice_metrics& sm : last_slice_snapshot) {
+      slice_ml_dataset::slice_sample ss{};
+      ss.period_idx    = slice_ml_period;
+      ss.slot          = slice_ml_slot;
+      ss.period_ms     = slice_ml_period_ms;
+      ss.cell_nof_prbs = cell_prbs;
+      ss.pci           = static_cast<uint16_t>(cell_cfg.pci);
+      ss.sst           = sm.sst;
+      ss.sd            = sm.sd;
+      ss.nof_ues       = sm.nof_ues;
+
+      ss.min_prbs    = sm.min_prbs;
+      ss.max_prbs    = sm.max_prbs;
+      ss.ded_prbs    = sm.ded_prbs;
+      ss.min_prbs_ul = sm.min_prbs_ul;
+      ss.max_prbs_ul = sm.max_prbs_ul;
+      ss.ded_prbs_ul = sm.ded_prbs_ul;
+
+      const float prb_scale = cell_prbs > 0 ? 100.0f / static_cast<float>(cell_prbs) : 0.0f;
+      ss.min_prb_ratio      = sm.min_prbs * prb_scale;
+      ss.max_prb_ratio      = sm.max_prbs * prb_scale;
+      ss.min_prb_ratio_ul   = sm.min_prbs_ul * prb_scale;
+      ss.max_prb_ratio_ul   = sm.max_prbs_ul * prb_scale;
+
+      ss.avg_dl_rbs_per_slot = sm.avg_dl_rbs_per_slot;
+      ss.avg_ul_rbs_per_slot = sm.avg_ul_rbs_per_slot;
+      ss.dl_prb_share = cell_prbs > 0 ? sm.avg_dl_rbs_per_slot / static_cast<float>(cell_prbs) : 0.0f;
+      ss.ul_prb_share = cell_prbs > 0 ? sm.avg_ul_rbs_per_slot / static_cast<float>(cell_prbs) : 0.0f;
+
+      ss.target_dl_rate_kbps = slice_ml_target_rate;
+      ss.delay_budget_ms     = slice_ml_budget_ms;
+
+      ss.dl_brate_kbps_sum = sm.dl_brate_kbps_sum;
+      ss.ul_brate_kbps_sum = sm.ul_brate_kbps_sum;
+      ss.dl_bs_sum         = sm.dl_bs_sum;
+      ss.bsr_sum           = sm.bsr_sum;
+      ss.ssr_embb          = sm.ssr_embb;
+      ss.ssr_urllc         = sm.ssr_urllc;
+
+      auto it = slice_accums.find({sm.sst, sm.sd});
+      if (it != slice_accums.end()) {
+        const slice_accum& acc = it->second;
+        ss.dl_nof_ok_sum       = acc.dl_ok;
+        ss.dl_nof_nok_sum      = acc.dl_nok;
+        ss.ul_nof_ok_sum       = acc.ul_ok;
+        ss.ul_nof_nok_sum      = acc.ul_nok;
+
+        ss.has_mean_cqi = acc.cqi_n > 0;
+        ss.mean_cqi     = ss.has_mean_cqi ? static_cast<float>(acc.cqi_sum / acc.cqi_n) : 0.0f;
+        ss.has_mean_dl_mcs = acc.mcs_n > 0;
+        ss.mean_dl_mcs     = ss.has_mean_dl_mcs ? static_cast<float>(acc.dl_mcs_sum / acc.mcs_n) : 0.0f;
+        ss.has_mean_ul_mcs = acc.mcs_n > 0;
+        ss.mean_ul_mcs     = ss.has_mean_ul_mcs ? static_cast<float>(acc.ul_mcs_sum / acc.mcs_n) : 0.0f;
+        ss.has_mean_pusch_snr_db = acc.snr_n > 0;
+        ss.mean_pusch_snr_db     = ss.has_mean_pusch_snr_db ? static_cast<float>(acc.snr_sum / acc.snr_n) : 0.0f;
+
+        ss.has_mean_sr_to_pusch_delay_ms = acc.sr_delay_n > 0;
+        ss.mean_sr_to_pusch_delay_ms =
+            ss.has_mean_sr_to_pusch_delay_ms ? static_cast<float>(acc.sr_delay_sum / acc.sr_delay_n) : 0.0f;
+        ss.has_max_sr_to_pusch_delay_ms = acc.has_sr_delay_max;
+        ss.max_sr_to_pusch_delay_ms     = acc.sr_delay_max;
+      }
+      ss.has_power_stats                 = sm.has_power_stats;
+      ss.power_committed_w               = sm.power_committed_w;
+      ss.power_remaining_w               = sm.power_remaining_w;
+      ss.power_pairs_rejected_unit_taken = sm.power_pairs_rejected_unit_taken;
+      ss.power_pairs_rejected_infeasible = sm.power_pairs_rejected_infeasible;
+      ss.power_pairs_rejected_no_demand  = sm.power_pairs_rejected_no_demand;
+      ss.power_decode_steps_taken        = sm.power_decode_steps_taken;
+      ss.power_decode_steps_total        = sm.power_decode_steps_total;
+
+      slice_ml_dataset::log_slice_sample(ss);
+    }
   }
 
   next_report->slice_metrics = std::move(last_slice_snapshot);

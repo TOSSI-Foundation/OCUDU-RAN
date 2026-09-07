@@ -55,8 +55,20 @@ struct time_qos_scheduler_config {
 /// \brief Round-Robin policy scheduler expert parameters.
 struct time_rr_scheduler_config {};
 
+struct attention_ml_scheduler_config {
+  enum class role_type { embb, urllc };
+
+  std::string model_path;
+  role_type role = role_type::embb;
+  unsigned prb_group = 1;
+  unsigned max_inference_us    = 0;
+  unsigned max_deadline_misses = 8;
+  time_qos_scheduler_config fallback{};
+};
+
 /// \brief Scheduler policy parameters.
-using scheduler_policy_config = std::variant<time_qos_scheduler_config, time_rr_scheduler_config>;
+using scheduler_policy_config =
+    std::variant<time_qos_scheduler_config, time_rr_scheduler_config, attention_ml_scheduler_config>;
 
 struct ul_power_control {
   /// Enable closed-loop PUSCH power control.
@@ -148,16 +160,48 @@ struct bsr_ml_expert_config {
   unsigned retx_bsr_timer_subframes = 80;
 };
 
+/// ML-based DL CSI (effective-CQI) prediction configuration.
+///
+/// Predicts the UE's effective_cqi forward from its recent reporting history (the paper's
+/// gamma_e time-series, mapped onto OCUDU-RAN's only DL channel-quality signal). Structurally
+/// like ml_mcs (scheduler-internal, no UE-facing signalling, no F1AP) rather than bsr_ml.
 struct csi_ml_expert_config {
+  // --- Inference (shadow / promoted) ---
+  /// Enable the predictor. When false, no inference runs (Stage 1 collection only).
   bool inference_enabled = false;
+  /// Which model to load and run: "wiener" or "gru".
   std::string inference_model_type = "wiener";
+  /// Runtime-loadable Wiener model file (hot-swappable). Falls back to the compiled seed if empty.
   std::string inference_wiener_model_path;
+  /// Runtime-loadable GRU model file (hot-swappable). Falls back to the compiled seed if empty.
   std::string inference_gru_model_path;
+  /// Stage-3 promotion gate. When true (and inference_enabled), calculate_dl_mcs() may source the
+  /// aging-slot CQI from the prediction; otherwise the prediction is shadow-only (logged, not
+  /// applied). Default false keeps behaviour identical to today's ZOH.
   bool inference_apply_to_mcs = false;
 
+  // --- Dataset logging (Stage 1 collection) ---
   bool        dataset_logging_enabled = false;
   std::string dataset_output_dir      = "ml/datasets";
   std::string dataset_scenario        = "default";
+};
+
+struct slice_ml_expert_config {
+  bool        dataset_logging_enabled = false;
+  std::string dataset_output_dir      = "ml/datasets/slice_datasets";
+  std::string dataset_scenario        = "default";
+  float target_dl_rate_kbps = 0.0f;
+  float delay_budget_ms = 0.0f;
+
+  bool inference_enabled = false;
+  std::string inference_model_path;
+  bool inference_apply = false;
+
+  unsigned default_action_idx = 12;
+  unsigned min_urllc_prb_ratio = 10;
+  unsigned max_total_min_ratio = 100;
+  unsigned switch_hysteresis_periods = 2;
+  unsigned min_periods_between_switches = 5;
 };
 
 /// \brief UE scheduling statically configurable expert parameters.
@@ -250,6 +294,7 @@ struct scheduler_ue_expert_config {
   ml_mcs_expert_config ml_mcs;
   bsr_ml_expert_config bsr_ml;
   csi_ml_expert_config csi_ml;
+  slice_ml_expert_config slice_ml;
 };
 
 /// \brief System Information scheduling statically configurable expert parameters.

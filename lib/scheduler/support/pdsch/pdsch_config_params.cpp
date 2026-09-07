@@ -86,10 +86,16 @@ sched_helper::get_pdsch_config_f1_1_c_rnti(const cell_configuration&            
 
   pdsch_config_params pdsch;
 
+  // TS 38.214 Section 5.1.6.2, TS 38.331 PDSCH-Config
+  const bool has_type_b_dmrs_cfg =
+      pdsch_td_cfg.map_type == sch_mapping_type::typeB and pdsch_cfg.pdsch_mapping_type_b_dmrs.has_value();
+  const dmrs_downlink_config& dmrs_dl_cfg =
+      has_type_b_dmrs_cfg ? pdsch_cfg.pdsch_mapping_type_b_dmrs.value() : pdsch_cfg.pdsch_mapping_type_a_dmrs.value();
+
   pdsch.dmrs = make_dmrs_info_dedicated(pdsch_td_cfg,
                                         cell_cfg_common.pci,
                                         cell_cfg_common.dmrs_typeA_pos,
-                                        pdsch_cfg.pdsch_mapping_type_a_dmrs.value(),
+                                        dmrs_dl_cfg,
                                         nof_layers,
                                         cell_cfg_common.dl_carrier.nof_ant,
                                         are_both_cws_enabled);

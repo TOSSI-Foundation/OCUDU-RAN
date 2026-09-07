@@ -30,6 +30,8 @@ struct pdsch_builder_params {
   /// Position for additional DM-RS in DL, see Tables 7.4.1.1.2-3 and 7.4.1.1.2-4 in TS 38.211. If the field is absent,
   /// the UE applies the value pos2.
   dmrs_additional_positions additional_positions{dmrs_additional_positions::pos2};
+  // TS 38.214 Table 5.1.2.1-1
+  bool enable_pdsch_mapping_type_b = false;
   /// VRB-to-PRB mapping type for PDSCH. The field vrb-ToPRB-Interleaver applies to DCI format 1_1.
   vrb_to_prb::mapping_type interleaving_bundle_size{vrb_to_prb::mapping_type::non_interleaved};
   /// See TS 38.331, \c downlinkHARQ-FeedbackDisabled.
@@ -60,6 +62,8 @@ struct pusch_builder_params {
   /// forced to pick higher k1 values, as it cannot allocate PUCCHs in slots where there is an PUSCH with an already
   /// assigned DAI.
   uint8_t min_k2 = 4;
+  // TS 38.214 Table 6.1.2.1-1
+  bool enable_pusch_mapping_type_b = false;
   /// Indicates which MCS table the UE shall use for PUSCH.
   pusch_mcs_table mcs_table{pusch_mcs_table::qam64};
   /// PUSCH Maximum of transmission layers. Limits the maximum rank the UE is configured with. Values: {1, ..., 4}.

@@ -47,6 +47,10 @@ struct cell_config_builder_params {
   /// allocate PUCCHs in slots where there is an PUSCH with an already assigned DAI.
   /// Possible values: {1, ..., 32}.
   uint8_t min_k2 = 4;
+  // TS 38.213 Section 11.1, TS 38.214 Table 6.1.2.1-1
+  bool enable_pusch_mapping_type_b = false;
+  // TS 38.214 Table 5.1.2.1-1
+  bool enable_pdsch_mapping_type_b = false;
   /// Defines the TDD DL-UL pattern and periodicity. If no value is set, the cell is in FDD mode.
   std::optional<tdd_ul_dl_config_common> tdd_ul_dl_cfg_common;
   /// Maximum number of DL layers.

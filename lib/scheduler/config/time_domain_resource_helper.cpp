@@ -122,7 +122,8 @@ uint8_t time_domain_resource_helper::calculate_minimum_pdsch_symbol(const pdcch_
 std::vector<pdsch_time_domain_resource_allocation>
 time_domain_resource_helper::generate_dedicated_pdsch_td_res_list(const tdd_ul_dl_config_common& tdd_cfg,
                                                                   cyclic_prefix                  cp,
-                                                                  uint8_t                        min_pdsch_symbol)
+                                                                  uint8_t                        min_pdsch_symbol,
+                                                                  bool                           enable_mapping_type_b)
 {
   // See TS 38.214, Table 5.1.2.1-1: Valid S and L combinations.
   static constexpr unsigned pdsch_mapping_typeA_min_L_value = 3;
@@ -153,6 +154,19 @@ time_domain_resource_helper::generate_dedicated_pdsch_td_res_list(const tdd_ul_d
         pdsch_time_domain_resource_allocation{.k0 = 0, .map_type = sch_mapping_type::typeA, .symbols = symbs});
   }
 
+  if (enable_mapping_type_b) {
+    // TS 38.214 Section 5.1.2.1, Table 5.1.2.1-1
+    if (cp == cyclic_prefix::NORMAL) {
+      for (const unsigned l : {2, 4, 7}) {
+        // TS 38.214 Table 5.1.2.1-1
+        if (min_pdsch_symbol + l <= nof_ofdm_symbols) {
+          result.push_back(pdsch_time_domain_resource_allocation{
+              .k0 = 0, .map_type = sch_mapping_type::typeB, .symbols = {min_pdsch_symbol, min_pdsch_symbol + l}});
+        }
+      }
+    }
+  }
+
   // Sort PDSCH time domain resource allocations in:
   // - ascending order of k0
   // - descending or OFDM symbol range length to always choose the resource which occupies most of the DL symbols in
@@ -169,11 +183,12 @@ time_domain_resource_helper::generate_dedicated_pdsch_td_res_list(const tdd_ul_d
 std::vector<pdsch_time_domain_resource_allocation>
 time_domain_resource_helper::generate_dedicated_pdsch_td_res_list(const std::optional<tdd_ul_dl_config_common>& tdd_cfg,
                                                                   cyclic_prefix                                 cp,
-                                                                  uint8_t min_pdsch_symbol)
+                                                                  uint8_t min_pdsch_symbol,
+                                                                  bool    enable_mapping_type_b)
 {
   if (tdd_cfg.has_value()) {
     // TDD case.
-    return generate_dedicated_pdsch_td_res_list(*tdd_cfg, cp, min_pdsch_symbol);
+    return generate_dedicated_pdsch_td_res_list(*tdd_cfg, cp, min_pdsch_symbol, enable_mapping_type_b);
   }
 
   // FDD case.
@@ -183,13 +198,25 @@ time_domain_resource_helper::generate_dedicated_pdsch_td_res_list(const std::opt
   result[0].symbols  = {min_pdsch_symbol,
                        cp == cyclic_prefix::NORMAL ? NOF_OFDM_SYM_PER_SLOT_NORMAL_CP
                                                     : NOF_OFDM_SYM_PER_SLOT_EXTENDED_CP};
+
+  if (enable_mapping_type_b and cp == cyclic_prefix::NORMAL) {
+    // TS 38.214 Table 5.1.2.1-1
+    for (const unsigned l : {2, 4, 7}) {
+      if (min_pdsch_symbol + l <= NOF_OFDM_SYM_PER_SLOT_NORMAL_CP) {
+        result.push_back(pdsch_time_domain_resource_allocation{
+            .k0 = 0, .map_type = sch_mapping_type::typeB, .symbols = {min_pdsch_symbol, min_pdsch_symbol + l}});
+      }
+    }
+  }
+
   return result;
 }
 
 std::vector<pusch_time_domain_resource_allocation>
 time_domain_resource_helper::generate_dedicated_pusch_td_res_list(const tdd_ul_dl_config_common& tdd_cfg,
                                                                   cyclic_prefix                  cp,
-                                                                  uint8_t                        min_k2)
+                                                                  uint8_t                        min_k2,
+                                                                  bool                           enable_mapping_type_b)
 {
   const unsigned symbols_per_slot  = get_nsymb_per_slot(cp);
   const unsigned tdd_period_slots  = nof_slots_per_tdd_period(tdd_cfg);
@@ -204,9 +231,26 @@ time_domain_resource_helper::generate_dedicated_pusch_td_res_list(const tdd_ul_d
     if (not get_active_tdd_dl_symbols(tdd_cfg, idx, cp).empty()) {
       for (uint8_t k2 = min_k2; k2 <= SCHEDULER_MAX_K2 and result.size() < pusch_constants::MAX_NOF_PUSCH_TD_RES_ALLOCS;
            ++k2) {
+        const ofdm_symbol_range ul_symbols = get_active_tdd_ul_symbols(tdd_cfg, idx + k2, cp);
+
+        // TS 38.213 Section 11.1, TS 38.214 Table 6.1.2.1-1
+        if (enable_mapping_type_b and not ul_symbols.empty() and ul_symbols.length() < symbols_per_slot) {
+          const bool already_present =
+              std::any_of(result.begin(), result.end(), [k2, &ul_symbols](const auto& res) {
+                return res.k2 == k2 and res.map_type == sch_mapping_type::typeB and res.symbols == ul_symbols;
+              });
+          if (not already_present) {
+            result.emplace_back(
+                pusch_time_domain_resource_allocation{k2, sch_mapping_type::typeB, ul_symbols});
+          }
+          continue;
+        }
+
         // TODO: Consider partial UL slots when scheduler supports it.
-        if (get_active_tdd_ul_symbols(tdd_cfg, idx + k2, cp).length() == symbols_per_slot) {
-          if (std::none_of(result.begin(), result.end(), [k2](const auto& res) { return res.k2 == k2; })) {
+        if (ul_symbols.length() == symbols_per_slot) {
+          if (std::none_of(result.begin(), result.end(), [k2](const auto& res) {
+                return res.k2 == k2 and res.map_type == sch_mapping_type::typeA;
+              })) {
             result.emplace_back(pusch_time_domain_resource_allocation{
                 k2, sch_mapping_type::typeA, ofdm_symbol_range{0, symbols_per_slot}});
           }
@@ -231,11 +275,12 @@ time_domain_resource_helper::generate_dedicated_pusch_td_res_list(const tdd_ul_d
 std::vector<pusch_time_domain_resource_allocation>
 time_domain_resource_helper::generate_dedicated_pusch_td_res_list(const std::optional<tdd_ul_dl_config_common>& tdd_cfg,
                                                                   cyclic_prefix                                 cp,
-                                                                  uint8_t                                       min_k2)
+                                                                  uint8_t                                       min_k2,
+                                                                  bool enable_mapping_type_b)
 {
   if (tdd_cfg.has_value()) {
     // TDD case.
-    return generate_dedicated_pusch_td_res_list(*tdd_cfg, cp, min_k2);
+    return generate_dedicated_pusch_td_res_list(*tdd_cfg, cp, min_k2, enable_mapping_type_b);
   }
 
   return {pusch_time_domain_resource_allocation{

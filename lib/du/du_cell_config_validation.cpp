@@ -196,8 +196,9 @@ static check_outcome check_dl_config_common(const du_cell_config& cell_cfg)
       // Mapping Type B.
       if (bwp.generic_params.cp == cyclic_prefix::NORMAL) {
         CHECK_EQ_OR_BELOW(pdsch.symbols.start(), 12, "PDSCH S");
+        // TS 38.214 Table 5.1.2.1-1
         CHECK_TRUE(pdsch.symbols.length() == 2 or pdsch.symbols.length() == 4 or pdsch.symbols.length() == 7,
-                   "Invalid PDSCH L (valid values are 2, 4, 7)");
+                   "Invalid PDSCH L (Rel-15 valid values are 2, 4, 7)");
       } else {
         // Extended Cyclic Prefix.
         CHECK_EQ_OR_BELOW(pdsch.symbols.start(), 10, "PDSCH S");

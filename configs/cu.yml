@@ -14,6 +14,8 @@ cu_cp:
             tai_slice_support_list:
               - sst: 1
                 sd: 1
+              - sst: 2
+                sd: 1
 
   f1ap:
     bind_addrs: 127.0.10.1

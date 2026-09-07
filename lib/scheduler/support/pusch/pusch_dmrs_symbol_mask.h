@@ -37,4 +37,17 @@ struct pusch_dmrs_symbol_mask_mapping_type_A_single_configuration {
 dmrs_symbol_mask pusch_dmrs_symbol_mask_mapping_type_A_single_get(
     const pusch_dmrs_symbol_mask_mapping_type_A_single_configuration& config);
 
+// TS 38.211 Section 6.4.1.1.3, TS 38.214 Table 6.1.2.1-1
+struct pusch_dmrs_symbol_mask_mapping_type_B_single_configuration {
+  // TS 38.214 Table 6.1.2.1-1
+  bounded_integer<uint8_t, 0, 13> start_symbol;
+  // TS 38.214 Table 6.1.2.1-1
+  bounded_integer<uint8_t, 1, 14> duration;
+  dmrs_additional_positions additional_position;
+};
+
+// TS 38.211 Table 6.4.1.1.3-3, Section 6.4.1.1.3, Table 6.4.1.1.3-6
+dmrs_symbol_mask pusch_dmrs_symbol_mask_mapping_type_B_single_get(
+    const pusch_dmrs_symbol_mask_mapping_type_B_single_configuration& config);
+
 } // namespace ocudu

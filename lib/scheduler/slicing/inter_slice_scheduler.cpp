@@ -57,8 +57,11 @@ inter_slice_scheduler::inter_slice_scheduler(const cell_configuration& cell_cfg_
     }
     rrm_adjusted.priority = std::min(rrm.priority, slice_rrm_policy_config::max_priority);
     // Create custom RAN slice based on the RRM policy.
-    slices.emplace_back(
-        id_count, cell_cfg, rrm_adjusted, create_scheduler_strategy(rrm.policy_sched_cfg, cell_cfg), ues);
+    slices.emplace_back(id_count,
+                        cell_cfg,
+                        rrm_adjusted,
+                        create_scheduler_strategy(rrm.policy_sched_cfg, cell_cfg, rrm_adjusted.dl_rbs().min()),
+                        ues);
     ++id_count;
   }
 
@@ -366,6 +369,7 @@ void inter_slice_scheduler::handle_slice_reconfiguration_request(const du_cell_s
         found              = true;
         slice.inst.cfg.rbs = rrm.rbs;
         slice.inst.cfg.rbs_ul.reset();
+        slice.policy->on_slice_reconfiguration(slice.inst.cfg.dl_rbs().min());
       }
     }
 
@@ -458,6 +462,7 @@ void inter_slice_scheduler::collect_slice_metrics(std::vector<scheduler_slice_me
     const float dl_mean_prbs = inst.metric_avg_pdsch_rbs_per_slot();
     const float ul_mean_prbs = inst.metric_avg_pusch_rbs_per_slot();
     inst.reset_metric_period();
+    const scheduler_policy_power_stats pw = ctx.policy->consume_power_stats();
     if (inst.cfg.rrc_member.s_nssai.sst.value() == 0) {
       continue;
     }
@@ -473,6 +478,18 @@ void inter_slice_scheduler::collect_slice_metrics(std::vector<scheduler_slice_me
     m.ded_prbs_ul         = inst.cfg.ul_rbs().dedicated();
     m.avg_dl_rbs_per_slot = dl_mean_prbs;
     m.avg_ul_rbs_per_slot = ul_mean_prbs;
+
+    m.has_power_stats = pw.has_stats;
+    if (pw.has_stats) {
+      m.power_committed_w               = pw.mean_power_committed_w;
+      m.power_remaining_w               = pw.mean_power_remaining_w;
+      m.power_pairs_rejected_unit_taken = pw.pairs_rejected_unit_taken;
+      m.power_pairs_rejected_infeasible = pw.pairs_rejected_power_infeasible;
+      m.power_pairs_rejected_no_demand  = pw.pairs_rejected_no_demand;
+      m.power_decode_steps_taken        = pw.decode_steps_taken;
+      m.power_decode_steps_total        = pw.decode_steps_total;
+    }
+
     out.push_back(m);
   }
 }

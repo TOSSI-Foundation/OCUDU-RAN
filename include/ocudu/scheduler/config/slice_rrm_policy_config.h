@@ -28,6 +28,8 @@ struct slice_rrm_policy_config {
   unsigned priority = 0;
   /// ITU-T X.731; TS 28.541 clause 6.3.1; TS 28.622; TS 28.531 clause 5.1.8
   bool administrative_unlocked = true;
+  // TS 38.214 Section 5.1.2.1, Table 5.1.2.1-1
+  bool prefer_short_pdsch = false;
   /// Policy scheduler configuration for the slice.
   scheduler_policy_config policy_sched_cfg = time_qos_scheduler_config{};
 

@@ -3,19 +3,25 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "scheduler_policy_factory.h"
+#include "scheduler_attention_ml.h"
 #include "scheduler_time_qos.h"
 #include "scheduler_time_rr.h"
 
 using namespace ocudu;
 
 std::unique_ptr<scheduler_policy> ocudu::create_scheduler_strategy(const scheduler_policy_config& policy_cfg,
-                                                                   const cell_configuration&      cell_cfg)
+                                                                   const cell_configuration&      cell_cfg,
+                                                                   unsigned                       slice_dedicated_rbs)
 {
   if (std::holds_alternative<time_rr_scheduler_config>(policy_cfg)) {
     return std::make_unique<scheduler_time_rr>();
   }
   if (std::holds_alternative<time_qos_scheduler_config>(policy_cfg)) {
     return std::make_unique<scheduler_time_qos>(std::get<time_qos_scheduler_config>(policy_cfg), cell_cfg);
+  }
+  if (std::holds_alternative<attention_ml_scheduler_config>(policy_cfg)) {
+    return std::make_unique<scheduler_attention_ml>(
+        std::get<attention_ml_scheduler_config>(policy_cfg), cell_cfg, slice_dedicated_rbs);
   }
   return nullptr;
 }

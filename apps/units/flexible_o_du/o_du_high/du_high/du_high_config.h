@@ -206,6 +206,8 @@ struct du_high_unit_pdsch_config {
   std::optional<unsigned> max_rank;
   /// Enable multiplexing of CSI-RS and PDSCH.
   bool enable_csi_rs_pdsch_multiplexing = true;
+  // TS 38.214 Table 5.1.2.1-1
+  bool enable_pdsch_mapping_type_b = false;
 };
 
 /// PUSCH application configuration.
@@ -305,6 +307,8 @@ struct du_high_unit_pusch_config {
 
   /// Minimum k2 value (distance in slots between UL PDCCH and PUSCH) that the gNB can use. Values: {1, ..., 32}.
   unsigned min_k2 = 4;
+  // TS 38.213 Section 11.1, TS 38.214 Table 6.1.2.1-1
+  bool enable_pusch_mapping_type_b = false;
   /// Maximum number of PUSCH grants per slot.
   unsigned max_puschs_per_slot = MAX_PUSCH_PDUS_PER_SLOT;
   /// \brief Direct Current (DC) offset, in number of subcarriers, used in PUSCH.
@@ -1007,6 +1011,8 @@ struct du_high_unit_cell_slice_sched_config {
   std::optional<unsigned> ded_prb_policy_ratio_ul;
   /// ITU-T X.731; TS 28.541 clause 6.3.1; TS 28.531
   std::string administrative_state = "UNLOCKED";
+  // TS 38.214 Table 5.1.2.1-1
+  bool prefer_short_pdsch = false;
   /// Scheduler policy configuration for the slice. Default: Policy configured for the cell.
   std::optional<scheduler_policy_config> slice_policy_cfg;
 
@@ -1335,12 +1341,15 @@ struct du_high_unit_ml_mcs_config {
   online_training_config  online_training;
 };
 
+/// ML-based DL CSI (effective-CQI) prediction configuration. Structurally like ml_mcs (no F1AP,
+/// no UE-facing change); the predictor feeds only the scheduler's own DL MCS decision.
 struct du_high_unit_csi_ml_config {
   struct inference_config {
     bool        enabled           = false;
-    std::string model_type        = "wiener";
+    std::string model_type        = "wiener"; // "wiener" | "gru"
     std::string wiener_model_path = "ml/models/csi_wiener_seed.model";
     std::string gru_model_path    = "ml/models/csi_gru_seed.model";
+    // Stage-3 promotion gate: apply the prediction to calculate_dl_mcs(). Default false = shadow.
     bool apply_to_mcs = false;
   };
   struct dataset_logging_config {
@@ -1350,6 +1359,33 @@ struct du_high_unit_csi_ml_config {
   };
   inference_config       inference;
   dataset_logging_config dataset_logging;
+};
+
+struct du_high_unit_slice_ml_config {
+  struct dataset_logging_config {
+    bool        enabled    = false;
+    std::string output_dir = "ml/datasets/slice_datasets";
+    std::string scenario   = "default";
+    float target_dl_rate_kbps = 0.0f;
+    float delay_budget_ms = 0.0f;
+  };
+  struct inference_config {
+    bool        enabled    = false;
+    std::string model_path;
+    bool apply = false;
+    unsigned default_action_idx = 12;
+    unsigned min_urllc_prb_ratio = 10;
+    unsigned max_total_min_ratio = 100;
+    unsigned switch_hysteresis_periods = 2;
+    unsigned min_periods_between_switches = 5;
+    std::string plmn = "00101";
+    unsigned embb_sst = 1;
+    unsigned embb_sd = 1;
+    unsigned urllc_sst = 2;
+    unsigned urllc_sd = 1;
+  };
+  dataset_logging_config dataset_logging;
+  inference_config       inference;
 };
 
 /// DU high configuration.
@@ -1383,6 +1419,7 @@ struct du_high_unit_config {
   du_high_unit_ml_mcs_config ml_mcs;
   du_high_unit_bsr_ml_config bsr_ml;
   du_high_unit_csi_ml_config csi_ml;
+  du_high_unit_slice_ml_config slice_ml;
 
   /// Returns true if testmode is enabled, false otherwise.
   bool is_testmode_enabled() const { return test_mode_cfg.test_ue.rnti != rnti_t::INVALID_RNTI; }
