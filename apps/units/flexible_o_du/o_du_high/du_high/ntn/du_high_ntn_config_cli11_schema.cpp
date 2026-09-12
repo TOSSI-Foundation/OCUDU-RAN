@@ -196,6 +196,12 @@ static void configure_cli11_ntn_args(CLI::App&                             app,
                  " When this field is included in SIB19, it indicates reporting of timing advanced is enabled")
       ->capture_default_str();
 
+  app.add_option("--emulate_doppler",
+                 serv_cell_ntn_config.emulate_doppler,
+                 "Impose the service-link Doppler on the carrier of an emulated NTN channel. Only correct when "
+                 "the UE compensates it (OAI: --cont-fo-comp), so enable both together or neither")
+      ->capture_default_str();
+
   // Broadcast Ephemeris Info type in SIB19.
   app.add_option(
          "--use_state_vector",

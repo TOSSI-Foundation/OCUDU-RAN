@@ -120,6 +120,10 @@ private:
   /// \param doppler_update_time The time point at which the Doppler compensation should be updated.
   /// \param ta_info TA-Info used to compute Doppler shift frequencies.
   /// \return True if the request was successfully sent; false otherwise.
+  bool send_ntn_channel_emulation_request(const ntn_cell_config&        cell_cfg,
+                                          const ntn_orbital_state&      state,
+                                          std::chrono::duration<double> epoch_lead);
+
   bool send_cfo_compensation_request(const ntn_cell_config& cell_cfg,
                                      time_point             doppler_update_time,
                                      const ta_info_t&       ta_info);
@@ -147,6 +151,7 @@ private:
   /// Whether the periodic updates are currently armed. Makes \c start() and \c stop() idempotent and lets the manager
   /// be restarted. Only touched from the thread driving the manager lifecycle.
   bool running = false;
+  bool ntn_link_was_up = true;
 };
 
 } // namespace ocudu_ntn

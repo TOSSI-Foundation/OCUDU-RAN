@@ -31,10 +31,46 @@ bool ntn_ru_doppler_adapter::handle_dl_doppler_compensation(const ocudu_ntn::dop
   // Apply the pre-calculated DL Doppler compensation values to TX.
   cfo_ctrl->set_tx_cfo(request.sector_id, cfo_reqs);
 
-  logger.debug("NTN: Apply DL Doppler compensation: {:.1f} Hz (drift: {:.1f} Hz/s) at {:%T}",
-               cfo_reqs.cfo_hz,
-               cfo_reqs.cfo_drift_hz_s,
-               cfo_reqs.start_timestamp.value());
+  if (cfo_reqs.start_timestamp.has_value()) {
+    logger.debug("NTN: Apply DL Doppler compensation: {:.1f} Hz (drift: {:.1f} Hz/s) at {:%T}",
+                 cfo_reqs.cfo_hz,
+                 cfo_reqs.cfo_drift_hz_s,
+                 *cfo_reqs.start_timestamp);
+  } else {
+    logger.debug("NTN: Apply DL Doppler compensation: {:.1f} Hz (drift: {:.1f} Hz/s), immediately",
+                 cfo_reqs.cfo_hz,
+                 cfo_reqs.cfo_drift_hz_s);
+  }
+
+  return true;
+}
+
+bool ntn_ru_doppler_adapter::handle_ntn_channel_emulation(const ocudu_ntn::ntn_channel_emulation_request& request)
+{
+  ru_controller* controller = ru_ctrl.load(std::memory_order_acquire);
+  if (controller == nullptr) {
+    return false;
+  }
+
+  ru_ntn_channel_controller* ntn_ctrl = controller->get_ntn_channel_controller();
+  if (ntn_ctrl == nullptr) {
+    return false;
+  }
+
+  ntn_channel_request ntn_req;
+  ntn_req.rx_delay               = request.rx_delay;
+  ntn_req.delay_drift_us_per_s   = request.delay_drift_us_per_s;
+  ntn_req.service_drift_us_per_s = request.service_drift_us_per_s;
+  ntn_req.emulate_doppler        = request.emulate_doppler;
+  ntn_req.link_up                = request.link_up;
+
+  if (!ntn_ctrl->set_ntn_channel(request.sector_id, ntn_req)) {
+    return false;
+  }
+
+  logger.debug("NTN: Apply emulated channel: rx delay {} us, delay drift {:.3f} us/s",
+               request.rx_delay.count(),
+               request.delay_drift_us_per_s);
 
   return true;
 }
@@ -60,10 +96,16 @@ bool ntn_ru_doppler_adapter::handle_ul_doppler_compensation(const ocudu_ntn::dop
   // Apply the pre-calculated UL Doppler compensation values to RX.
   cfo_ctrl->set_rx_cfo(request.sector_id, cfo_reqs);
 
-  logger.debug("NTN: Apply UL Doppler compensation: {:.1f} Hz (drift: {:.1f} Hz/s) at {:%T}",
-               cfo_reqs.cfo_hz,
-               cfo_reqs.cfo_drift_hz_s,
-               cfo_reqs.start_timestamp.value());
+  if (cfo_reqs.start_timestamp.has_value()) {
+    logger.debug("NTN: Apply UL Doppler compensation: {:.1f} Hz (drift: {:.1f} Hz/s) at {:%T}",
+                 cfo_reqs.cfo_hz,
+                 cfo_reqs.cfo_drift_hz_s,
+                 *cfo_reqs.start_timestamp);
+  } else {
+    logger.debug("NTN: Apply UL Doppler compensation: {:.1f} Hz (drift: {:.1f} Hz/s), immediately",
+                 cfo_reqs.cfo_hz,
+                 cfo_reqs.cfo_drift_hz_s);
+  }
 
   return true;
 }

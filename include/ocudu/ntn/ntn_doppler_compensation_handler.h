@@ -23,6 +23,15 @@ struct doppler_compensation_request {
   std::optional<time_point> start_timestamp;
 };
 
+struct ntn_channel_emulation_request {
+  unsigned                  sector_id = 0;
+  std::chrono::microseconds rx_delay{0};
+  double                    delay_drift_us_per_s   = 0.0;
+  double                    service_drift_us_per_s = 0.0;
+  bool                      emulate_doppler        = false;
+  bool                      link_up                = true;
+};
+
 /// \brief Interface for handling NTN Doppler compensation requests.
 ///
 /// This interface decouples the NTN module from direct RU controller dependencies.
@@ -42,6 +51,8 @@ public:
   /// \param request Pre-calculated UL Doppler compensation request containing time, frequency, and drift values.
   /// \return True if the request was successfully handled; false otherwise.
   virtual bool handle_ul_doppler_compensation(const doppler_compensation_request& request) = 0;
+
+  virtual bool handle_ntn_channel_emulation(const ntn_channel_emulation_request& request) { return false; }
 };
 
 } // namespace ocudu_ntn

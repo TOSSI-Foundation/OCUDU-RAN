@@ -36,6 +36,15 @@ public:
   /// \param[in] center_freq_Hz New center frequency in Hertz.
   /// \return True if the operation is successful. Otherwise, false.
   virtual bool set_rx_freq(unsigned stream_id, double center_freq_Hz) = 0;
+
+  virtual bool set_ntn_channel(double one_way_delay_us,
+                               double delay_drift_us_per_s,
+                               double service_drift_us_per_s,
+                               bool   emulate_doppler,
+                               bool   link_up)
+  {
+    return false;
+  }
 };
 
 } // namespace ocudu

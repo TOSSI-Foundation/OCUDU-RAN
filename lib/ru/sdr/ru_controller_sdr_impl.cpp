@@ -98,6 +98,7 @@ void ru_controller_sdr_impl::set_lower_phy_sectors(std::vector<lower_phy_sector*
   cfo_controller            = ru_cfo_controller_sdr_impl(lower_phy_sectors);
   center_freq_controller    = ru_center_frequency_controller_sdr_impl(lower_phy_sectors, &radio);
   tx_time_offset_controller = ru_tx_time_offset_controller_sdr_impl(lower_phy_sectors);
+  ntn_channel_controller    = ru_ntn_channel_controller_sdr_impl(&radio);
 }
 
 bool ru_gain_controller_sdr_impl::set_tx_gain(unsigned port_id, double gain_dB)
@@ -130,6 +131,19 @@ bool ru_cfo_controller_sdr_impl::set_rx_cfo(unsigned sector_id, const cfo_compen
         cfo_request.cfo_drift_hz_s);
   }
   return false;
+}
+
+bool ru_ntn_channel_controller_sdr_impl::set_ntn_channel(unsigned sector_id, const ntn_channel_request& ntn_request)
+{
+  (void)sector_id;
+  if (radio == nullptr || *radio == nullptr) {
+    return false;
+  }
+  return (*radio)->get_management_plane().set_ntn_channel(static_cast<double>(ntn_request.rx_delay.count()),
+                                                          ntn_request.delay_drift_us_per_s,
+                                                          ntn_request.service_drift_us_per_s,
+                                                          ntn_request.emulate_doppler,
+                                                          ntn_request.link_up);
 }
 
 bool ru_center_frequency_controller_sdr_impl::set_tx_center_frequency(unsigned sector_id, double center_freq_Hz)

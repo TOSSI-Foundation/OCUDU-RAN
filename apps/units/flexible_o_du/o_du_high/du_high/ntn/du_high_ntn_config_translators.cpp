@@ -8,6 +8,7 @@
 #include "du_high_unit_cell_ntn_config.h"
 #include "ocudu/du/du_high/du_qos_config.h"
 #include "ocudu/du/du_high/du_srb_config.h"
+#include "ocudu/ran/band_helper.h"
 #include "ocudu/ran/nr_cgi.h"
 #include "ocudu/ran/qos/five_qi.h"
 #include "ocudu/rlc/rlc_config.h"
@@ -178,6 +179,8 @@ ocudu::generate_ntn_configuration_manager_config(const gnb_id_t&                
     out_cell.nr_cgi.nci     = nci.value();
     out_cell.ntn_cfg        = convert_ntn_config_to_serving_cell_config(ntn_cfg, out_cfg.satellites);
     out_cell.common_scs     = cell_cfg.common_scs;
+    out_cell.dl_carrier_freq_hz = band_helper::nr_arfcn_to_freq(cell_cfg.dl_f_ref_arfcn);
+    out_cell.emulate_doppler    = ntn_cfg.serving && ntn_cfg.serving->emulate_doppler;
 
     // Build sat-switch target satellite (if configured).
     if (ntn_cfg.serving && ntn_cfg.serving->sat_switch_with_resync) {

@@ -1,6 +1,7 @@
 #pragma once
-#include <stdint.h>
 #include "PHY/TOOLS/tools_defs.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 #define INVALID_DBFS_VALUE (-1000.0)
 #define RFSIMU_MODULEID 1
@@ -9,11 +10,19 @@
 #define CORR_LEVEL_HIGH 2
 typedef int SCM_t;
 
+#define RFSIM_SHIM_MAX_RX_ANT 8
+
 typedef struct channel_desc_s {
   char    *model_name;
   uint64_t channel_offset;
   uint32_t channel_length;
   int64_t  start_TS;
+
+  bool   is_uplink;
+  int    nb_tx;
+  double sampling_rate;
+  double doppler_phase_inc;
+  double doppler_phase[RFSIM_SHIM_MAX_RX_ANT];
 } channel_desc_t;
 
 #ifdef __cplusplus

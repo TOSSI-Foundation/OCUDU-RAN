@@ -461,6 +461,65 @@ bool ntn_configuration_manager_impl::handle_ntn_cell_config_update(const ntn_cel
   return true;
 }
 
+bool ntn_configuration_manager_impl::send_ntn_channel_emulation_request(const ntn_cell_config&        cell_cfg,
+                                                                        const ntn_orbital_state&      state,
+                                                                        std::chrono::duration<double> epoch_lead)
+{
+  if (not cell_cfg.ntn_cfg) {
+    return false;
+  }
+
+  const std::optional<std::chrono::microseconds> ref_location_ul_ta = compute_ref_location_ul_ta(state, cell_cfg);
+  if (not ref_location_ul_ta.has_value()) {
+    return false;
+  }
+
+  const std::optional<geodetic_coordinates_t>& ref_location = cell_cfg.ntn_cfg->reference_location.has_value()
+                                                                  ? cell_cfg.ntn_cfg->reference_location
+                                                                  : cell_cfg.ntn_cfg->moving_reference_location;
+  if (not ref_location.has_value()) {
+    return false;
+  }
+
+  const double service_drift_us_per_s = compute_service_link_rtt_drift(state, *ref_location).value_or(0.0);
+  double       rtt_drift_us_per_s     = service_drift_us_per_s;
+  if (cell_cfg.ntn_cfg->feeder_link_info.has_value() and state.ta_info.has_value()) {
+    rtt_drift_us_per_s += state.ta_info->ta_common_drift;
+  }
+
+  ntn_channel_emulation_request req;
+  req.sector_id                   = cell_cfg.sector_id.value_or(0);
+  const double lead_correction_us = rtt_drift_us_per_s * epoch_lead.count();
+  req.rx_delay =
+      *ref_location_ul_ta - std::chrono::microseconds{static_cast<int64_t>(std::llround(lead_correction_us))};
+  req.delay_drift_us_per_s   = rtt_drift_us_per_s;
+  req.service_drift_us_per_s = service_drift_us_per_s;
+
+  static constexpr double     min_elevation_deg = 0.0;
+  const std::optional<double> elevation_deg     = compute_service_link_elevation(state, *ref_location);
+  req.link_up                                   = elevation_deg.has_value() and (*elevation_deg >= min_elevation_deg);
+  if (req.link_up != ntn_link_was_up) {
+    logger.info("NTN: satellite {} the horizon at the reference location, elevation {:.2f} deg: emulated link {}",
+                req.link_up ? "rose above" : "set below",
+                elevation_deg.value_or(0.0),
+                req.link_up ? "up" : "down");
+    ntn_link_was_up = req.link_up;
+  }
+
+  req.emulate_doppler = cell_cfg.emulate_doppler;
+
+  if (not doppler_handler->handle_ntn_channel_emulation(req)) {
+    return false;
+  }
+
+  logger.info("Emulated NTN channel updated, cell={:#x} rx_delay={}us drift={:.3f}us/s doppler={}",
+              cell_cfg.nr_cgi.nci,
+              req.rx_delay.count(),
+              req.delay_drift_us_per_s,
+              req.emulate_doppler ? "on" : "off");
+  return true;
+}
+
 bool ntn_configuration_manager_impl::send_cfo_compensation_request(const ntn_cell_config& cell_cfg,
                                                                    time_point             doppler_update_time,
                                                                    const ta_info_t&       ta_info)
@@ -705,6 +764,10 @@ void ntn_configuration_manager_impl::periodic_ntn_config_update_task(const nr_ce
   // Send CFO compensation request to PHY.
   if (doppler_handler != nullptr and serving_ntn_info.ta_info) {
     send_cfo_compensation_request(cell_cfg, epoch_time, *serving_ntn_info.ta_info);
+  }
+
+  if (doppler_handler != nullptr) {
+    send_ntn_channel_emulation_request(cell_cfg, serving_ntn_info, epoch_time - tp);
   }
 
   // Publish measurement-related NTN neighbour info (e.g. to the CU-CP cell measurement manager).

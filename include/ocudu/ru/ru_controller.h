@@ -84,6 +84,22 @@ public:
   virtual bool set_rx_cfo(unsigned sector_id, const cfo_compensation_request& cfo_request) = 0;
 };
 
+struct ntn_channel_request {
+  std::chrono::microseconds rx_delay{0};
+  double                    delay_drift_us_per_s   = 0.0;
+  double                    service_drift_us_per_s = 0.0;
+  bool                      emulate_doppler        = false;
+  bool                      link_up                = true;
+};
+
+class ru_ntn_channel_controller
+{
+public:
+  virtual ~ru_ntn_channel_controller() = default;
+
+  virtual bool set_ntn_channel(unsigned sector_id, const ntn_channel_request& ntn_request) = 0;
+};
+
 /// \brief Radio Unit - carrier center frequency control interface.
 ///
 /// Provides an interface for modifying the carrier center frequency for downlink and uplink in runtime.
@@ -151,6 +167,8 @@ public:
 
   /// Returns the transmit time offset controller of this Radio Unit or nullptr if the Radio unit does not support it.
   virtual ru_tx_time_offset_controller* get_tx_time_offset_controller() = 0;
+
+  virtual ru_ntn_channel_controller* get_ntn_channel_controller() { return nullptr; }
 };
 
 } // namespace ocudu

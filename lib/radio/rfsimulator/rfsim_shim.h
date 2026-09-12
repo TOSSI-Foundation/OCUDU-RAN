@@ -11,4 +11,7 @@ void rfsim_set_log_sink(void (*sink)(int level, const char* message));
 
 void rfsim_set_log_level(int level);
 
+void rfsim_set_ntn_channel(double rx_delay_us, double drift_us_per_s, bool link_up);
+
+void rfsim_set_ntn_doppler(double doppler_hz);
 }

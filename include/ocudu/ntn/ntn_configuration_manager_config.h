@@ -114,6 +114,8 @@ struct ntn_si_scheduling_info {
 struct ntn_cell_config {
   /// NR-CGI.
   nr_cell_global_id_t nr_cgi;
+  bool                emulate_doppler    = false;
+  double              dl_carrier_freq_hz = 0.0;
   /// Common subcarrier spacing of the cell. Drives the numerology (slots per frame and slot duration) used to derive
   /// the SIB19 epoch wall-clock time. Left invalid by default so a caller that forgets to set it fails loudly instead
   /// of silently assuming 15 kHz.

@@ -65,6 +65,12 @@ struct ntn_orbital_state {
 std::optional<std::chrono::microseconds> compute_service_link_rtt(const ntn_orbital_state&      state,
                                                                   const geodetic_coordinates_t& ref_location);
 
+std::optional<double> compute_service_link_rtt_drift(const ntn_orbital_state&      state,
+                                                     const geodetic_coordinates_t& ref_location);
+
+std::optional<double> compute_service_link_elevation(const ntn_orbital_state&      state,
+                                                     const geodetic_coordinates_t& ref_location);
+
 /// Computes satellite orbital propagation, ephemeris, and TA-info for a given epoch time.
 class ntn_orbital_compute_module
 {

@@ -74,6 +74,18 @@ public:
   bool set_rx_center_frequency(unsigned sector_id, double center_freq_Hz) override;
 };
 
+class ru_ntn_channel_controller_sdr_impl : public ru_ntn_channel_controller
+{
+  radio_session** radio = nullptr;
+
+public:
+  ru_ntn_channel_controller_sdr_impl() = default;
+
+  explicit ru_ntn_channel_controller_sdr_impl(radio_session** radio_) : radio(radio_) {}
+
+  bool set_ntn_channel(unsigned sector_id, const ntn_channel_request& ntn_request) override;
+};
+
 /// SDR Radio Unit transmit time offset controller implementation.
 class ru_tx_time_offset_controller_sdr_impl : public ru_tx_time_offset_controller
 {
@@ -112,6 +124,8 @@ public:
   // See interface for documentation.
   ru_tx_time_offset_controller* get_tx_time_offset_controller() override { return &tx_time_offset_controller; }
 
+  ru_ntn_channel_controller* get_ntn_channel_controller() override { return &ntn_channel_controller; }
+
   // See interface for documentation.
   void start() override;
 
@@ -133,6 +147,7 @@ private:
   ru_cfo_controller_sdr_impl                           cfo_controller;
   ru_center_frequency_controller_sdr_impl              center_freq_controller;
   ru_tx_time_offset_controller_sdr_impl                tx_time_offset_controller;
+  ru_ntn_channel_controller_sdr_impl                   ntn_channel_controller;
 };
 
 } // namespace ocudu

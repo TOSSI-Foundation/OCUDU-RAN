@@ -102,6 +102,7 @@ struct du_high_unit_ntn_serving_cell_config {
   /// serving cell in SIB19 (unlike for neighbor cells or SatSwitchWithReSync, where it is optional), so this field
   /// is not optional and defaults to disabled.
   bool ta_report = false;
+  bool emulate_doppler = false;
   /// Moving reference location for NTN Earth-moving cell (R18).
   std::optional<geodetic_coordinates_t> moving_ref_location;
   /// Satellite switch with resynchronization parameters (R18).

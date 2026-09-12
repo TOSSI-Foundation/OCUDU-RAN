@@ -28,6 +28,8 @@ public:
   // See interface for documentation.
   bool handle_ul_doppler_compensation(const ocudu_ntn::doppler_compensation_request& request) override;
 
+  bool handle_ntn_channel_emulation(const ocudu_ntn::ntn_channel_emulation_request& request) override;
+
   /// Connects this adapter with the given RU controller.
   void connect(ru_controller& controller) { ru_ctrl.store(&controller, std::memory_order_release); }
 

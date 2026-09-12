@@ -235,6 +235,26 @@ ntn_orbital_state ntn_orbital_compute_module::compute_orbital_state(time_point e
   return state;
 }
 
+std::optional<double> ocudu_ntn::compute_service_link_rtt_drift(const ntn_orbital_state&      state,
+                                                                const geodetic_coordinates_t& ref_location)
+{
+  if (not state.success) {
+    return std::nullopt;
+  }
+
+  const state_vector ref_ecef =
+      coordinate_converter::geodetic_to_ecef(ref_location.latitude, ref_location.longitude, ref_location.altitude);
+  const state_vector rho   = ref_ecef - state.sat_ecef;
+  const double       range = norm(rho.position);
+  if (range <= 0.0) {
+    return std::nullopt;
+  }
+
+  const double range_rate_m_s = dot(rho.position, rho.velocity) / range;
+
+  return 2.0 * range_rate_m_s / (SPEED_OF_LIGHT_KM_S * 1e3) * 1e6;
+}
+
 std::optional<std::chrono::microseconds> ocudu_ntn::compute_service_link_rtt(const ntn_orbital_state&      state,
                                                                              const geodetic_coordinates_t& ref_location)
 {
@@ -245,4 +265,27 @@ std::optional<std::chrono::microseconds> ocudu_ntn::compute_service_link_rtt(con
   const state_vector ref_ecef =
       coordinate_converter::geodetic_to_ecef(ref_location.latitude, ref_location.longitude, ref_location.altitude);
   return std::chrono::round<std::chrono::microseconds>(compute_link_rtt(state.sat_ecef, ref_ecef));
+}
+
+std::optional<double> ocudu_ntn::compute_service_link_elevation(const ntn_orbital_state&      state,
+                                                                const geodetic_coordinates_t& ref_location)
+{
+  if (not state.success) {
+    return std::nullopt;
+  }
+
+  const state_vector ref_ecef =
+      coordinate_converter::geodetic_to_ecef(ref_location.latitude, ref_location.longitude, ref_location.altitude);
+
+  const state_vector los   = state.sat_ecef - ref_ecef;
+  const double       range = norm(los.position);
+  if (range <= 0.0) {
+    return std::nullopt;
+  }
+
+  const double   lat_rad = ref_location.latitude * M_PI / 180.0;
+  const double   lon_rad = ref_location.longitude * M_PI / 180.0;
+  const coord_3d up{std::cos(lat_rad) * std::cos(lon_rad), std::cos(lat_rad) * std::sin(lon_rad), std::sin(lat_rad)};
+
+  return std::asin(std::clamp(dot(los.position, up) / range, -1.0, 1.0)) * 180.0 / M_PI;
 }
