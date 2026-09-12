@@ -1,0 +1,10 @@
+cell_cfg:
+  ntn:
+    ntn_ul_sync_validity_dur: 5
+    sat_train:
+      num_satellites: 12
+      switch_elevation_deg: 4.5
+      min_lead_s: 10
+
+log:
+  filename: /tmp/gnb_leo_sattrain.log

@@ -1,0 +1,21 @@
+cu_cp:
+  amf:
+    addr: 192.168.1.115
+    bind_addr: 192.168.1.117
+    supported_tracking_areas:
+      - tac: 1
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+                sd: "010203"
+
+cu_up:
+  ngu:
+    socket:
+      - bind_addr: 192.168.1.117
+
+cell_cfg:
+  slicing:
+    - sst: 1
+      sd: 66051

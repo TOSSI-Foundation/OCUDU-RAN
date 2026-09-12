@@ -1,0 +1,90 @@
+
+gnb_id: 412
+ran_node_name: gnb-sat2
+
+cu_cp:
+  amf:
+    addr: 192.168.1.115
+    bind_addr: 192.168.1.120
+    supported_tracking_areas:
+      - tac: 1
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+                sd: "010203"
+
+  xnap:
+    gateways:
+      - bind_addrs:
+          - 127.0.0.2
+        connections:
+          - peer_addrs:
+              - 127.0.0.1
+
+  mobility:
+    trigger_handover_from_measurements: false
+    cells:
+      - nr_cell_id: 0x670000
+        periodic_report_cfg_id: 1
+        ncells:
+          - nr_cell_id: 0x66C000
+            report_configs: [2]
+      - nr_cell_id: 0x66C000
+        ncells:
+          - nr_cell_id: 0x670000
+            report_configs: [2]
+        gnb_id_bit_length: 22
+        pci: 1
+        plmn: "00101"
+        tac: 1
+        ssb_arfcn: 436610
+        band: 256
+        ssb_scs: 15
+        ssb_period: 10
+        ssb_offset: 0
+        ssb_duration: 5
+    report_configs:
+      - report_cfg_id: 1
+        report_type: periodical
+        report_interval_ms: 1024
+      - report_cfg_id: 2
+        report_type: event_triggered
+        event_triggered_report_type: a3
+        meas_trigger_quantity: rsrp
+        meas_trigger_quantity_offset_db: 3
+        hysteresis_db: 0
+        time_to_trigger_ms: 100
+        report_interval_ms: 1024
+
+cu_up:
+  ngu:
+    socket:
+      - bind_addr: 192.168.1.120
+
+ru_sdr:
+  device_args: serveraddr=127.0.0.1,serverport=4043,options=chanmod,realtime
+
+cell_cfg:
+  slicing:
+    - sst: 1
+      sd: 66051
+
+  pci: 2
+
+  ntn:
+    ephemeris_info_ecef:
+      pos_x: 0
+      pos_y: -3058969.4
+      pos_z: 6248128.4
+      vel_x: 0
+      vel_y: 6798.43
+      vel_z: 3328.39
+
+log:
+  filename: /tmp/gnb_leo_sat2.log
+
+pcap:
+  ngap_filename: /tmp/ntn_leo_sat2_ngap.pcap
+  xnap_enable: true
+  xnap_filename: /tmp/ntn_leo_sat2_xnap.pcap
