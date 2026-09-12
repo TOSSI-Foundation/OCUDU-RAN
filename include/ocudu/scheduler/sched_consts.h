@@ -43,7 +43,7 @@ constexpr units::bytes SCHEDULER_MAX_TRIG_GRANT_SIZE{1500};
 
 /// [Implementation defined] Hardcoded grant size for SRB1 triggered UL grant. The value base on maxiumum RCC processing
 /// delay defined in TS 38.331.
-constexpr units::bytes SRB1_TRIG_GRANT_SIZE{16};
+constexpr units::bytes SRB1_TRIG_GRANT_SIZE{256};
 
 /// Maximum value of NTN Cell-specific K-offset. The field is expressed in slots for a subcarrier spacing of 15 kHz.
 /// See TS 38.331.

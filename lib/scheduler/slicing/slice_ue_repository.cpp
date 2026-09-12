@@ -112,6 +112,9 @@ unsigned slice_ue::pending_ul_newtx_bytes() const
     if (pending_bytes > 0) {
       return std::max(pending_bytes, 0);
     }
+    if (slice_id == SRB_RAN_SLICE_ID) {
+      return SR_GRANT_BYTES;
+    }
   }
 
   // In case a SR is pending and this is the SRB slice, we return a minimum SR grant size if no other bearers have
