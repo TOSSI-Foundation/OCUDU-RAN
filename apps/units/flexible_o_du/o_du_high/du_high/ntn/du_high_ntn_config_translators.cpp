@@ -14,6 +14,8 @@
 #include "ocudu/rlc/rlc_config.h"
 #include "ocudu/support/error_handling.h"
 #include "fmt/format.h"
+#include <array>
+#include <cmath>
 
 using namespace ocudu;
 
@@ -103,6 +105,40 @@ convert_ntn_config_to_serving_cell_config(const du_high_unit_cell_ntn_config&   
   return info;
 }
 
+static ecef_coordinates_t rotate_along_orbit(const ecef_coordinates_t& s, double angle_deg)
+{
+  static constexpr double     w = 7.292115146706979e-5;
+  const std::array<double, 3> r{s.position_x, s.position_y, s.position_z};
+  const std::array<double, 3> v{s.velocity_vx - w * s.position_y, s.velocity_vy + w * s.position_x, s.velocity_vz};
+  std::array<double, 3>       h{r[1] * v[2] - r[2] * v[1], r[2] * v[0] - r[0] * v[2], r[0] * v[1] - r[1] * v[0]};
+  const double                hn = std::sqrt(h[0] * h[0] + h[1] * h[1] + h[2] * h[2]);
+  for (double& c : h) {
+    c /= hn;
+  }
+  const double a   = angle_deg * M_PI / 180.0;
+  const double c   = std::cos(a);
+  const double n   = std::sin(a);
+  auto         rot = [&](const std::array<double, 3>& x) {
+    const std::array<double, 3> hx{h[1] * x[2] - h[2] * x[1], h[2] * x[0] - h[0] * x[2], h[0] * x[1] - h[1] * x[0]};
+    const double                hd = h[0] * x[0] + h[1] * x[1] + h[2] * x[2];
+    std::array<double, 3>       o{};
+    for (unsigned i = 0; i != 3; ++i) {
+      o[i] = x[i] * c + hx[i] * n + h[i] * hd * (1.0 - c);
+    }
+    return o;
+  };
+  const std::array<double, 3> rp = rot(r);
+  const std::array<double, 3> vp = rot(v);
+  ecef_coordinates_t          out{};
+  out.position_x  = rp[0];
+  out.position_y  = rp[1];
+  out.position_z  = rp[2];
+  out.velocity_vx = vp[0] + w * rp[1];
+  out.velocity_vy = vp[1] - w * rp[0];
+  out.velocity_vz = vp[2];
+  return out;
+}
+
 ocudu_ntn::ntn_configuration_manager_config
 ocudu::generate_ntn_configuration_manager_config(const gnb_id_t&                          gnb_id,
                                                  span<const du_high_unit_cell_config>     du_hi_cells,
@@ -118,6 +154,7 @@ ocudu::generate_ntn_configuration_manager_config(const gnb_id_t&                
   // wherever a satellite reference is present. Neighbor cells are resolved regardless of whether this is an
   // NTN serving cell or a TN-band cell that only reports NTN neighbor cells.
   std::vector<std::optional<du_high_unit_cell_ntn_config>> resolved_ntn_cfgs(du_hi_cells.size());
+  std::vector<std::vector<unsigned>>                       train_indices(du_hi_cells.size());
   for (unsigned phy_sector_idx = 0; phy_sector_idx != du_hi_cells.size(); ++phy_sector_idx) {
     const auto& cell_cfg = du_hi_cells[phy_sector_idx].cell;
     if (!cell_cfg.ntn_cfg) {
@@ -132,6 +169,35 @@ ocudu::generate_ntn_configuration_manager_config(const gnb_id_t&                
                                 next_satellite_idx,
                                 serving.sat_ref.ta_info,
                                 fmt::format("cells[{}].ntn", phy_sector_idx));
+
+      if (serving.sat_train) {
+        const auto& train = *serving.sat_train;
+        if (serving.sat_switch_with_resync) {
+          report_error("cells[{}].ntn: sat_train and sat_switch_with_resync are mutually exclusive - a train arms "
+                       "its own switches",
+                       phy_sector_idx);
+        }
+        const unsigned serving_idx = *serving.sat_ref.satellite_idx;
+        auto           serving_it  = std::find_if(out_cfg.satellites.begin(),
+                                       out_cfg.satellites.end(),
+                                       [serving_idx](const auto& sat) { return sat.satellite_index == serving_idx; });
+        if (serving_it == out_cfg.satellites.end() ||
+            !std::holds_alternative<ecef_coordinates_t>(serving_it->ephemeris_info)) {
+          report_error("cells[{}].ntn.sat_train: needs the serving satellite's ephemeris as an ECEF state vector",
+                       phy_sector_idx);
+        }
+        const ocudu_ntn::ntn_satellite_config serving_sat = *serving_it;
+        const double                          spacing_deg = 360.0 / train.num_satellites;
+        train_indices[phy_sector_idx].push_back(serving_idx);
+        for (unsigned k = 1; k != train.num_satellites; ++k) {
+          ocudu_ntn::ntn_satellite_config sat = serving_sat;
+          sat.satellite_index                 = next_satellite_idx++;
+          sat.ephemeris_info = rotate_along_orbit(std::get<ecef_coordinates_t>(serving_sat.ephemeris_info),
+                                                  -static_cast<double>(k) * spacing_deg);
+          out_cfg.satellites.push_back(sat);
+          train_indices[phy_sector_idx].push_back(sat.satellite_index);
+        }
+      }
 
       if (serving.sat_switch_with_resync) {
         auto& sat_sw = *serving.sat_switch_with_resync;
@@ -199,6 +265,12 @@ ocudu::generate_ntn_configuration_manager_config(const gnb_id_t&                
                                                      out_cfg.satellites),
                              sat_sw.promote_to_serving,
                              sat_sw.promote_neighbors};
+    }
+
+    if (ntn_cfg.serving && ntn_cfg.serving->sat_train) {
+      const auto& train  = *ntn_cfg.serving->sat_train;
+      out_cell.sat_train = ocudu_ntn::ntn_sat_train_config{
+          train_indices[phy_sector_idx], train.switch_elevation_deg, std::chrono::seconds(train.min_lead_s)};
     }
 
     // Build neighbors' cell configs.

@@ -64,6 +64,8 @@ private:
 
     ntn_orbital_compute_module ocm;
 
+    ntn_satellite_config cfg;
+
     /// Cached result of the last OCM computation.
     struct cached_result {
       time_point        epoch_time;
@@ -89,6 +91,7 @@ private:
     std::optional<sib19_info> last_sib19;
     /// Queue of full cell config snapshots ordered by epoch_time. Always non-empty (seeded at construction).
     static_ring_buffer<cell_config_snapshot, 8> cell_cfg_queue;
+    time_point                                  sat_train_retry_after{};
   };
 
   /// \brief Returns the cell config applicable for the given epoch time.
@@ -98,6 +101,16 @@ private:
   /// \param ctx Per-cell context.
   /// \param t   SIB19 epoch time.
   const ntn_cell_config& get_cell_config(per_cell_context& ctx, time_point t) const;
+
+  void arm_next_sat_switch(const nr_cell_global_id_t& nr_cgi, per_cell_context& ctx, time_point now);
+
+  std::optional<time_point> find_setting_time(const ntn_satellite_config&   sat_cfg,
+                                              const geodetic_coordinates_t& ref,
+                                              double                        elevation_deg,
+                                              time_point                    from) const;
+
+  std::optional<double>
+  elevation_at(const ntn_satellite_config& sat_cfg, const geodetic_coordinates_t& ref, time_point t) const;
 
   /// \brief Runs one update for the given cell, if the node timeline already provides a slot mapping.
   void run_cell_update(const nr_cell_global_id_t& nr_cgi, per_cell_context& ctx);

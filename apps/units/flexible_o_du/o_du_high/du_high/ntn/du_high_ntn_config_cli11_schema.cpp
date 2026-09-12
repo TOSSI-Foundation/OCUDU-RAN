@@ -266,6 +266,33 @@ static void configure_cli11_ntn_args(CLI::App&                             app,
     }
   });
 
+  static du_high_unit_sat_train_config sat_train_config;
+  CLI::App*                            sat_train_subcmd =
+      add_subcommand(app, "sat_train", "Satellite train: keep switching to the next satellite as the serving one sets");
+  add_option(*sat_train_subcmd,
+             "--num_satellites",
+             sat_train_config.num_satellites,
+             "Satellites evenly spaced round the serving satellite's orbit, the configured one included")
+      ->capture_default_str()
+      ->check(CLI::Range(2, 64));
+  add_option(*sat_train_subcmd,
+             "--switch_elevation_deg",
+             sat_train_config.switch_elevation_deg,
+             "The serving satellite hands over as it sets through this elevation")
+      ->capture_default_str()
+      ->check(CLI::Range(0.0, 60.0));
+  add_option(*sat_train_subcmd,
+             "--min_lead_s",
+             sat_train_config.min_lead_s,
+             "Minimum notice in SIB19 before a switch, in seconds")
+      ->capture_default_str()
+      ->check(CLI::Range(1, 600));
+  sat_train_subcmd->parse_complete_callback([&]() {
+    if (app.get_subcommand("sat_train")->count() != 0) {
+      serv_cell_ntn_config.sat_train = sat_train_config;
+    }
+  });
+
   // NTN neighbor cells.
   configure_cli11_ncells(app, config.ncells);
 }

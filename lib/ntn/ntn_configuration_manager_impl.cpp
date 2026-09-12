@@ -203,6 +203,7 @@ ntn_configuration_manager_impl::ntn_configuration_manager_impl(const ntn_configu
       continue;
     }
     auto& sat_ctx = sat_it->second;
+    sat_ctx.cfg   = sat_config;
     sat_ctx.ocm.set_ta_info_override(sat_config.ta_info);
 
     if (sat_config.epoch_timestamp) {
@@ -293,6 +294,185 @@ const ntn_cell_config& ntn_configuration_manager_impl::get_cell_config(per_cell_
     q.pop();
   }
   return q[0].config;
+}
+
+std::optional<double> ntn_configuration_manager_impl::elevation_at(const ntn_satellite_config&   sat_cfg,
+                                                                   const geodetic_coordinates_t& ref,
+                                                                   time_point                    t) const
+{
+  if (!sat_cfg.epoch_timestamp) {
+    return std::nullopt;
+  }
+  ntn_orbital_compute_module probe(sat_cfg.propagator_type);
+  probe.enqueue_ephemeris_info(ephemeris_info_update{*sat_cfg.epoch_timestamp, sat_cfg.ephemeris_info});
+  return compute_service_link_elevation(probe.compute_orbital_state(t, 5, true), ref);
+}
+
+std::optional<ntn_configuration_manager_impl::time_point>
+ntn_configuration_manager_impl::find_setting_time(const ntn_satellite_config&   sat_cfg,
+                                                  const geodetic_coordinates_t& ref,
+                                                  double                        elevation_deg,
+                                                  time_point                    from) const
+{
+  if (!sat_cfg.epoch_timestamp) {
+    return std::nullopt;
+  }
+  ntn_orbital_compute_module probe(sat_cfg.propagator_type);
+  probe.enqueue_ephemeris_info(ephemeris_info_update{*sat_cfg.epoch_timestamp, sat_cfg.ephemeris_info});
+  auto elev = [&](time_point t) {
+    return compute_service_link_elevation(probe.compute_orbital_state(t, 5, true), ref);
+  };
+
+  constexpr auto        step    = std::chrono::seconds(5);
+  constexpr auto        horizon = std::chrono::hours(3);
+  std::optional<double> e_prev  = elev(from);
+  if (!e_prev) {
+    return std::nullopt;
+  }
+  time_point t_prev = from;
+  for (time_point t = from + step; t <= from + horizon; t += step) {
+    const std::optional<double> e = elev(t);
+    if (!e) {
+      return std::nullopt;
+    }
+    if (t_prev == from && *e_prev <= elevation_deg && *e < *e_prev) {
+      return from;
+    }
+    if (*e_prev > elevation_deg && *e <= elevation_deg) {
+      time_point lo = t_prev;
+      time_point hi = t;
+      while (hi - lo > std::chrono::milliseconds(20)) {
+        const time_point            mid = lo + (hi - lo) / 2;
+        const std::optional<double> em  = elev(mid);
+        if (!em) {
+          return std::nullopt;
+        }
+        (*em > elevation_deg ? lo : hi) = mid;
+      }
+      return hi;
+    }
+    t_prev = t;
+    e_prev = e;
+  }
+  return std::nullopt;
+}
+
+void ntn_configuration_manager_impl::arm_next_sat_switch(const nr_cell_global_id_t& nr_cgi,
+                                                         per_cell_context&          ctx,
+                                                         time_point                 now)
+{
+  auto& q = ctx.cell_cfg_queue;
+  if (q.size() != 1 || now < ctx.sat_train_retry_after) {
+    return;
+  }
+  ntn_cell_config& cur = q[0].config;
+  if (!cur.sat_train || !cur.ntn_cfg || cur.sat_switch) {
+    return;
+  }
+  ctx.sat_train_retry_after = now + std::chrono::seconds(10);
+
+  const ntn_sat_train_config&  train   = *cur.sat_train;
+  const std::vector<unsigned>& order   = train.satellite_indices;
+  const unsigned               serving = cur.ntn_cfg->satellite_index;
+  const auto                   it      = std::find(order.begin(), order.end(), serving);
+  if (order.size() < 2 || it == order.end()) {
+    logger.error("Sat-train cell={:#x}: serving satellite {} is not in the train", nr_cgi.nci, serving);
+    return;
+  }
+  const unsigned next = std::next(it) == order.end() ? order.front() : *std::next(it);
+
+  const std::optional<geodetic_coordinates_t>& ref =
+      cur.ntn_cfg->reference_location ? cur.ntn_cfg->reference_location : cur.ntn_cfg->moving_reference_location;
+  const per_satellite_context* serving_ctx = find_satellite_context(serving);
+  const per_satellite_context* next_ctx    = find_satellite_context(next);
+  if (!ref || !serving_ctx || !next_ctx) {
+    logger.warning("Sat-train cell={:#x}: missing reference location or satellite {} / {}", nr_cgi.nci, serving, next);
+    return;
+  }
+
+  const std::optional<double> serving_el = elevation_at(serving_ctx->cfg, *ref, now);
+  if (serving_el && *serving_el < train.switch_elevation_deg) {
+    unsigned best    = serving;
+    double   best_el = *serving_el;
+    for (unsigned idx : order) {
+      const per_satellite_context* sat = find_satellite_context(idx);
+      if (!sat) {
+        continue;
+      }
+      const std::optional<double> el = elevation_at(sat->cfg, *ref, now);
+      if (el && *el > best_el) {
+        best    = idx;
+        best_el = *el;
+      }
+    }
+    if (best != serving && best_el > train.switch_elevation_deg) {
+      logger.info(
+          "Sat-train cell={:#x}: satellite {} is at {:.1f} deg, below the switch elevation - starting on satellite "
+          "{} at {:.1f} deg instead",
+          nr_cgi.nci,
+          serving,
+          *serving_el,
+          best,
+          best_el);
+      cur.ntn_cfg->satellite_index = best;
+      ctx.sat_train_retry_after    = {};
+    } else {
+      logger.warning("Sat-train cell={:#x}: no satellite of the train is above {:.1f} deg - coverage gap",
+                     nr_cgi.nci,
+                     train.switch_elevation_deg);
+    }
+    return;
+  }
+
+  std::optional<time_point> t_switch = find_setting_time(serving_ctx->cfg, *ref, train.switch_elevation_deg, now);
+  if (!t_switch) {
+    logger.warning("Sat-train cell={:#x}: satellite {} does not set through {:.1f} deg within 3 h, not arming",
+                   nr_cgi.nci,
+                   serving,
+                   train.switch_elevation_deg);
+    return;
+  }
+  const time_point earliest = now + std::chrono::duration_cast<time_point::duration>(train.min_lead);
+  if (*t_switch < earliest) {
+    t_switch = earliest;
+  }
+
+  cur.ntn_cfg->t_service = *t_switch;
+  ntn_sat_switch_config sw{};
+  sw.satellite_index    = next;
+  sw.t_service_start    = *t_switch;
+  sw.use_state_vector   = cur.ntn_cfg->use_state_vector;
+  sw.promote_to_serving = true;
+  sw.promote_neighbors  = true;
+  cur.sat_switch        = sw;
+
+  std::optional<ntn_cell_config> derived = derive_post_switch_config(cur);
+  if (!derived || !q.try_push(cell_config_snapshot{*t_switch, std::move(*derived)})) {
+    cur.sat_switch.reset();
+    cur.ntn_cfg->t_service.reset();
+    logger.warning("Sat-train cell={:#x}: could not queue the switch to satellite {}", nr_cgi.nci, next);
+    return;
+  }
+  ctx.sat_train_retry_after = {};
+
+  const std::optional<double> next_el = elevation_at(next_ctx->cfg, *ref, *t_switch);
+  logger.info("Sat-train armed, cell={:#x} satellite {} -> {} at {:%T} (in {:.0f} s): {} sets through {:.1f} deg, "
+              "{} will be at {:.1f} deg",
+              nr_cgi.nci,
+              serving,
+              next,
+              *t_switch,
+              std::chrono::duration<double>(*t_switch - now).count(),
+              serving,
+              train.switch_elevation_deg,
+              next,
+              next_el.value_or(-90.0));
+  if (!next_el || *next_el <= 0.0) {
+    logger.warning("Sat-train cell={:#x}: satellite {} is below the horizon at the switch - coverage gap, the train "
+                   "needs more satellites",
+                   nr_cgi.nci,
+                   next);
+  }
 }
 
 ntn_configuration_manager_impl::per_satellite_context*
@@ -512,11 +692,12 @@ bool ntn_configuration_manager_impl::send_ntn_channel_emulation_request(const nt
     return false;
   }
 
-  logger.info("Emulated NTN channel updated, cell={:#x} rx_delay={}us drift={:.3f}us/s doppler={}",
+  logger.info("Emulated NTN channel updated, cell={:#x} rx_delay={}us drift={:.3f}us/s doppler={} sat={}",
               cell_cfg.nr_cgi.nci,
               req.rx_delay.count(),
               req.delay_drift_us_per_s,
-              req.emulate_doppler ? "on" : "off");
+              req.emulate_doppler ? "on" : "off",
+              cell_cfg.ntn_cfg->satellite_index);
   return true;
 }
 
@@ -620,6 +801,8 @@ void ntn_configuration_manager_impl::periodic_ntn_config_update_task(const nr_ce
 
   auto& ctx = it->second;
 
+  get_cell_config(ctx, tp);
+  arm_next_sat_switch(nr_cgi, ctx, tp);
   const ntn_cell_config& cell_cfg = get_cell_config(ctx, tp);
 
   // Derive the epoch slot: from the SI windows when SIB19 is scheduled for this cell, otherwise the current slot.
@@ -693,6 +876,25 @@ void ntn_configuration_manager_impl::periodic_ntn_config_update_task(const nr_ce
         sat_sw_ntn_info.reset();
         logger.warning("Failed to generate sat-switch propagated config, cell={:#x}", nr_cgi.nci);
       }
+    }
+  }
+
+  if (sat_sw_ntn_info && cell_cfg.ntn_cfg) {
+    const std::optional<geodetic_coordinates_t>&   ref_location = cell_cfg.ntn_cfg->reference_location.has_value()
+                                                                      ? cell_cfg.ntn_cfg->reference_location
+                                                                      : cell_cfg.ntn_cfg->moving_reference_location;
+    const std::optional<std::chrono::microseconds> ul_ta = compute_ref_location_ul_ta(*sat_sw_ntn_info, cell_cfg);
+    if (ref_location && ul_ta) {
+      double drift_us_per_s = compute_service_link_rtt_drift(*sat_sw_ntn_info, *ref_location).value_or(0.0);
+      if (cell_cfg.ntn_cfg->feeder_link_info.has_value() && sat_sw_ntn_info->ta_info.has_value()) {
+        drift_us_per_s += sat_sw_ntn_info->ta_info->ta_common_drift;
+      }
+      const std::chrono::duration<double> epoch_lead = epoch_time - tp;
+      logger.info("Sat-switch target geometry, cell={:#x} rx_delay={}us drift={:.3f}us/s sat={}",
+                  nr_cgi.nci,
+                  ul_ta->count() - std::llround(drift_us_per_s * epoch_lead.count()),
+                  drift_us_per_s,
+                  cell_cfg.sat_switch->satellite_index);
     }
   }
 

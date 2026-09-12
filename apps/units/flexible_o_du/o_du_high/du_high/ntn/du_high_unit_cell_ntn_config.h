@@ -35,6 +35,12 @@ struct du_high_unit_ntn_neighbor_cell_config {
   bool has_feeder_link = false;
 };
 
+struct du_high_unit_sat_train_config {
+  unsigned num_satellites       = 10;
+  double   switch_elevation_deg = 4.5;
+  unsigned min_lead_s           = 10;
+};
+
 /// Application-level sat_switch_with_resync configuration.
 struct du_high_unit_sat_switch_config {
   /// Reference to the switch target's satellite (global reference or inline definition).
@@ -107,6 +113,7 @@ struct du_high_unit_ntn_serving_cell_config {
   std::optional<geodetic_coordinates_t> moving_ref_location;
   /// Satellite switch with resynchronization parameters (R18).
   std::optional<du_high_unit_sat_switch_config> sat_switch_with_resync;
+  std::optional<du_high_unit_sat_train_config>  sat_train;
 };
 
 /// Application-level per-cell NTN configuration. Valid both for an NTN serving cell (NTN band, \c serving

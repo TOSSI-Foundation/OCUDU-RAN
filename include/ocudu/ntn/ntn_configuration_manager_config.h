@@ -102,6 +102,12 @@ struct ntn_sat_switch_config {
   bool promote_neighbors = false;
 };
 
+struct ntn_sat_train_config {
+  std::vector<unsigned> satellite_indices;
+  double                switch_elevation_deg = 4.5;
+  std::chrono::seconds  min_lead{10};
+};
+
 /// SIB19 scheduling information of a cell.
 struct ntn_si_scheduling_info {
   unsigned si_msg_idx;
@@ -134,6 +140,7 @@ struct ntn_cell_config {
   std::optional<ntn_serving_cell_config> ntn_cfg;
   /// Satellite-switch target configuration. Absent if sat-switch is not configured and in TN serving cells.
   std::optional<ntn_sat_switch_config> sat_switch;
+  std::optional<ntn_sat_train_config>  sat_train;
   /// Neighbor NTN cells listed in SIB19.
   static_vector<ntn_neighbor_cell_config, MAX_NOF_NTN_NEIGHBORS> ncells;
 };
