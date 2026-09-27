@@ -3,6 +3,7 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "du_high_config_validator.h"
+#include "ocudu/ran/prs/prs.h"
 #include "ocudu/adt/format.h"
 #include "ocudu/ran/duplex_mode.h"
 #include "ocudu/ran/nr_cell_identity.h"
@@ -357,6 +358,54 @@ static bool validate_pdsch_cell_unit_config(const du_high_unit_pdsch_config& con
     return false;
   }
 
+  return true;
+}
+
+/// Validates the DL-PRS configuration against TS 38.211 Section 7.4.1.7 and TS 38.214 Section 5.1.6.5. Returns true on
+/// success. Placement against SSB and SIB1 is checked by the scheduler cell validator, which has the derived slots.
+static bool validate_prs_cell_unit_config(const du_high_unit_prs_config& config,
+                                          subcarrier_spacing             scs_common,
+                                          unsigned                       cell_bw_crbs)
+{
+  if (not prs_valid_period(config.period_slots, scs_common)) {
+    fmt::print("prs: period_slots={} is not 2^mu x {{4, 5, 8, ..., 10240}} for {} (TS 38.211 Section 7.4.1.7.4).\n",
+               config.period_slots,
+               to_string(scs_common));
+    return false;
+  }
+  if (config.set_slot_offset >= config.period_slots) {
+    fmt::print("prs: set_slot_offset={} must be below period_slots={}.\n", config.set_slot_offset, config.period_slots);
+    return false;
+  }
+  if (config.comb_offset >= config.comb_size) {
+    fmt::print("prs: comb_offset={} must be below comb_size={} (TS 38.211 Section 7.4.1.7.3).\n",
+               config.comb_offset,
+               config.comb_size);
+    return false;
+  }
+  // {L_PRS, K_comb} pairs of TS 38.211 Section 7.4.1.7.3 that the PHY supports (all but the Rel-18 L_PRS = 1 ones).
+  if (not prs_valid_num_symbols_and_comb_size(static_cast<prs_num_symbols>(config.nof_symbols),
+                                              static_cast<prs_comb_size>(config.comb_size))) {
+    fmt::print("prs: nof_symbols={} with comb_size={} is not a combination allowed by TS 38.211 Section 7.4.1.7.3.\n",
+               config.nof_symbols,
+               config.comb_size);
+    return false;
+  }
+  if (config.start_symbol + config.nof_symbols > NOF_OFDM_SYM_PER_SLOT_NORMAL_CP) {
+    fmt::print("prs: start_symbol={} + nof_symbols={} exceeds the slot.\n", config.start_symbol, config.nof_symbols);
+    return false;
+  }
+  // TS 38.214 Section 5.1.6.5: 24 to 272 PRBs in steps of 4, all within the carrier.
+  const unsigned nof_prbs =
+      config.nof_prbs.value_or(std::min(272U, (cell_bw_crbs > config.start_prb ? cell_bw_crbs - config.start_prb : 0U) / 4 * 4));
+  if (nof_prbs < 24 or nof_prbs > 272 or nof_prbs % 4 != 0) {
+    fmt::print("prs: {} PRBs is not 24 to 272 in steps of 4 (TS 38.214 Section 5.1.6.5).\n", nof_prbs);
+    return false;
+  }
+  if (config.start_prb + nof_prbs > cell_bw_crbs) {
+    fmt::print("prs: PRBs [{}, {}) exceed the carrier's {} CRBs.\n", config.start_prb, config.start_prb + nof_prbs, cell_bw_crbs);
+    return false;
+  }
   return true;
 }
 
@@ -1709,6 +1758,10 @@ static bool validate_base_cell_unit_config(const du_high_unit_base_cell_config& 
   }
 
   if (!validate_csi_cell_unit_config(config.csi_cfg, config.common_scs, nof_crbs, config.tdd_ul_dl_cfg)) {
+    return false;
+  }
+
+  if (config.prs_cfg.has_value() and !validate_prs_cell_unit_config(*config.prs_cfg, config.common_scs, nof_crbs)) {
     return false;
   }
 

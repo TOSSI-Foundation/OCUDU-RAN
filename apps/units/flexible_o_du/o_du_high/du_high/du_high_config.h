@@ -1222,6 +1222,38 @@ struct du_high_unit_cell_slice_config {
   du_high_unit_cell_slice_sched_config sched_cfg;
 };
 
+
+/// \brief DL-PRS of the cell: one resource set with one resource, no repetition, no muting.
+///
+/// Each field is the TS 38.211 Section 7.4.1.7 parameter; the value sets are those of TS 38.211/38.214 and the LPP
+/// NR-DL-PRS-Info (TS 37.355), so the same numbers go to the scheduler and to the LMF.
+struct du_high_unit_prs_config {
+  /// Resource set periodicity in slots, 2^mu x {4, 5, 8, 10, 16, 20, 32, 40, 64, 80, 160, ..., 10240}.
+  unsigned period_slots = 160;
+  /// Resource set slot offset with respect to SFN0 slot0, {0, ..., period_slots - 1}.
+  unsigned set_slot_offset = 0;
+  /// Resource slot offset within the set, {0, ..., 511}.
+  unsigned resource_slot_offset = 0;
+  /// dl-PRS-SequenceID, {0, ..., 4095}.
+  unsigned n_id = 0;
+  /// Comb size, {2, 4, 6, 12}.
+  unsigned comb_size = 4;
+  /// RE offset, {0, ..., comb_size - 1}.
+  unsigned comb_offset = 0;
+  /// Number of symbols, {2, 4, 6, 12}; must be a multiple of the comb size (TS 38.211 Table 7.4.1.7.3 pairs).
+  unsigned nof_symbols = 4;
+  /// First symbol in the slot, {0, ..., 12}.
+  unsigned start_symbol = 2;
+  /// First PRB with respect to Point A.
+  unsigned start_prb = 0;
+  /// Number of PRBs, 24 to 272 in steps of 4. Empty: the largest such value that fits the carrier.
+  std::optional<unsigned> nof_prbs;
+  /// Declared EPRE in dBm, {-60, ..., 50}, reported to the LMF as dl-PRS-ResourcePower.
+  int tx_power_dbm = 0;
+  /// Power offset applied by the PHY, in dB.
+  std::optional<float> power_offset_db;
+};
+
 /// Base cell configuration.
 struct du_high_unit_base_cell_config {
   /// Physical cell identifier.
@@ -1283,6 +1315,8 @@ struct du_high_unit_base_cell_config {
   du_high_unit_phy_cell_group_config pcg_cfg;
   /// Geographical coordinates of the cell/TRP antenna, reported in the F1AP TRP Information Response.
   std::optional<du_high_unit_cell_geo_coordinates_config> geo_coordinates_cfg;
+  /// DL-PRS transmitted by the cell (TS 38.211 Section 7.4.1.7), also reported in the TRP Information Response.
+  std::optional<du_high_unit_prs_config> prs_cfg;
   /// MAC Cell Gropup parameters.
   du_high_unit_mac_cell_group_config mcg_cfg;
   /// TDD slot configuration.

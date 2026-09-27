@@ -2622,6 +2622,54 @@ static void configure_cli11_geo_coordinates_args(CLI::App&                      
   });
 }
 
+static void configure_cli11_prs_args(CLI::App& app, std::optional<du_high_unit_prs_config>& prs_cfg)
+{
+  // Same lifetime trick as geo_coordinates: a per-cell heap instance owned by the callback, emplaced only when the
+  // "prs" block is actually present.
+  auto cfg = std::make_shared<du_high_unit_prs_config>();
+  // Value sets: TS 38.211 Section 7.4.1.7 and TS 38.214 Section 5.1.6.5. Periodicities are listed for every
+  // numerology here; the scheduler cell validator rejects one that is not 2^mu x the 15 kHz set for this cell.
+  add_option(app, "--period_slots", cfg->period_slots, "PRS resource set periodicity in slots")
+      ->capture_default_str()
+      ->check(CLI::IsMember({4, 5, 8, 10, 16, 20, 32, 40, 64, 80, 128, 160, 256, 320, 512, 640, 1280, 2560, 5120,
+                             10240, 20480, 40960, 81920}));
+  add_option(app, "--set_slot_offset", cfg->set_slot_offset, "PRS resource set slot offset from SFN0 slot0")
+      ->capture_default_str()
+      ->check(CLI::Range(0, 81919));
+  add_option(app, "--resource_slot_offset", cfg->resource_slot_offset, "PRS resource slot offset within the set")
+      ->capture_default_str()
+      ->check(CLI::Range(0, 511));
+  add_option(app, "--n_id", cfg->n_id, "dl-PRS-SequenceID")->capture_default_str()->check(CLI::Range(0, 4095));
+  add_option(app, "--comb_size", cfg->comb_size, "PRS comb size")
+      ->capture_default_str()
+      ->check(CLI::IsMember({2, 4, 6, 12}));
+  add_option(app, "--comb_offset", cfg->comb_offset, "PRS RE offset, below comb_size")
+      ->capture_default_str()
+      ->check(CLI::Range(0, 11));
+  add_option(app, "--nof_symbols", cfg->nof_symbols, "Number of PRS symbols")
+      ->capture_default_str()
+      ->check(CLI::IsMember({2, 4, 6, 12}));
+  add_option(app, "--start_symbol", cfg->start_symbol, "First PRS symbol in the slot")
+      ->capture_default_str()
+      ->check(CLI::Range(0, 12));
+  add_option(app, "--start_prb", cfg->start_prb, "First PRS PRB with respect to Point A")
+      ->capture_default_str()
+      ->check(CLI::Range(0, 2176));
+  add_option(app, "--nof_prbs", cfg->nof_prbs, "Number of PRS PRBs, 24 to 272 in steps of 4; default fills the carrier")
+      ->check(CLI::Range(24, 272));
+  add_option(app, "--tx_power_dbm", cfg->tx_power_dbm, "Declared PRS EPRE in dBm, reported to the LMF")
+      ->capture_default_str()
+      ->check(CLI::Range(-60, 50));
+  add_option(app, "--power_offset_db", cfg->power_offset_db, "PRS power offset applied by the PHY, in dB");
+
+  app.parse_complete_callback([&app, &prs_cfg, cfg]() {
+    if (app.count() == 0) {
+      return;
+    }
+    prs_cfg = *cfg;
+  });
+}
+
 static void configure_cli11_common_cell_args(CLI::App& app, du_high_unit_base_cell_config& cell_params)
 {
   add_option(app, "--pci", cell_params.pci, "PCI")->capture_default_str()->check(CLI::Range(0, 1007));
@@ -2751,6 +2799,10 @@ static void configure_cli11_common_cell_args(CLI::App& app, du_high_unit_base_ce
   CLI::App* geo_coordinates_subcmd = add_subcommand(
       app, "geo_coordinates", "Geographical coordinates of the cell/TRP antenna, TS 38.473, Section 9.3.1.184");
   configure_cli11_geo_coordinates_args(*geo_coordinates_subcmd, cell_params.geo_coordinates_cfg);
+
+  // DL-PRS of the cell.
+  CLI::App* prs_subcmd = add_subcommand(app, "prs", "DL-PRS of the cell, TS 38.211 Section 7.4.1.7");
+  configure_cli11_prs_args(*prs_subcmd, cell_params.prs_cfg);
 
   // MAC Cell group parameters.
   CLI::App* mcg_subcmd = add_subcommand(app, "mac_cell_group", "MAC Cell Group parameters")->configurable();

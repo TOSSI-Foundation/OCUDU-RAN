@@ -148,3 +148,7 @@ target_link_libraries(precoding_matrix_resource_grid_test
         GTest::gtest
         ocudu_gtest_main)
 add_test(precoding_matrix_resource_grid_test precoding_matrix_resource_grid_test)
+
+add_executable(prs_occasion_test prs/prs_occasion_test.cpp)
+target_link_libraries(prs_occasion_test ocudu_support GTest::gtest GTest::gtest_main)
+gtest_discover_tests(prs_occasion_test)

@@ -37,10 +37,11 @@ static ng_ran_high_accuracy_access_point_position_t
 make_trp_geo_coordinates_ha(const du_high_unit_cell_geo_coordinates_ha_config& cfg)
 {
   ng_ran_high_accuracy_access_point_position_t position;
-  // TS 23.032, Section 6.1a: N = floor((X/90)*2^31), X being the latitude in degrees [-90, 90].
-  position.latitude = static_cast<int64_t>(std::floor((cfg.latitude / 90.0) * 2147483648.0));
-  // TS 23.032, Section 6.1a: N = floor((X/180)*2^31), X being the longitude in degrees [-180, 180].
-  position.longitude = static_cast<int64_t>(std::floor((cfg.longitude / 180.0) * 2147483648.0));
+  // TS 23.032, Section 6.1a: N = floor((X/90)*2^31), X being the latitude in degrees [-90, 90], and N =
+  // floor((X/180)*2^31) for the longitude in degrees [-180, 180].
+  static constexpr int64_t max_n = 2147483647;
+  position.latitude  = std::min(static_cast<int64_t>(std::floor((cfg.latitude / 90.0) * 2147483648.0)), max_n);
+  position.longitude = std::min(static_cast<int64_t>(std::floor((cfg.longitude / 180.0) * 2147483648.0)), max_n);
   // TS 23.032, Section 6.3a: a = N*2^-7, a being the altitude in metres [-500, 10000].
   position.altitude                  = static_cast<int32_t>(std::lround(cfg.altitude * 128.0));
   position.uncertainty_semi_major    = cfg.uncertainty_semi_major;
@@ -750,6 +751,28 @@ std::vector<odu::du_cell_config> ocudu::generate_du_cell_config(const du_high_un
     // Geographical coordinates of the cell/TRP antenna.
     if (base_cell.geo_coordinates_cfg.has_value()) {
       out_cell.trp_geo_coordinates = make_trp_geo_coordinates(base_cell.geo_coordinates_cfg.value());
+    }
+
+    // DL-PRS of the cell. The PRB range is relative to Point A, i.e. CRB0 of the carrier.
+    if (base_cell.prs_cfg.has_value()) {
+      const du_high_unit_prs_config& prs      = *base_cell.prs_cfg;
+      const unsigned                 nof_crbs = band_helper::get_n_rbs_from_bw(
+          base_cell.channel_bw_mhz, base_cell.common_scs, freq_range);
+      // Default: the largest multiple of 4 that fits, capped at 272 (TS 38.214 Section 5.1.6.5). A carrier too
+      // narrow for 24 PRBs yields a range the scheduler cell validator rejects.
+      const unsigned nof_prbs =
+          prs.nof_prbs.value_or(std::min(272U, (nof_crbs > prs.start_prb ? nof_crbs - prs.start_prb : 0U) / 4 * 4));
+      out_cell.ran.prs = prs_cell_config{.period_slots         = prs.period_slots,
+                                         .set_slot_offset      = prs.set_slot_offset,
+                                         .resource_slot_offset = prs.resource_slot_offset,
+                                         .n_id                 = prs.n_id,
+                                         .comb_size            = static_cast<prs_comb_size>(prs.comb_size),
+                                         .comb_offset          = prs.comb_offset,
+                                         .nof_symbols          = static_cast<prs_num_symbols>(prs.nof_symbols),
+                                         .start_symbol         = prs.start_symbol,
+                                         .crbs                 = crb_interval{prs.start_prb, prs.start_prb + nof_prbs},
+                                         .tx_power_dbm         = prs.tx_power_dbm,
+                                         .power_offset_db      = prs.power_offset_db};
     }
 
     // MAC Cell Group Config parameters.

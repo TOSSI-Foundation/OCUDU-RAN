@@ -11,6 +11,7 @@
 #include "common_scheduling/ra_scheduler.h"
 #include "common_scheduling/si_scheduler.h"
 #include "common_scheduling/ssb_scheduler.h"
+#include "common_scheduling/prs_scheduler.h"
 #include "config/cell_configuration.h"
 #include "logging/cell_event_tracer.h"
 #include "logging/cell_metrics_handler.h"
@@ -87,6 +88,7 @@ private:
   ocudulog::basic_logger&                        logger;
 
   ssb_scheduler                 ssb_sch;
+  prs_scheduler                 prs_sch;
   pdcch_resource_allocator_impl pdcch_sch;
   si_scheduler                  si_sch;
   csi_rs_scheduler              csi_sch;

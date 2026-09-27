@@ -6,6 +6,7 @@
 
 #include "ocudu/adt/stable_id_map.h"
 #include "ocudu/scheduler/result/csi_rs_info.h"
+#include "ocudu/scheduler/result/prs_info.h"
 #include "ocudu/scheduler/result/pdcch_info.h"
 #include "ocudu/scheduler/result/pdsch_info.h"
 #include "ocudu/scheduler/result/prach_info.h"
@@ -33,6 +34,8 @@ struct dl_sched_result {
   static_vector<dl_msg_alloc, MAX_UE_PDUS_PER_SLOT> ue_grants;
   /// Allocation of CSI-RS messages.
   static_vector<csi_rs_info, MAX_CSI_RS_PDUS_PER_SLOT> csi_rs;
+  /// DL-PRS transmissions (TS 38.211 Section 7.4.1.7).
+  static_vector<prs_info, MAX_PRS_PDUS_PER_SLOT> prs;
 };
 
 /// Scheduler decision made for UL in a given slot.

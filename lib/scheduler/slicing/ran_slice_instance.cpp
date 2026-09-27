@@ -43,8 +43,12 @@ void ran_slice_instance::slot_indication(slot_point slot_tx)
   pdsch_slot_to_clear = 0;
 
   // Recompute rate of UL allocation for slice and clear PUSCH RB count in previous slot.
-  auto& pusch_slot_to_clear = pusch_rb_count_per_slot[(slot_tx + min_k2 - 1 + cell_cfg->ntn_cs_koffset).to_uint() %
-                                                      pusch_rb_count_per_slot.size()];
+  // ntn_cs_koffset must be included: PUSCH is stored and read at slot_tx + k2 + ntn_cs_koffset (see
+  // inter_slice_scheduler), so without it the cleared entry trails the read entry by koffset slots and the reads
+  // return a stale count from the previous ring cycle.
+  auto& pusch_slot_to_clear =
+      pusch_rb_count_per_slot[(slot_tx + min_k2 - 1 + cell_cfg->ntn_cs_koffset).to_uint() %
+                              pusch_rb_count_per_slot.size()];
   avg_pusch_rbs_per_slot += exp_avg_coeff * (pusch_slot_to_clear - avg_pusch_rbs_per_slot);
   pusch_slot_to_clear = 0;
 

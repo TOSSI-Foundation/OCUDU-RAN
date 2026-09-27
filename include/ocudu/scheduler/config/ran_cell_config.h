@@ -9,6 +9,7 @@
 #include "ocudu/ran/dmrs/dmrs.h"
 #include "ocudu/ran/n_ta_offset.h"
 #include "ocudu/ran/pci.h"
+#include "ocudu/ran/prs/prs.h"
 #include "ocudu/ran/ssb/ssb_configuration.h"
 #include "ocudu/ran/tdd/tdd_ul_dl_config.h"
 #include "ocudu/scheduler/config/bwp_builder_params.h"
@@ -41,6 +42,8 @@ struct ran_cell_config {
   std::optional<ntn_cell_params> ntn_params;
   /// Cell time advance offset - parameter \f$N_{TA,offset}\f$ in TS38.211 Section 4.3.3.
   n_ta_offset ta_offset = n_ta_offset::n0;
+  /// DL-PRS transmitted by this cell (TS 38.211 Section 7.4.1.7). When empty, the cell sends no PRS.
+  std::optional<prs_cell_config> prs;
 };
 
 } // namespace ocudu

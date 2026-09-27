@@ -8,6 +8,10 @@
 #include "../support/prbs_calculator.h"
 #include "ocudu/adt/format.h"
 #include "ocudu/ran/band_helper.h"
+#include "ocudu/ran/prs/prs.h"
+#include "ocudu/ran/sib/sib_helper.h"
+#include "ocudu/ran/ssb/ssb_helper.h"
+#include "ocudu/support/enum_utils.h"
 #include "ocudu/ran/duplex_mode.h"
 #include "ocudu/ran/prach/prach_configuration.h"
 #include "ocudu/ran/prach/prach_helper.h"
@@ -18,6 +22,8 @@
 #include "ocudu/scheduler/config/serving_cell_config_validator.h"
 #include "ocudu/scheduler/config/time_domain_resource_helper.h"
 #include "ocudu/scheduler/sched_consts.h"
+#include <algorithm>
+#include <numeric>
 
 using namespace ocudu;
 using namespace config_validators;
@@ -260,6 +266,85 @@ static error_type<std::string> validate_sib1_cfg(const sched_cell_configuration_
   return {};
 }
 
+/// Whether a PRS occasion (every \c prs_period slots from \c prs_offset) can fall on one of \c slots, repeating every
+/// \c period. Walks one full cycle of the two periods.
+static std::optional<unsigned>
+prs_meets(unsigned prs_offset, unsigned prs_period, span<const unsigned> slots, unsigned period)
+{
+  const unsigned steps = period / std::gcd(prs_period, period);
+  for (unsigned k = 0; k != steps; ++k) {
+    const unsigned n = (prs_offset + k * prs_period) % period;
+    if (std::find(slots.begin(), slots.end(), n) != slots.end()) {
+      return n;
+    }
+  }
+  return std::nullopt;
+}
+
+/// DL-PRS placement, on top of the value checks already done on the configuration.
+static error_type<std::string> validate_prs_cfg(const sched_cell_configuration_request_message& msg,
+                                                const scheduler_expert_config&                  expert_cfg)
+{
+  if (not msg.ran.prs.has_value()) {
+    return {};
+  }
+  const prs_cell_config&   prs = *msg.ran.prs;
+  const bwp_configuration& bwp = msg.ran.dl_cfg_common.init_dl_bwp.generic_params;
+  const auto&              pdcch_common = msg.ran.dl_cfg_common.init_dl_bwp.pdcch_common;
+
+  VERIFY(prs_valid_period(prs.period_slots, bwp.scs),
+         "PRS period={} slots is not allowed for SCS={} (TS 38.211 Section 7.4.1.7.4)",
+         prs.period_slots,
+         to_string(bwp.scs));
+  VERIFY(prs.crbs.length() >= 24 and prs.crbs.length() <= 272 and prs.crbs.length() % 4 == 0,
+         "PRS bandwidth={} PRBs is not 24 to 272 in steps of 4 (TS 38.214 Section 5.1.6.5)",
+         prs.crbs.length());
+  VERIFY(prs.crbs.start() >= bwp.crbs.start() and prs.crbs.stop() <= bwp.crbs.stop(),
+         "PRS PRBs {} are not inside the DL BWP {}",
+         prs.crbs,
+         bwp.crbs);
+  // Not a 3GPP rule, a scheduling one: PRS on the CORESET#0 symbols would block the common PDCCH in every PRS slot.
+  if (pdcch_common.coreset0.has_value()) {
+    VERIFY(prs.start_symbol >= pdcch_common.coreset0->duration(),
+           "PRS start symbol={} overlaps CORESET#0 (symbols 0..{})",
+           prs.start_symbol,
+           pdcch_common.coreset0->duration() - 1);
+  }
+
+  const unsigned slots_per_sf = get_nof_slots_per_subframe(bwp.scs);
+  const unsigned prs_offset   = prs.set_slot_offset + prs.resource_slot_offset;
+
+  // TS 38.211 Section 7.4.1.7.3 maps PRS only to symbols no SS/PBCH block uses. A PRS PDU covers one contiguous symbol
+  // range, so rather than transmit a PRS with a hole the UE would not expect, never let an occasion reach an SSB slot.
+  const std::vector<unsigned> ssb_slots =
+      ssb_helper::get_occupied_slot_offsets(msg.ran.ssb_cfg, msg.ran.dl_carrier.band, bwp.scs);
+  const unsigned ssb_period = to_value(msg.ran.ssb_cfg.ssb_period) * slots_per_sf;
+  if (auto n = prs_meets(prs_offset, prs.period_slots, ssb_slots, ssb_period)) {
+    return make_unexpected(fmt::format("PRS occasions (period={}, offset={}) meet the SSB in slot {} of every SSB "
+                                       "period; TS 38.211 Section 7.4.1.7.3 excludes SSB symbols from PRS",
+                                       prs.period_slots,
+                                       prs_offset,
+                                       *n));
+  }
+
+  // A PRS over the carrier would leave SIB1 no room in its slot.
+  if (pdcch_common.get_searchspace0().has_value() and pdcch_common.get_coreset0().has_value()) {
+    const sib_helper::sib1_sched_occations sib1 =
+        sib_helper::get_occupied_slot_offsets(msg.ran.ssb_cfg,
+                                              msg.ran.dl_carrier.band,
+                                              bwp.scs,
+                                              *pdcch_common.get_searchspace0(),
+                                              pdcch_common.get_coreset0()->value(),
+                                              expert_cfg.si.sib1_retx_period);
+    if (auto n = prs_meets(prs_offset, prs.period_slots, sib1.slot_offsets, sib1.window_period_slots)) {
+      return make_unexpected(fmt::format(
+          "PRS occasions (period={}, offset={}) meet SIB1 in slot {} of every {} slots", prs.period_slots, prs_offset, *n,
+          sib1.window_period_slots));
+    }
+  }
+  return {};
+}
+
 static error_type<std::string> validate_paging_cfg(const scheduler_expert_config& expert_cfg)
 {
   static constexpr pdsch_mcs_table mcs_table = ocudu::pdsch_mcs_table::qam64;
@@ -296,6 +381,8 @@ error_type<std::string> config_validators::validate_sched_cell_configuration_req
   HANDLE_CODE(validate_sib1_cfg(msg, expert_cfg));
 
   HANDLE_CODE(validate_paging_cfg(expert_cfg));
+
+  HANDLE_CODE(validate_prs_cfg(msg, expert_cfg));
 
   if (msg.ran.init_bwp.csi.has_value()) {
     const auto csi_helper          = config_helpers::make_csi_meas_config_builder_params(msg.ran);

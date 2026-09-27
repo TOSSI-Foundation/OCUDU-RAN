@@ -5,6 +5,7 @@
 
 set(SOURCES
         csi_rs.cpp
+        prs.cpp
         pdcch.cpp
         pdsch.cpp
         prach.cpp
