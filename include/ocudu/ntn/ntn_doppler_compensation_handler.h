@@ -23,13 +23,25 @@ struct doppler_compensation_request {
   std::optional<time_point> start_timestamp;
 };
 
+/// Structure used to drive an emulated NTN channel from the propagated satellite geometry.
+///
+/// Only a simulated radio consumes this. It exists so the channel a UE flies through is derived from the same
+/// ephemeris the gNB broadcasts in SIB19, rather than from an orbit model private to the simulator.
 struct ntn_channel_emulation_request {
-  unsigned                  sector_id = 0;
-  std::chrono::microseconds rx_delay{0};
-  double                    delay_drift_us_per_s   = 0.0;
-  double                    service_drift_us_per_s = 0.0;
-  bool                      emulate_doppler        = false;
-  bool                      link_up                = true;
+  /// Sector Id to which the request applies.
+  unsigned sector_id = 0;
+  // \brief Delay applied to the receive path of the emulated channel: the uplink leg.
+  std::chrono::duration<double, std::micro> rx_delay{0};
+  /// Rate of change of that delay, in microseconds per second. The radio turns this into a Doppler shift using
+  /// its own centre frequencies, so the NTN layer does not need to know the carriers.
+  double delay_drift_us_per_s = 0.0;
+  // \brief Rate of change of the SERVICE leg alone, in microseconds per second, for the Doppler shift.
+  double service_drift_us_per_s = 0.0;
+  /// Whether the radio should also rotate the carrier by the service-link Doppler. Only correct when the UE
+  /// compensates it too - see du_high_unit_ntn_serving_cell_config.
+  bool emulate_doppler = false;
+  // \brief Whether the satellite is above the horizon at the reference location.
+  bool link_up = true;
 };
 
 /// \brief Interface for handling NTN Doppler compensation requests.
@@ -52,6 +64,7 @@ public:
   /// \return True if the request was successfully handled; false otherwise.
   virtual bool handle_ul_doppler_compensation(const doppler_compensation_request& request) = 0;
 
+  // \brief Handle an NTN channel emulation request.
   virtual bool handle_ntn_channel_emulation(const ntn_channel_emulation_request& request) { return false; }
 };
 

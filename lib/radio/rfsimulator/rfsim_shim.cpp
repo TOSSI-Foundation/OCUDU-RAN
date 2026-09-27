@@ -1,22 +1,24 @@
 // SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
 // SPDX-License-Identifier: BSD-3-Clause-Open-MPI
 
-#include "rfsim_shim.h"
-#include "PHY/TOOLS/tools_defs.h"
-#include "common/config/config_userapi.h"
-#include "common/utils/LOG/log.h"
-#include "openair1/SIMULATION/TOOLS/sim.h"
-#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <algorithm>
 #include <map>
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include "rfsim_shim.h"
+
+#include "common/config/config_userapi.h"
+#include "common/utils/LOG/log.h"
+#include "openair1/SIMULATION/TOOLS/sim.h"
+#include "PHY/TOOLS/tools_defs.h"
 extern "C" {
 #include "radio/rfsimulator/rfsimulator.h"
 }
@@ -55,7 +57,13 @@ static std::map<std::string, std::string>& overrides()
   return m;
 }
 
-void ocudu::rfsim_config_set(const char *name, const char *value) { overrides()[name] = value; }
+void ocudu::rfsim_config_set(const char *name, const char *value)
+{
+  overrides()[name] = value;
+  if (strcmp(name, "ntn_dl_share") == 0) {
+    ocudu::rfsim_set_ntn_dl_share(atof(value));
+  }
+}
 
 configmodule_interface_t *rfsim_config_get_if(void)
 {
@@ -111,6 +119,9 @@ int config_get(configmodule_interface_t *cfg, paramdef_t *params, int numparams,
         p->dblptr  = new double(val ? strtod(val, nullptr) : p->defdblval);
         break;
       case TYPE_STRINGLIST: {
+        // The vendored simulator walks this list to enable its options, so an override like "options=chanmod"
+        // has to arrive as a list rather than being dropped. Values are separated by ':' since device_args
+        // already uses ',' and ' ' to split one argument from the next.
         p->strlistptr = nullptr;
         p->numelt     = 0;
         if (val == nullptr) {
@@ -152,15 +163,22 @@ int config_getlist(configmodule_interface_t *, paramlist_def_t *, paramdef_t *, 
   return -1;
 }
 
+// ----------------------------------------------------------------------------------------------------------
+// ----- NTN channel model.
+
 namespace {
 
 struct ntn_link_state {
-  std::atomic<double>   rx_delay_us{0.0};
+  std::atomic<double> rx_delay_us{0.0};
+  // Rate of change of that delay.
   std::atomic<double>   drift_us_per_s{0.0};
   std::atomic<uint64_t> base_ts{0};
   std::atomic<bool>     base_ts_valid{false};
   std::atomic<double>   doppler_hz{0.0};
+  // Fraction of the round trip carried by the downlink rather than the receive path.
+  std::atomic<double>   dl_share{0.0};
   std::atomic<bool>     active{false};
+  /// False once the satellite has set. The receive path then carries nothing.
   std::atomic<bool>     link_up{true};
 };
 
@@ -170,6 +188,8 @@ ntn_link_state& ntn_link()
   return state;
 }
 
+/// Sampling rate reported by the rfsimulator at load_channellist() time, needed to turn a delay in microseconds
+/// into a sample count and a Doppler shift into a per-sample phase increment.
 double& channel_sampling_rate()
 {
   static double sample_rate = 0.0;
@@ -182,6 +202,8 @@ int& channel_nb_tx()
   return nb_tx;
 }
 
+/// Models are created on demand and live for the process. The rfsimulator asks for one per connected peer by
+/// name and never expects to outlive them.
 std::map<std::string, channel_desc_t*>& channel_models()
 {
   static std::map<std::string, channel_desc_t*> models;
@@ -190,21 +212,51 @@ std::map<std::string, channel_desc_t*>& channel_models()
 
 channel_desc_t* make_model(const std::string& name)
 {
-  auto* desc           = new channel_desc_t{};
-  desc->model_name     = strdup(name.c_str());
+  auto* desc          = new channel_desc_t{};
+  desc->model_name    = strdup(name.c_str());
   desc->channel_length = 1;
-  desc->nb_tx          = channel_nb_tx();
-  desc->sampling_rate  = channel_sampling_rate();
+  desc->nb_tx         = channel_nb_tx();
+  desc->sampling_rate = channel_sampling_rate();
   return desc;
 }
 
 } // namespace
+
+namespace {
+
+/// The whole emulated round trip at sample timestamp TS, extrapolated from the last update with its drift.
+/// Returns a negative value when there is no geometry to apply.
+double round_trip_us_at(uint64_t TS, double sample_rate)
+{
+  if (!ntn_link().active.load(std::memory_order_acquire) || sample_rate <= 0.0) {
+    return -1.0;
+  }
+  // Anchor the extrapolation to the first read or write after each update.
+  if (!ntn_link().base_ts_valid.load(std::memory_order_relaxed)) {
+    ntn_link().base_ts.store(TS, std::memory_order_relaxed);
+    ntn_link().base_ts_valid.store(true, std::memory_order_relaxed);
+  }
+  const uint64_t base_ts   = ntn_link().base_ts.load(std::memory_order_relaxed);
+  const double   elapsed_s = (TS > base_ts) ? static_cast<double>(TS - base_ts) / sample_rate : 0.0;
+  const double   drift     = ntn_link().drift_us_per_s.load(std::memory_order_relaxed);
+  return ntn_link().rx_delay_us.load(std::memory_order_relaxed) + drift * elapsed_s;
+}
+
+} // namespace
+
+void ocudu::rfsim_set_ntn_dl_share(double share)
+{
+  const double clamped = std::min(std::max(share, 0.0), 1.0);
+  ntn_link().dl_share.store(clamped, std::memory_order_relaxed);
+  rfsim_log(OAILOG_INFO, 0, "NTN channel: %.0f%% of the round trip carried by the downlink\n", clamped * 100.0);
+}
 
 void ocudu::rfsim_set_ntn_channel(double rx_delay_us, double drift_us_per_s, bool link_up)
 {
   ntn_link().link_up.store(link_up, std::memory_order_relaxed);
   ntn_link().rx_delay_us.store(rx_delay_us, std::memory_order_relaxed);
   ntn_link().drift_us_per_s.store(drift_us_per_s, std::memory_order_relaxed);
+  // Re-anchor: the next read extrapolates from this sample, not from the previous update's.
   ntn_link().base_ts_valid.store(false, std::memory_order_relaxed);
   ntn_link().active.store(true, std::memory_order_release);
 }
@@ -242,24 +294,13 @@ channel_desc_t* find_channel_desc_fromname(const char* name)
   return desc;
 }
 
-channel_desc_t* new_channel_desc_scm(uint8_t nb_tx,
-                                     uint8_t,
-                                     SCM_t,
-                                     double sr,
-                                     double,
-                                     double,
-                                     double,
-                                     double,
-                                     int,
-                                     double,
-                                     uint64_t off,
-                                     double,
-                                     float)
+channel_desc_t* new_channel_desc_scm(uint8_t nb_tx, uint8_t, SCM_t, double sr, double, double, double, double, int,
+                                     double, uint64_t off, double, float)
 {
-  channel_desc_t* desc = make_model("");
-  desc->nb_tx          = (nb_tx > 0) ? nb_tx : 1;
-  desc->sampling_rate  = (sr > 0.0) ? sr : channel_sampling_rate();
-  desc->channel_offset = off;
+  channel_desc_t* desc  = make_model("");
+  desc->nb_tx           = (nb_tx > 0) ? nb_tx : 1;
+  desc->sampling_rate   = (sr > 0.0) ? sr : channel_sampling_rate();
+  desc->channel_offset  = off;
   return desc;
 }
 
@@ -268,6 +309,7 @@ void free_channel_desc_scm(channel_desc_t* desc)
   if (desc == nullptr) {
     return;
   }
+  // Only free a descriptor that is not in the by-name table; those are owned for the life of the process.
   for (const auto& entry : channel_models()) {
     if (entry.second == desc) {
       return;
@@ -293,22 +335,16 @@ void set_channeldesc_direction(channel_desc_t* desc, int is_uplink)
   }
 }
 
-int random_channel(channel_desc_t*, uint8_t)
-{
-  return 0;
-}
+int  random_channel(channel_desc_t*, uint8_t) { return 0; }
 void set_channeldesc_owner(channel_desc_t*, int) {}
-int  modelid_fromstrtype(const char*)
-{
-  return 0;
-}
-int modelid_fromstrmodeltype(char*)
-{
-  return 0;
-}
+int  modelid_fromstrtype(const char*) { return 0; }
+int  modelid_fromstrmodeltype(char*) { return 0; }
 
 extern "C" {
 
+/// Called once per read, before the samples are pulled, so the delay and Doppler track the satellite across the
+/// pass. The geometry comes from the NTN configuration manager's propagation of the configured ephemeris; TS is
+/// used only to extrapolate between its updates.
 void update_channel_model(channel_desc_t* desc, int nbSamples, uint64_t TS)
 {
   (void)nbSamples;
@@ -316,34 +352,45 @@ void update_channel_model(channel_desc_t* desc, int nbSamples, uint64_t TS)
     return;
   }
   const double sample_rate = (desc->sampling_rate > 0.0) ? desc->sampling_rate : channel_sampling_rate();
-  if (sample_rate <= 0.0) {
+  const double round_trip_us = round_trip_us_at(TS, sample_rate);
+  if (round_trip_us < 0.0) {
     return;
   }
+  const double delay_us = round_trip_us * (1.0 - ntn_link().dl_share.load(std::memory_order_relaxed));
+  desc->channel_offset  = static_cast<uint64_t>(std::llround(std::max(delay_us, 0.0) * 1e-6 * sample_rate));
 
-  if (!ntn_link().base_ts_valid.load(std::memory_order_relaxed)) {
-    ntn_link().base_ts.store(TS, std::memory_order_relaxed);
-    ntn_link().base_ts_valid.store(true, std::memory_order_relaxed);
-  }
-  const uint64_t base_ts   = ntn_link().base_ts.load(std::memory_order_relaxed);
-  const double   elapsed_s = (TS > base_ts) ? static_cast<double>(TS - base_ts) / sample_rate : 0.0;
-  const double   drift     = ntn_link().drift_us_per_s.load(std::memory_order_relaxed);
-  const double   delay_us  = ntn_link().rx_delay_us.load(std::memory_order_relaxed) + drift * elapsed_s;
-  desc->channel_offset     = static_cast<uint64_t>(std::llround(std::max(delay_us, 0.0) * 1e-6 * sample_rate));
-
-  const double doppler    = ntn_link().doppler_hz.load(std::memory_order_relaxed);
+  const double doppler   = ntn_link().doppler_hz.load(std::memory_order_relaxed);
   desc->doppler_phase_inc = 2.0 * M_PI * doppler / sample_rate;
 }
 
+/// The downlink delay this radio is emulating at TS, in samples. The vendored simulator puts it in every block
+/// header (RFSIM_OPT_NTN_DELAY) and the peer reads this stream that far behind.
+uint64_t ntn_tx_offset_samples(uint64_t TS)
+{
+  const double sample_rate   = channel_sampling_rate();
+  const double round_trip_us = round_trip_us_at(TS, sample_rate);
+  if (round_trip_us < 0.0) {
+    return 0;
+  }
+  const double delay_us = round_trip_us * ntn_link().dl_share.load(std::memory_order_relaxed);
+  return static_cast<uint64_t>(std::llround(std::max(delay_us, 0.0) * 1e-6 * sample_rate));
+}
+
+/// Applies the frequency rotation and accumulates into the caller's float scratch buffer, which it zeroes once
+/// per read before the first peer. The delay itself is already applied: the caller read the input starting at
+/// timestamp - channel_offset.
 void rxAddInput(c16_t** input_sig, cf_t* after_channel_sig, int rxAnt, channel_desc_t* channelDesc, int nbSamples)
 {
   if (channelDesc == nullptr || input_sig == nullptr || after_channel_sig == nullptr) {
     return;
   }
+  // A satellite below the horizon delivers nothing. The caller has already zeroed the accumulation buffer for
+  // this read, so returning without adding leaves silence.
   if (ntn_link().active.load(std::memory_order_acquire) && !ntn_link().link_up.load(std::memory_order_relaxed)) {
     return;
   }
 
-  const int ant   = (rxAnt >= 0 && rxAnt < RFSIM_SHIM_MAX_RX_ANT) ? rxAnt : 0;
+  const int ant = (rxAnt >= 0 && rxAnt < RFSIM_SHIM_MAX_RX_ANT) ? rxAnt : 0;
   const int nb_tx = (channelDesc->nb_tx > 0) ? channelDesc->nb_tx : 1;
 
   double       phase     = channelDesc->doppler_phase[ant];
@@ -360,22 +407,15 @@ void rxAddInput(c16_t** input_sig, cf_t* after_channel_sig, int rxAnt, channel_d
     phase += phase_inc;
   }
 
+  // Keep the phase bounded so it does not lose precision over a long pass.
   channelDesc->doppler_phase[ant] = std::fmod(phase, 2.0 * M_PI);
 }
-}
 
-double get_noise_power_dBFS(void)
-{
-  return INVALID_DBFS_VALUE;
-}
-double gaussZiggurat(double, double)
-{
-  return 0.0;
-}
-void randominit(void) {}
-void set_taus_seed(unsigned int) {}
+} // extern "C"
 
-int32_t signal_energy(int32_t*, uint32_t)
-{
-  return 0;
-}
+double get_noise_power_dBFS(void) { return INVALID_DBFS_VALUE; }
+double gaussZiggurat(double, double) { return 0.0; }
+void   randominit(void) {}
+void   set_taus_seed(unsigned int) {}
+
+int32_t signal_energy(int32_t*, uint32_t) { return 0; }

@@ -60,8 +60,8 @@ static double compute_doppler_shift_rate_hz_per_s(double ta_common_drift_variant
 ///
 /// \return The reference location T_TA, or std::nullopt when the service link round trip is unavailable (no reference
 /// location).
-static std::optional<std::chrono::microseconds> compute_ref_location_ul_ta(const ntn_orbital_state& state,
-                                                                           const ntn_cell_config&   cell_cfg)
+static std::optional<std::chrono::duration<double, std::micro>>
+compute_ref_location_ul_ta_exact(const ntn_orbital_state& state, const ntn_cell_config& cell_cfg)
 {
   if (not cell_cfg.ntn_cfg) {
     return std::nullopt;
@@ -74,22 +74,32 @@ static std::optional<std::chrono::microseconds> compute_ref_location_ul_ta(const
   if (not ref_location.has_value()) {
     return std::nullopt;
   }
-  const std::optional<std::chrono::microseconds> service_link_rtt = compute_service_link_rtt(state, *ref_location);
+  const auto service_link_rtt = compute_service_link_rtt_exact(state, *ref_location);
   if (not service_link_rtt.has_value()) {
     return std::nullopt;
   }
 
-  std::chrono::microseconds ul_ta = *service_link_rtt;
+  std::chrono::duration<double, std::micro> ul_ta = *service_link_rtt;
   // Only add N_TA_adj_common where SIB19 actually broadcasts ta-Info, and with the offset it folds into taCommon-r17:
   // the cell-level one, falling back to the satellite TA-info override. The OCM computes ta-Info per satellite, so it
   // is also present for a cell without a feeder link, whose UE applies no N_TA_adj_common at all.
   if (cell_cfg.ntn_cfg->feeder_link_info.has_value() and state.ta_info.has_value()) {
     const double ta_common_offset_us =
         cell_cfg.ntn_cfg->ta_common_offset.value_or(state.ta_info->ta_common_offset.value_or(0.0));
-    const double ta_common_us = state.ta_info->ta_common + ta_common_offset_us;
-    ul_ta += std::chrono::microseconds{static_cast<int64_t>(std::lround(ta_common_us))};
+    ul_ta += std::chrono::duration<double, std::micro>{state.ta_info->ta_common + ta_common_offset_us};
   }
   return ul_ta;
+}
+
+/// Whole microseconds, for the scheduler (measurement-gap timing), where that is ample.
+static std::optional<std::chrono::microseconds> compute_ref_location_ul_ta(const ntn_orbital_state& state,
+                                                                           const ntn_cell_config&   cell_cfg)
+{
+  const auto ul_ta = compute_ref_location_ul_ta_exact(state, cell_cfg);
+  if (not ul_ta.has_value()) {
+    return std::nullopt;
+  }
+  return std::chrono::round<std::chrono::microseconds>(*ul_ta);
 }
 
 /// \brief Merges a sparse cell config update into a full cell config snapshot.
@@ -317,15 +327,16 @@ ntn_configuration_manager_impl::find_setting_time(const ntn_satellite_config&   
   if (!sat_cfg.epoch_timestamp) {
     return std::nullopt;
   }
+  // One scratch propagator for the whole search: it propagates in place, so a forward scan is incremental.
   ntn_orbital_compute_module probe(sat_cfg.propagator_type);
   probe.enqueue_ephemeris_info(ephemeris_info_update{*sat_cfg.epoch_timestamp, sat_cfg.ephemeris_info});
-  auto elev = [&](time_point t) {
-    return compute_service_link_elevation(probe.compute_orbital_state(t, 5, true), ref);
-  };
+  auto elev = [&](time_point t) { return compute_service_link_elevation(probe.compute_orbital_state(t, 5, true), ref); };
 
-  constexpr auto        step    = std::chrono::seconds(5);
-  constexpr auto        horizon = std::chrono::hours(3);
-  std::optional<double> e_prev  = elev(from);
+  // Coarse scan for a downward crossing, then bisect to 20 ms. 5 s steps cannot skip a LEO pass, which lasts
+  // minutes, and three hours is more than one orbit, so a satellite that sets at all is found.
+  constexpr auto step    = std::chrono::seconds(5);
+  constexpr auto horizon = std::chrono::hours(3);
+  std::optional<double> e_prev = elev(from);
   if (!e_prev) {
     return std::nullopt;
   }
@@ -335,6 +346,7 @@ ntn_configuration_manager_impl::find_setting_time(const ntn_satellite_config&   
     if (!e) {
       return std::nullopt;
     }
+    // Already below the threshold and still going down: hand over as soon as possible.
     if (t_prev == from && *e_prev <= elevation_deg && *e < *e_prev) {
       return from;
     }
@@ -369,6 +381,7 @@ void ntn_configuration_manager_impl::arm_next_sat_switch(const nr_cell_global_id
   if (!cur.sat_train || !cur.ntn_cfg || cur.sat_switch) {
     return;
   }
+  // Back off by default; cleared once a switch is queued.
   ctx.sat_train_retry_after = now + std::chrono::seconds(10);
 
   const ntn_sat_train_config&  train   = *cur.sat_train;
@@ -381,8 +394,9 @@ void ntn_configuration_manager_impl::arm_next_sat_switch(const nr_cell_global_id
   }
   const unsigned next = std::next(it) == order.end() ? order.front() : *std::next(it);
 
-  const std::optional<geodetic_coordinates_t>& ref =
-      cur.ntn_cfg->reference_location ? cur.ntn_cfg->reference_location : cur.ntn_cfg->moving_reference_location;
+  const std::optional<geodetic_coordinates_t>& ref = cur.ntn_cfg->reference_location
+                                                         ? cur.ntn_cfg->reference_location
+                                                         : cur.ntn_cfg->moving_reference_location;
   const per_satellite_context* serving_ctx = find_satellite_context(serving);
   const per_satellite_context* next_ctx    = find_satellite_context(next);
   if (!ref || !serving_ctx || !next_ctx) {
@@ -390,9 +404,11 @@ void ntn_configuration_manager_impl::arm_next_sat_switch(const nr_cell_global_id
     return;
   }
 
+  // Serving satellite already below the switch elevation - a gNB started or restarted after it set, which
+  // in steady state cannot happen because the train switches away at exactly that elevation.
   const std::optional<double> serving_el = elevation_at(serving_ctx->cfg, *ref, now);
   if (serving_el && *serving_el < train.switch_elevation_deg) {
-    unsigned best    = serving;
+    unsigned best = serving;
     double   best_el = *serving_el;
     for (unsigned idx : order) {
       const per_satellite_context* sat = find_satellite_context(idx);
@@ -406,14 +422,13 @@ void ntn_configuration_manager_impl::arm_next_sat_switch(const nr_cell_global_id
       }
     }
     if (best != serving && best_el > train.switch_elevation_deg) {
-      logger.info(
-          "Sat-train cell={:#x}: satellite {} is at {:.1f} deg, below the switch elevation - starting on satellite "
-          "{} at {:.1f} deg instead",
-          nr_cgi.nci,
-          serving,
-          *serving_el,
-          best,
-          best_el);
+      logger.info("Sat-train cell={:#x}: satellite {} is at {:.1f} deg, below the switch elevation - starting on satellite "
+                  "{} at {:.1f} deg instead",
+                  nr_cgi.nci,
+                  serving,
+                  *serving_el,
+                  best,
+                  best_el);
       cur.ntn_cfg->satellite_index = best;
       ctx.sat_train_retry_after    = {};
     } else {
@@ -432,6 +447,7 @@ void ntn_configuration_manager_impl::arm_next_sat_switch(const nr_cell_global_id
                    train.switch_elevation_deg);
     return;
   }
+  // UEs learn of the switch from SIB19, so never schedule it sooner than they can read it.
   const time_point earliest = now + std::chrono::duration_cast<time_point::duration>(train.min_lead);
   if (*t_switch < earliest) {
     t_switch = earliest;
@@ -443,8 +459,9 @@ void ntn_configuration_manager_impl::arm_next_sat_switch(const nr_cell_global_id
   sw.t_service_start    = *t_switch;
   sw.use_state_vector   = cur.ntn_cfg->use_state_vector;
   sw.promote_to_serving = true;
-  sw.promote_neighbors  = true;
-  cur.sat_switch        = sw;
+  // The cell stays where it is and only its satellite changes, so its neighbour relations carry over.
+  sw.promote_neighbors = true;
+  cur.sat_switch       = sw;
 
   std::optional<ntn_cell_config> derived = derive_post_switch_config(cur);
   if (!derived || !q.try_push(cell_config_snapshot{*t_switch, std::move(*derived)})) {
@@ -649,11 +666,14 @@ bool ntn_configuration_manager_impl::send_ntn_channel_emulation_request(const nt
     return false;
   }
 
-  const std::optional<std::chrono::microseconds> ref_location_ul_ta = compute_ref_location_ul_ta(state, cell_cfg);
+  // The same round-trip figure that is handed to the scheduler, so the emulated channel and the gNB's own idea
+  // of the link agree by construction.
+  const auto ref_location_ul_ta = compute_ref_location_ul_ta_exact(state, cell_cfg);
   if (not ref_location_ul_ta.has_value()) {
     return false;
   }
 
+  // Same location compute_ref_location_ul_ta used, so the delay and its drift describe the same link.
   const std::optional<geodetic_coordinates_t>& ref_location = cell_cfg.ntn_cfg->reference_location.has_value()
                                                                   ? cell_cfg.ntn_cfg->reference_location
                                                                   : cell_cfg.ntn_cfg->moving_reference_location;
@@ -661,23 +681,26 @@ bool ntn_configuration_manager_impl::send_ntn_channel_emulation_request(const nt
     return false;
   }
 
+  // Kept apart on purpose. The delay sums both legs; the Doppler must come from the service leg alone.
   const double service_drift_us_per_s = compute_service_link_rtt_drift(state, *ref_location).value_or(0.0);
   double       rtt_drift_us_per_s     = service_drift_us_per_s;
+  // The feeder leg is folded into ref_location_ul_ta through ta_common, so its drift belongs in the delay.
   if (cell_cfg.ntn_cfg->feeder_link_info.has_value() and state.ta_info.has_value()) {
     rtt_drift_us_per_s += state.ta_info->ta_common_drift;
   }
 
   ntn_channel_emulation_request req;
-  req.sector_id                   = cell_cfg.sector_id.value_or(0);
+  req.sector_id = cell_cfg.sector_id.value_or(0);
+  // The WHOLE round trip on this one leg, because the UE runs no channel model of its own.
   const double lead_correction_us = rtt_drift_us_per_s * epoch_lead.count();
-  req.rx_delay =
-      *ref_location_ul_ta - std::chrono::microseconds{static_cast<int64_t>(std::llround(lead_correction_us))};
-  req.delay_drift_us_per_s   = rtt_drift_us_per_s;
-  req.service_drift_us_per_s = service_drift_us_per_s;
+  req.rx_delay = *ref_location_ul_ta - std::chrono::duration<double, std::micro>{lead_correction_us};
+  req.delay_drift_us_per_s     = rtt_drift_us_per_s;
+  req.service_drift_us_per_s   = service_drift_us_per_s;
 
+  // A satellite below the horizon has no line of sight, so the emulated link must carry nothing.
   static constexpr double     min_elevation_deg = 0.0;
   const std::optional<double> elevation_deg     = compute_service_link_elevation(state, *ref_location);
-  req.link_up                                   = elevation_deg.has_value() and (*elevation_deg >= min_elevation_deg);
+  req.link_up = elevation_deg.has_value() and (*elevation_deg >= min_elevation_deg);
   if (req.link_up != ntn_link_was_up) {
     logger.info("NTN: satellite {} the horizon at the reference location, elevation {:.2f} deg: emulated link {}",
                 req.link_up ? "rose above" : "set below",
@@ -686,13 +709,14 @@ bool ntn_configuration_manager_impl::send_ntn_channel_emulation_request(const nt
     ntn_link_was_up = req.link_up;
   }
 
+  // The radio derives the Doppler from the drift and rotates the carrier itself, per sample, on both legs.
   req.emulate_doppler = cell_cfg.emulate_doppler;
 
   if (not doppler_handler->handle_ntn_channel_emulation(req)) {
     return false;
   }
 
-  logger.info("Emulated NTN channel updated, cell={:#x} rx_delay={}us drift={:.3f}us/s doppler={} sat={}",
+  logger.info("Emulated NTN channel updated, cell={:#x} rx_delay={:.3f}us drift={:.3f}us/s doppler={} sat={}",
               cell_cfg.nr_cgi.nci,
               req.rx_delay.count(),
               req.delay_drift_us_per_s,
@@ -801,6 +825,7 @@ void ntn_configuration_manager_impl::periodic_ntn_config_update_task(const nr_ce
 
   auto& ctx = it->second;
 
+  // Pop a promotion that is now due before arming the next one, so a satellite train re-arms on the very next update.
   get_cell_config(ctx, tp);
   arm_next_sat_switch(nr_cgi, ctx, tp);
   const ntn_cell_config& cell_cfg = get_cell_config(ctx, tp);
@@ -879,20 +904,21 @@ void ntn_configuration_manager_impl::periodic_ntn_config_update_task(const nr_ce
     }
   }
 
+  // Log where the sat-switch target is, on every update, until it is promoted.
   if (sat_sw_ntn_info && cell_cfg.ntn_cfg) {
-    const std::optional<geodetic_coordinates_t>&   ref_location = cell_cfg.ntn_cfg->reference_location.has_value()
-                                                                      ? cell_cfg.ntn_cfg->reference_location
-                                                                      : cell_cfg.ntn_cfg->moving_reference_location;
-    const std::optional<std::chrono::microseconds> ul_ta = compute_ref_location_ul_ta(*sat_sw_ntn_info, cell_cfg);
+    const std::optional<geodetic_coordinates_t>& ref_location = cell_cfg.ntn_cfg->reference_location.has_value()
+                                                                    ? cell_cfg.ntn_cfg->reference_location
+                                                                    : cell_cfg.ntn_cfg->moving_reference_location;
+    const auto ul_ta = compute_ref_location_ul_ta_exact(*sat_sw_ntn_info, cell_cfg);
     if (ref_location && ul_ta) {
       double drift_us_per_s = compute_service_link_rtt_drift(*sat_sw_ntn_info, *ref_location).value_or(0.0);
       if (cell_cfg.ntn_cfg->feeder_link_info.has_value() && sat_sw_ntn_info->ta_info.has_value()) {
         drift_us_per_s += sat_sw_ntn_info->ta_info->ta_common_drift;
       }
       const std::chrono::duration<double> epoch_lead = epoch_time - tp;
-      logger.info("Sat-switch target geometry, cell={:#x} rx_delay={}us drift={:.3f}us/s sat={}",
+      logger.info("Sat-switch target geometry, cell={:#x} rx_delay={:.3f}us drift={:.3f}us/s sat={}",
                   nr_cgi.nci,
-                  ul_ta->count() - std::llround(drift_us_per_s * epoch_lead.count()),
+                  ul_ta->count() - drift_us_per_s * epoch_lead.count(),
                   drift_us_per_s,
                   cell_cfg.sat_switch->satellite_index);
     }
@@ -968,6 +994,7 @@ void ntn_configuration_manager_impl::periodic_ntn_config_update_task(const nr_ce
     send_cfo_compensation_request(cell_cfg, epoch_time, *serving_ntn_info.ta_info);
   }
 
+  // Drive an emulated NTN channel, if the deployment has one, from the geometry just propagated.
   if (doppler_handler != nullptr) {
     send_ntn_channel_emulation_request(cell_cfg, serving_ntn_info, epoch_time - tp);
   }

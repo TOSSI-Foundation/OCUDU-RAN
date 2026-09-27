@@ -3,16 +3,17 @@
 
 #pragma once
 
-#include "common_lib.h"
-#include "ocudu/adt/complex.h"
-#include "ocudu/adt/span.h"
 #include "ocudu/gateways/baseband/baseband_gateway_receiver.h"
 #include "ocudu/gateways/baseband/baseband_gateway_transmitter.h"
 #include "ocudu/radio/radio_session.h"
 #include "ocudu/support/executors/task_executor.h"
+#include "ocudu/adt/complex.h"
+#include "ocudu/adt/span.h"
 #include <atomic>
 #include <chrono>
 #include <vector>
+
+#include "common_lib.h"
 
 namespace ocudu {
 
@@ -74,30 +75,41 @@ private:
   baseband_gateway_timestamp ts_offset = 0;
 
   bool client_role = false;
-  bool     channel_model_enabled = false;
-  bool     rx_trace_enabled      = false;
-  uint64_t rx_trace_count        = 0;
-  double   rx_trace_peak         = 0.0;
-  double   rx_trace_rms          = 0.0;
-  unsigned rx_trace_short        = 0;
+  /// Whether the rfsimulator was configured with the chanmod option, i.e. whether it applies a channel model at
+  /// all. Set from device_args.
+  bool channel_model_enabled = false;
+  /// Whether to trace what actually arrives at the rfsimulator receive entry. Set with "rxtrace" in device_args.
+  bool     rx_trace_enabled = false;
+  uint64_t rx_trace_count   = 0;
+  double   rx_trace_peak    = 0.0;
+  double   rx_trace_rms     = 0.0;
+  unsigned rx_trace_short   = 0;
 
+  // \brief Downlink NTN Doppler applied to the transmitted carrier.
   void apply_tx_doppler(span<ci16_t> samples);
 
-  std::atomic<double>              tx_doppler_hz{0.0};
-  std::atomic<bool>                ntn_doppler_enabled{false};
-  std::atomic<bool>                ntn_link_up{true};
-  double                           tx_doppler_phase = 0.0;
+  /// Doppler for the transmit carrier, in Hz. Written from the DU control executor, read on the radio thread.
+  std::atomic<double> tx_doppler_hz{0.0};
+  /// Whether the NTN channel is rotating the carrier at all. Set from the cell's ntn.emulate_doppler.
+  std::atomic<bool> ntn_doppler_enabled{false};
+  // \brief Whether the satellite is above the horizon.
+  std::atomic<bool> ntn_link_up{true};
+  /// Running transmit phase, in radians. Only ever touched on the radio thread.
+  double tx_doppler_phase = 0.0;
+  /// Scratch buffers: the caller's transmit buffer is const and may be reused, so the rotation cannot be done
+  /// in place.
   std::vector<std::vector<ci16_t>> tx_scratch;
 
+  // \brief Real-time pacing.
   void pace_to_timestamp(baseband_gateway_timestamp ts);
 
-  bool                                  pace_enabled         = false;
+  bool                                  pace_enabled = false;
   double                                pace_sample_period_s = 0.0;
-  bool                                  pace_origin_valid    = false;
+  bool                                  pace_origin_valid = false;
   std::chrono::steady_clock::time_point pace_origin_tp;
-  baseband_gateway_timestamp            pace_origin_ts   = 0;
+  baseband_gateway_timestamp            pace_origin_ts = 0;
   uint64_t                              pace_total_count = 0;
-  uint64_t                              pace_late_count  = 0;
+  uint64_t                              pace_late_count = 0;
   std::chrono::nanoseconds              pace_max_slip{0};
 
   std::atomic<bool> stopped    = {false};

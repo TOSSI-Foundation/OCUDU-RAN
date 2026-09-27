@@ -35,6 +35,7 @@ struct du_high_unit_ntn_neighbor_cell_config {
   bool has_feeder_link = false;
 };
 
+// \brief Application-level satellite train.
 struct du_high_unit_sat_train_config {
   unsigned num_satellites       = 10;
   double   switch_elevation_deg = 4.5;
@@ -108,12 +109,16 @@ struct du_high_unit_ntn_serving_cell_config {
   /// serving cell in SIB19 (unlike for neighbor cells or SatSwitchWithReSync, where it is optional), so this field
   /// is not optional and defaults to disabled.
   bool ta_report = false;
+  /// Whether an emulated NTN channel should also impose the service-link Doppler on the carrier, in addition to
+  /// the propagation delay. Off by default: it is only correct when the UE compensates it, and the OAI UE only
+  /// does so with --cont-fo-comp, so the two have to be enabled together.
   bool emulate_doppler = false;
   /// Moving reference location for NTN Earth-moving cell (R18).
   std::optional<geodetic_coordinates_t> moving_ref_location;
   /// Satellite switch with resynchronization parameters (R18).
   std::optional<du_high_unit_sat_switch_config> sat_switch_with_resync;
-  std::optional<du_high_unit_sat_train_config>  sat_train;
+  /// Satellite train, re-arming sat-switch indefinitely. Mutually exclusive with sat_switch_with_resync.
+  std::optional<du_high_unit_sat_train_config> sat_train;
 };
 
 /// Application-level per-cell NTN configuration. Valid both for an NTN serving cell (NTN band, \c serving

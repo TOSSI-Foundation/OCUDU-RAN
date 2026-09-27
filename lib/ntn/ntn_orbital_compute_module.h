@@ -65,9 +65,17 @@ struct ntn_orbital_state {
 std::optional<std::chrono::microseconds> compute_service_link_rtt(const ntn_orbital_state&      state,
                                                                   const geodetic_coordinates_t& ref_location);
 
+/// \brief As \ref compute_service_link_rtt, unrounded: for the emulated channel, where a microsecond of rounding is
+/// 150 m of range that single-satellite positioning resolves.
+std::optional<std::chrono::duration<double, std::micro>>
+compute_service_link_rtt_exact(const ntn_orbital_state& state, const geodetic_coordinates_t& ref_location);
+
+// \brief Computes the rate of change of \ref compute_service_link_rtt at \c state.epoch_time, in us/s.
 std::optional<double> compute_service_link_rtt_drift(const ntn_orbital_state&      state,
                                                      const geodetic_coordinates_t& ref_location);
 
+// \brief Computes the elevation angle of the satellite above the local horizon at \c ref_location, in
+// degrees.
 std::optional<double> compute_service_link_elevation(const ntn_orbital_state&      state,
                                                      const geodetic_coordinates_t& ref_location);
 

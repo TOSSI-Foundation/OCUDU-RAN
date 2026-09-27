@@ -84,19 +84,29 @@ public:
   virtual bool set_rx_cfo(unsigned sector_id, const cfo_compensation_request& cfo_request) = 0;
 };
 
+/// \brief Structure used to set the emulated NTN channel geometry via the RU.
 struct ntn_channel_request {
-  std::chrono::microseconds rx_delay{0};
-  double                    delay_drift_us_per_s   = 0.0;
-  double                    service_drift_us_per_s = 0.0;
-  bool                      emulate_doppler        = false;
-  bool                      link_up                = true;
+  /// Delay applied to the receive path: the whole link round trip. See ntn_channel_emulation_request.
+  std::chrono::duration<double, std::micro> rx_delay{0};
+  /// Rate of change of that delay, in microseconds per second, from which the radio derives the Doppler shift.
+  double delay_drift_us_per_s = 0.0;
+  /// Rate of change of the service leg alone, in us/s, from which the Doppler shift is derived. Delay sums both
+  /// legs, Doppler must not; see ntn_channel_emulation_request::service_drift_us_per_s.
+  double service_drift_us_per_s = 0.0;
+  /// Whether to rotate the received carrier by the service-link Doppler.
+  bool emulate_doppler = false;
+  /// Whether the satellite is above the horizon; false mutes the emulated link. See ntn_channel_emulation_request.
+  bool link_up = true;
 };
 
+// \brief Radio Unit - NTN channel emulation interface.
 class ru_ntn_channel_controller
 {
 public:
+  /// Default destructor.
   virtual ~ru_ntn_channel_controller() = default;
 
+  // \brief Sets the emulated NTN channel geometry for the specified sector.
   virtual bool set_ntn_channel(unsigned sector_id, const ntn_channel_request& ntn_request) = 0;
 };
 
@@ -168,6 +178,8 @@ public:
   /// Returns the transmit time offset controller of this Radio Unit or nullptr if the Radio unit does not support it.
   virtual ru_tx_time_offset_controller* get_tx_time_offset_controller() = 0;
 
+  /// Returns the NTN channel emulation controller of this Radio Unit, or nullptr if it does not emulate a
+  /// channel, which is the case for every Radio Unit driving a real radio.
   virtual ru_ntn_channel_controller* get_ntn_channel_controller() { return nullptr; }
 };
 

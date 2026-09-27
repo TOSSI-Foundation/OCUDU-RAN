@@ -3,12 +3,12 @@
 // Portions of this file may implement 3GPP specifications, which may be subject to additional licensing requirements.
 
 #include "du_high_ntn_config_translators.h"
+#include "ocudu/ran/band_helper.h"
 #include "apps/helpers/ntn/ntn_config_translators.h"
 #include "apps/units/flexible_o_du/o_du_high/du_high/du_high_config.h"
 #include "du_high_unit_cell_ntn_config.h"
 #include "ocudu/du/du_high/du_qos_config.h"
 #include "ocudu/du/du_high/du_srb_config.h"
-#include "ocudu/ran/band_helper.h"
 #include "ocudu/ran/nr_cgi.h"
 #include "ocudu/ran/qos/five_qi.h"
 #include "ocudu/rlc/rlc_config.h"
@@ -105,9 +105,10 @@ convert_ntn_config_to_serving_cell_config(const du_high_unit_cell_ntn_config&   
   return info;
 }
 
+// \brief Moves a satellite along its own orbit by \p angle_deg: positive leads, negative trails.
 static ecef_coordinates_t rotate_along_orbit(const ecef_coordinates_t& s, double angle_deg)
 {
-  static constexpr double     w = 7.292115146706979e-5;
+  static constexpr double     w = 7.292115146706979e-5; // rad/s, as reference_frame_converter.cpp
   const std::array<double, 3> r{s.position_x, s.position_y, s.position_z};
   const std::array<double, 3> v{s.velocity_vx - w * s.position_y, s.velocity_vy + w * s.position_x, s.velocity_vz};
   std::array<double, 3>       h{r[1] * v[2] - r[2] * v[1], r[2] * v[0] - r[0] * v[2], r[0] * v[1] - r[1] * v[0]};
@@ -115,9 +116,9 @@ static ecef_coordinates_t rotate_along_orbit(const ecef_coordinates_t& s, double
   for (double& c : h) {
     c /= hn;
   }
-  const double a   = angle_deg * M_PI / 180.0;
-  const double c   = std::cos(a);
-  const double n   = std::sin(a);
+  const double a = angle_deg * M_PI / 180.0;
+  const double c = std::cos(a);
+  const double n = std::sin(a);
   auto         rot = [&](const std::array<double, 3>& x) {
     const std::array<double, 3> hx{h[1] * x[2] - h[2] * x[1], h[2] * x[0] - h[0] * x[2], h[0] * x[1] - h[1] * x[0]};
     const double                hd = h[0] * x[0] + h[1] * x[1] + h[2] * x[2];
@@ -133,6 +134,7 @@ static ecef_coordinates_t rotate_along_orbit(const ecef_coordinates_t& s, double
   out.position_x  = rp[0];
   out.position_y  = rp[1];
   out.position_z  = rp[2];
+  // Back to the rotating frame at the new position.
   out.velocity_vx = vp[0] + w * rp[1];
   out.velocity_vy = vp[1] - w * rp[0];
   out.velocity_vz = vp[2];
@@ -154,7 +156,8 @@ ocudu::generate_ntn_configuration_manager_config(const gnb_id_t&                
   // wherever a satellite reference is present. Neighbor cells are resolved regardless of whether this is an
   // NTN serving cell or a TN-band cell that only reports NTN neighbor cells.
   std::vector<std::optional<du_high_unit_cell_ntn_config>> resolved_ntn_cfgs(du_hi_cells.size());
-  std::vector<std::vector<unsigned>>                       train_indices(du_hi_cells.size());
+  // Per cell: the satellites of its train in service order, when one is configured.
+  std::vector<std::vector<unsigned>> train_indices(du_hi_cells.size());
   for (unsigned phy_sector_idx = 0; phy_sector_idx != du_hi_cells.size(); ++phy_sector_idx) {
     const auto& cell_cfg = du_hi_cells[phy_sector_idx].cell;
     if (!cell_cfg.ntn_cfg) {
@@ -170,6 +173,9 @@ ocudu::generate_ntn_configuration_manager_config(const gnb_id_t&                
                                 serving.sat_ref.ta_info,
                                 fmt::format("cells[{}].ntn", phy_sector_idx));
 
+      // Satellite train: spread num_satellites round the serving satellite's orbit. The serving one is satellite 0 of
+      // the train and each next one trails it by 360/num_satellites degrees, so a satellite that sets is always
+      // followed by the next one rising behind it, round the whole orbit.
       if (serving.sat_train) {
         const auto& train = *serving.sat_train;
         if (serving.sat_switch_with_resync) {
@@ -178,14 +184,16 @@ ocudu::generate_ntn_configuration_manager_config(const gnb_id_t&                
                        phy_sector_idx);
         }
         const unsigned serving_idx = *serving.sat_ref.satellite_idx;
-        auto           serving_it  = std::find_if(out_cfg.satellites.begin(),
-                                       out_cfg.satellites.end(),
-                                       [serving_idx](const auto& sat) { return sat.satellite_index == serving_idx; });
+        auto           serving_it =
+            std::find_if(out_cfg.satellites.begin(), out_cfg.satellites.end(), [serving_idx](const auto& sat) {
+              return sat.satellite_index == serving_idx;
+            });
         if (serving_it == out_cfg.satellites.end() ||
             !std::holds_alternative<ecef_coordinates_t>(serving_it->ephemeris_info)) {
           report_error("cells[{}].ntn.sat_train: needs the serving satellite's ephemeris as an ECEF state vector",
                        phy_sector_idx);
         }
+        // Copy: push_back below may reallocate the vector the iterator points into.
         const ocudu_ntn::ntn_satellite_config serving_sat = *serving_it;
         const double                          spacing_deg = 360.0 / train.num_satellites;
         train_indices[phy_sector_idx].push_back(serving_idx);

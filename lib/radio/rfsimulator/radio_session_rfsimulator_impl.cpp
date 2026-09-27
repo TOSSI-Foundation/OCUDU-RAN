@@ -9,8 +9,8 @@
 #include "ocudu/ocuduvec/zero.h"
 #include <algorithm>
 #include <cmath>
-#include <string>
 #include <thread>
+#include <string>
 
 using namespace ocudu;
 
@@ -24,6 +24,9 @@ void log_sink(int level, const char* message)
 {
   static ocudulog::basic_logger& log = ocudulog::fetch_basic_logger("RF");
 
+  // The text must be owned before it reaches the logger: `message` points at a stack buffer inside
+  // rfsim_log(), and the logger formats its arguments later on its own thread, by which point that frame
+  // is gone.
   std::string_view view(message);
   while (!view.empty() && (view.back() == '\n')) {
     view.remove_suffix(1);
@@ -66,6 +69,7 @@ void apply_device_args(const std::string&      args,
       continue;
     }
 
+    // Bare flags.
     if (item == "realtime") {
       realtime = true;
       continue;
@@ -144,12 +148,16 @@ bool radio_session_rfsimulator_impl::set_ntn_channel(double one_way_delay_us,
 {
   ntn_link_up.store(link_up, std::memory_order_relaxed);
 
+  // The channel is only in the receive path when the rfsimulator was started with the chanmod option; without it
+  // the vendored simulator never creates a channel model and the values below would go nowhere.
   if (!channel_model_enabled) {
     return false;
   }
 
   rfsim_set_ntn_channel(one_way_delay_us, delay_drift_us_per_s, link_up);
 
+  // Doppler is a matched pair: a Rel-17 NTN UE pre-compensates the uplink Doppler it derives from SIB19,
+  // and the channel then removes what the UE put in.
   ntn_doppler_enabled.store(emulate_doppler, std::memory_order_relaxed);
   if (emulate_doppler) {
     const double one_way_rate = -(0.5 * service_drift_us_per_s * 1e-6);
@@ -220,6 +228,8 @@ void radio_session_rfsimulator_impl::apply_tx_doppler(span<ci16_t> samples)
     return;
   }
 
+  // Incremental rotator rather than a cos/sin per sample: at 15.36 Msps the trigonometry would dominate. It is
+  // renormalised periodically because repeated complex multiplication slowly loses unit magnitude.
   const double phase_inc = 2.0 * M_PI * doppler_hz / oai_config.sample_rate;
   const double step_re   = std::cos(phase_inc);
   const double step_im   = std::sin(phase_inc);
@@ -245,6 +255,8 @@ void radio_session_rfsimulator_impl::apply_tx_doppler(span<ci16_t> samples)
     }
   }
 
+  // Carry the phase across calls. Resetting it here would reintroduce exactly the discontinuity that made the
+  // RU CFO path unusable.
   tx_doppler_phase = std::fmod(tx_doppler_phase + phase_inc * samples.size(), 2.0 * M_PI);
 }
 
@@ -262,12 +274,14 @@ void radio_session_rfsimulator_impl::pace_to_timestamp(baseband_gateway_timestam
   }
 
   const double elapsed_s = static_cast<double>(ts - pace_origin_ts) * pace_sample_period_s;
-  const auto   deadline  = pace_origin_tp + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-                                             std::chrono::duration<double>(elapsed_s));
+  const auto   deadline =
+      pace_origin_tp +
+      std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(elapsed_s));
   const auto now = std::chrono::steady_clock::now();
 
   ++pace_total_count;
 
+  // Running behind already: record how far and carry on rather than sleeping into an ever-growing backlog.
   if (now >= deadline) {
     const auto slip = std::chrono::duration_cast<std::chrono::nanoseconds>(now - deadline);
     if (slip > pace_max_slip) {
@@ -301,9 +315,10 @@ baseband_gateway_receiver::metadata radio_session_rfsimulator_impl::receive(base
   openair0_timestamp_t ts = 0;
   int                  nread = device.trx_read_func(&device, &ts, buffers, nof_samples, nof_channels);
 
+  // Wire-entry trace, enabled with "rxtrace" in device_args.
   if (rx_trace_enabled) {
-    span<const ci16_t> ch0    = data.get_channel_buffer(0);
-    int32_t            peak   = 0;
+    span<const ci16_t> ch0 = data.get_channel_buffer(0);
+    int32_t            peak = 0;
     int64_t            energy = 0;
     for (unsigned i = 0, e = ch0.size(); i != e; ++i) {
       const int32_t re = ch0[i].real();
@@ -312,9 +327,11 @@ baseband_gateway_receiver::metadata radio_session_rfsimulator_impl::receive(base
       energy += m2;
       peak = std::max(peak, m2);
     }
+    // Report the loudest block in the window, not a sampled one: the uplink is silent in most 1 ms blocks
+    // (the UE only transmits in its granted slots), so sampling every Nth block reads zero almost always.
     const double rms = ch0.empty() ? 0.0 : std::sqrt(static_cast<double>(energy) / ch0.size());
-    rx_trace_peak    = std::max(rx_trace_peak, std::sqrt(static_cast<double>(peak)) / 32768.0);
-    rx_trace_rms     = std::max(rx_trace_rms, rms / 32768.0);
+    rx_trace_peak = std::max(rx_trace_peak, std::sqrt(static_cast<double>(peak)) / 32768.0);
+    rx_trace_rms  = std::max(rx_trace_rms, rms / 32768.0);
     rx_trace_short += (nread > 0 && static_cast<unsigned>(nread) < nof_samples) ? 1 : 0;
     if (++rx_trace_count % 500 == 0) {
       logger.info("rxtrace: asked {} got {} short {} of 500  peak_amp {:.5f} rms {:.5f}",
@@ -349,6 +366,9 @@ void radio_session_rfsimulator_impl::transmit(const baseband_gateway_buffer_read
 
   void* buffers[RADIO_MAX_NOF_CHANNELS];
 
+  // Below the horizon there is no line of sight, so transmit silence rather than a clean carrier. The UE then
+  // loses sync the way it would against a real setting satellite, instead of holding a link that geometry says
+  // cannot exist.
   const bool link_up = ntn_link_up.load(std::memory_order_relaxed);
 
   if (!link_up) {
@@ -358,12 +378,14 @@ void radio_session_rfsimulator_impl::transmit(const baseband_gateway_buffer_read
       buffers[i_channel] = tx_scratch[i_channel].data();
     }
   } else if (ntn_doppler_enabled.load(std::memory_order_relaxed)) {
+    // Copy out before rotating: the caller owns the buffer and reuses it.
     tx_scratch.resize(nof_channels);
     for (unsigned i_channel = 0; i_channel != nof_channels; ++i_channel) {
       span<const ci16_t> in = data.get_channel_buffer(i_channel);
       tx_scratch[i_channel].assign(in.begin(), in.end());
       buffers[i_channel] = tx_scratch[i_channel].data();
     }
+    // One rotator drives every channel, so the phase must advance once, not once per channel.
     const double phase_before = tx_doppler_phase;
     for (unsigned i_channel = 0; i_channel != nof_channels; ++i_channel) {
       tx_doppler_phase = phase_before;

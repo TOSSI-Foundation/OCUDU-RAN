@@ -64,6 +64,9 @@ private:
 
     ntn_orbital_compute_module ocm;
 
+    // The satellite's configuration, kept so its orbit can be looked ahead on a scratch propagator: the
+    // live one above propagates in place and drops superseded ephemeris entries, so probing hours ahead
+    // on it is not safe.
     ntn_satellite_config cfg;
 
     /// Cached result of the last OCM computation.
@@ -91,7 +94,9 @@ private:
     std::optional<sib19_info> last_sib19;
     /// Queue of full cell config snapshots ordered by epoch_time. Always non-empty (seeded at construction).
     static_ring_buffer<cell_config_snapshot, 8> cell_cfg_queue;
-    time_point                                  sat_train_retry_after{};
+    /// Satellite train: do not retry arming before this, after a failed attempt. The look-ahead is a few thousand
+    /// propagations, which must not run on every 160 ms update when it cannot succeed.
+    time_point sat_train_retry_after{};
   };
 
   /// \brief Returns the cell config applicable for the given epoch time.
@@ -102,13 +107,17 @@ private:
   /// \param t   SIB19 epoch time.
   const ntn_cell_config& get_cell_config(per_cell_context& ctx, time_point t) const;
 
+  // \brief Satellite train: arms the next sat-switch when the cell has a train and no switch is pending.
   void arm_next_sat_switch(const nr_cell_global_id_t& nr_cgi, per_cell_context& ctx, time_point now);
 
+  /// \brief First moment at or after \p from that satellite \p sat_cfg sets through \p elevation_deg as seen from
+  /// \p ref, or nullopt if it does not within a few hours. Looks ahead on a scratch propagator.
   std::optional<time_point> find_setting_time(const ntn_satellite_config&   sat_cfg,
                                               const geodetic_coordinates_t& ref,
                                               double                        elevation_deg,
                                               time_point                    from) const;
 
+  /// \brief Elevation of \p sat_cfg at \p t as seen from \p ref, on a scratch propagator.
   std::optional<double>
   elevation_at(const ntn_satellite_config& sat_cfg, const geodetic_coordinates_t& ref, time_point t) const;
 
@@ -133,9 +142,11 @@ private:
   /// \param doppler_update_time The time point at which the Doppler compensation should be updated.
   /// \param ta_info TA-Info used to compute Doppler shift frequencies.
   /// \return True if the request was successfully sent; false otherwise.
-  bool send_ntn_channel_emulation_request(const ntn_cell_config&        cell_cfg,
-                                          const ntn_orbital_state&      state,
-                                          std::chrono::duration<double> epoch_lead);
+  /// Applies the propagated link geometry to an emulated NTN channel, when the radio has one. See the definition
+  /// for why the channel is driven from here rather than from the simulator's own orbit model.
+  bool send_ntn_channel_emulation_request(const ntn_cell_config&                cell_cfg,
+                                          const ntn_orbital_state&              state,
+                                          std::chrono::duration<double>         epoch_lead);
 
   bool send_cfo_compensation_request(const ntn_cell_config& cell_cfg,
                                      time_point             doppler_update_time,
@@ -164,6 +175,7 @@ private:
   /// Whether the periodic updates are currently armed. Makes \c start() and \c stop() idempotent and lets the manager
   /// be restarted. Only touched from the thread driving the manager lifecycle.
   bool running = false;
+  /// Last emulated link visibility, so the horizon crossing is logged once rather than every update.
   bool ntn_link_was_up = true;
 };
 

@@ -7,4 +7,6 @@
 #include <stdbool.h>
 void rxAddInput(c16_t **input_sig, cf_t *after_channel_sig, int rxAnt, channel_desc_t *channelDesc, int nbSamples);
 void update_channel_model(channel_desc_t *channelDesc, int nbSamples, uint64_t TS);
+/* ocudu: samples written at TS leave the emulated satellite this many samples later. */
+uint64_t ntn_tx_offset_samples(uint64_t TS);
 #endif

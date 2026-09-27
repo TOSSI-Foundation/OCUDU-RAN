@@ -1020,11 +1020,23 @@ static int rfsimulator_write_internal(rfsimulator_state_t *t,
   mutexlock(t->Sockmutex);
   LOG_D(HW, "Sending %d samples at time: %ld, nbAnt %d\n", nsamps, timestamp, nbAnt);
 
+  /* ocudu: the emulated satellite's share of the downlink delay, in samples, told to the peer so it can read
+     this stream that far behind (samplesBlockHeader_t.option_flag / option_value).
+     NOT by shifting the timestamp: the delay shrinks as the satellite rises, and a block whose start is
+     earlier than the previous block's end is "data in past" to the receiver, which trashes the whole block -
+     one lost block every ~3 ms at LEO, which is enough to stop the UE ever synchronising. */
+  const uint64_t tx_offset = ntn_tx_offset_samples((uint64_t)timestamp);
+
   for (int i = 0; i < MAX_FD_RFSIMU; i++) {
     buffer_t *b = &t->buf[i];
 
     if (b->conn_sock >= 0) {
-      samplesBlockHeader_t header = {(uint32_t)nsamps, (uint32_t)nbAnt, (uint64_t)timestamp, 0, 0, beams_to_beam_map(tx_beams)};
+      samplesBlockHeader_t header = {(uint32_t)nsamps,
+                                    (uint32_t)nbAnt,
+                                    (uint64_t)timestamp,
+                                    (uint32_t)tx_offset,
+                                    tx_offset ? RFSIM_OPT_NTN_DELAY : 0u,
+                                    beams_to_beam_map(tx_beams)};
       int num_beams = tx_beams.size();
       // Send beams in order of beam index. This is required for beam_map to work correctly on the receiver side.
       std::vector<size_t> indices(tx_beams.size());

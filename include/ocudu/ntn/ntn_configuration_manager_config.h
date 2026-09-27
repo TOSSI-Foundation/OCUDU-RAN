@@ -102,10 +102,14 @@ struct ntn_sat_switch_config {
   bool promote_neighbors = false;
 };
 
+// \brief Satellite train: the cell keeps re-arming a sat-switch so its service never ends.
 struct ntn_sat_train_config {
+  /// Satellites in service order. The serving satellite must be one of them; the list wraps.
   std::vector<unsigned> satellite_indices;
-  double                switch_elevation_deg = 4.5;
-  std::chrono::seconds  min_lead{10};
+  /// The serving satellite hands over as it sets through this elevation, in degrees.
+  double switch_elevation_deg = 4.5;
+  /// UEs are told about a switch at least this long before it happens, so they read it in SIB19 in time.
+  std::chrono::seconds min_lead{10};
 };
 
 /// SIB19 scheduling information of a cell.
@@ -120,8 +124,12 @@ struct ntn_si_scheduling_info {
 struct ntn_cell_config {
   /// NR-CGI.
   nr_cell_global_id_t nr_cgi;
-  bool                emulate_doppler    = false;
-  double              dl_carrier_freq_hz = 0.0;
+  /// Whether to impose the service-link Doppler on the transmit carrier for an emulated NTN channel. See
+  /// du_high_unit_ntn_serving_cell_config::emulate_doppler.
+  bool emulate_doppler = false;
+  /// Downlink carrier centre frequency in Hz. Only used to turn the propagated range rate into the Doppler
+  /// shift imposed on the transmit carrier for an emulated NTN channel; zero disables that.
+  double dl_carrier_freq_hz = 0.0;
   /// Common subcarrier spacing of the cell. Drives the numerology (slots per frame and slot duration) used to derive
   /// the SIB19 epoch wall-clock time. Left invalid by default so a caller that forgets to set it fails loudly instead
   /// of silently assuming 15 kHz.
@@ -140,7 +148,8 @@ struct ntn_cell_config {
   std::optional<ntn_serving_cell_config> ntn_cfg;
   /// Satellite-switch target configuration. Absent if sat-switch is not configured and in TN serving cells.
   std::optional<ntn_sat_switch_config> sat_switch;
-  std::optional<ntn_sat_train_config>  sat_train;
+  /// Satellite train. When present, sat_switch is armed automatically and re-armed after every promotion.
+  std::optional<ntn_sat_train_config> sat_train;
   /// Neighbor NTN cells listed in SIB19.
   static_vector<ntn_neighbor_cell_config, MAX_NOF_NTN_NEIGHBORS> ncells;
 };

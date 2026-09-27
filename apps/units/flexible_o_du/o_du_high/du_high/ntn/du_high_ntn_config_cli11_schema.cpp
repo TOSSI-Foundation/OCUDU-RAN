@@ -266,9 +266,10 @@ static void configure_cli11_ntn_args(CLI::App&                             app,
     }
   });
 
+  // Satellite train: sat-switch re-armed after every promotion.
   static du_high_unit_sat_train_config sat_train_config;
-  CLI::App*                            sat_train_subcmd =
-      add_subcommand(app, "sat_train", "Satellite train: keep switching to the next satellite as the serving one sets");
+  CLI::App*                            sat_train_subcmd = add_subcommand(
+      app, "sat_train", "Satellite train: keep switching to the next satellite as the serving one sets");
   add_option(*sat_train_subcmd,
              "--num_satellites",
              sat_train_config.num_satellites,

@@ -9,10 +9,15 @@ typedef struct {
   uint32_t size;
   uint32_t nbAnt;
   uint64_t timestamp;
-  uint32_t option_value;
+  uint32_t option_value;   // with RFSIM_OPT_NTN_DELAY: the transmitter's emulated delay, in samples
   uint32_t option_flag;
   uint64_t beam_map;
 } samplesBlockHeader_t;
+
+/* option_flag: the sender is emulating a propagation delay and option_value says how many samples of it, so
+   the receiver reads this stream that far behind. Two satellites over one UE differ only in this, so it is
+   what the receiver needs to tell their downlinks apart. Must match the OAI rfsimulator's definition. */
+#define RFSIM_OPT_NTN_DELAY 0x4e544e44u
 
 typedef enum { MAX_CARDS = 8 } openair0_limits_e;
 typedef enum { RFSIMULATOR = 100 } dev_type_t;

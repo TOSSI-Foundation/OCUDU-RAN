@@ -250,25 +250,38 @@ std::optional<double> ocudu_ntn::compute_service_link_rtt_drift(const ntn_orbita
     return std::nullopt;
   }
 
+  // rho.velocity is the ground velocity minus the satellite's; in ECEF the ground point is static, so this is
+  // just the satellite's velocity negated, projected onto the line of sight.
   const double range_rate_m_s = dot(rho.position, rho.velocity) / range;
 
+  // Round trip, converted from a range rate in m/s to a delay drift in us/s.
   return 2.0 * range_rate_m_s / (SPEED_OF_LIGHT_KM_S * 1e3) * 1e6;
+}
+
+std::optional<std::chrono::duration<double, std::micro>>
+ocudu_ntn::compute_service_link_rtt_exact(const ntn_orbital_state& state, const geodetic_coordinates_t& ref_location)
+{
+  if (not state.success) {
+    return std::nullopt;
+  }
+
+  const state_vector ref_ecef =
+      coordinate_converter::geodetic_to_ecef(ref_location.latitude, ref_location.longitude, ref_location.altitude);
+  return compute_link_rtt(state.sat_ecef, ref_ecef);
 }
 
 std::optional<std::chrono::microseconds> ocudu_ntn::compute_service_link_rtt(const ntn_orbital_state&      state,
                                                                              const geodetic_coordinates_t& ref_location)
 {
-  if (not state.success) {
+  const auto rtt = compute_service_link_rtt_exact(state, ref_location);
+  if (not rtt.has_value()) {
     return std::nullopt;
   }
-
-  const state_vector ref_ecef =
-      coordinate_converter::geodetic_to_ecef(ref_location.latitude, ref_location.longitude, ref_location.altitude);
-  return std::chrono::round<std::chrono::microseconds>(compute_link_rtt(state.sat_ecef, ref_ecef));
+  return std::chrono::round<std::chrono::microseconds>(*rtt);
 }
 
 std::optional<double> ocudu_ntn::compute_service_link_elevation(const ntn_orbital_state&      state,
-                                                                const geodetic_coordinates_t& ref_location)
+                                                               const geodetic_coordinates_t& ref_location)
 {
   if (not state.success) {
     return std::nullopt;
@@ -277,12 +290,16 @@ std::optional<double> ocudu_ntn::compute_service_link_elevation(const ntn_orbita
   const state_vector ref_ecef =
       coordinate_converter::geodetic_to_ecef(ref_location.latitude, ref_location.longitude, ref_location.altitude);
 
+  // Ground station to satellite.
   const state_vector los   = state.sat_ecef - ref_ecef;
   const double       range = norm(los.position);
   if (range <= 0.0) {
     return std::nullopt;
   }
 
+  // Local up. geodetic_coordinates_t carries geodetic latitude, for which the ellipsoid normal is exactly this
+  // unit vector - no need to go via the ECEF position, whose direction is the geocentric normal and differs by
+  // up to 0.19 degrees at mid latitudes.
   const double   lat_rad = ref_location.latitude * M_PI / 180.0;
   const double   lon_rad = ref_location.longitude * M_PI / 180.0;
   const coord_3d up{std::cos(lat_rad) * std::cos(lon_rad), std::cos(lat_rad) * std::sin(lon_rad), std::sin(lat_rad)};

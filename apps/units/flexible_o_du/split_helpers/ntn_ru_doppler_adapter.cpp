@@ -31,6 +31,7 @@ bool ntn_ru_doppler_adapter::handle_dl_doppler_compensation(const ocudu_ntn::dop
   // Apply the pre-calculated DL Doppler compensation values to TX.
   cfo_ctrl->set_tx_cfo(request.sector_id, cfo_reqs);
 
+  // start_timestamp is optional and means "apply immediately" when unset; do not dereference it blindly.
   if (cfo_reqs.start_timestamp.has_value()) {
     logger.debug("NTN: Apply DL Doppler compensation: {:.1f} Hz (drift: {:.1f} Hz/s) at {:%T}",
                  cfo_reqs.cfo_hz,
@@ -52,14 +53,15 @@ bool ntn_ru_doppler_adapter::handle_ntn_channel_emulation(const ocudu_ntn::ntn_c
     return false;
   }
 
+  // Absent on every Radio Unit driving a real radio, where the channel is the sky and there is nothing to set.
   ru_ntn_channel_controller* ntn_ctrl = controller->get_ntn_channel_controller();
   if (ntn_ctrl == nullptr) {
     return false;
   }
 
   ntn_channel_request ntn_req;
-  ntn_req.rx_delay               = request.rx_delay;
-  ntn_req.delay_drift_us_per_s   = request.delay_drift_us_per_s;
+  ntn_req.rx_delay             = request.rx_delay;
+  ntn_req.delay_drift_us_per_s = request.delay_drift_us_per_s;
   ntn_req.service_drift_us_per_s = request.service_drift_us_per_s;
   ntn_req.emulate_doppler        = request.emulate_doppler;
   ntn_req.link_up                = request.link_up;
@@ -96,6 +98,7 @@ bool ntn_ru_doppler_adapter::handle_ul_doppler_compensation(const ocudu_ntn::dop
   // Apply the pre-calculated UL Doppler compensation values to RX.
   cfo_ctrl->set_rx_cfo(request.sector_id, cfo_reqs);
 
+  // start_timestamp is optional and means "apply immediately" when unset; do not dereference it blindly.
   if (cfo_reqs.start_timestamp.has_value()) {
     logger.debug("NTN: Apply UL Doppler compensation: {:.1f} Hz (drift: {:.1f} Hz/s) at {:%T}",
                  cfo_reqs.cfo_hz,
