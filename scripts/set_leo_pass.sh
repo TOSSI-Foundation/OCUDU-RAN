@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Place the LEO satellite(s) at a chosen elevation and stamp the epoch, so no stack needs any further setup.
 set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -6,26 +7,7 @@ BASE=$HERE/configs/ntn/leo_rfsim_gnb.yml
 SAT1=$HERE/configs/ntn/leo_ho_sat1.yml
 SAT2=$HERE/configs/ntn/leo_ho_sat2.yml
 
-usage() {
-    cat <<'USAGE'
-Usage: set_leo_pass.sh --elev <deg|horizon|zenith> [options]
-
-  --elev <deg|horizon|zenith>   where satellite 1 starts. Required unless --show.
-  --elev2 <deg|horizon|zenith>  where satellite 2 starts. Default: 18.3958 deg of phase behind satellite 1.
-                                Only valid with --ho / --both.
-  --single                      write the single-cell config only   (configs/ntn/leo_rfsim_gnb.yml)
-  --ho                          write the handover pair only        (leo_ho_sat1.yml + leo_ho_sat2.yml)
-  --both                        write all three (default)
-  --lead <seconds>              stamp the epoch this far ahead (default 12)
-  --no-epoch                    change geometry only, leave the epoch alone
-  --show                        print the current geometry and epoch, change nothing
-
-Examples:
-  ./scripts/set_leo_pass.sh --elev horizon
-  ./scripts/set_leo_pass.sh --elev 40 --elev2 10 --ho
-USAGE
-    exit "${1:-0}"
-}
+usage() { sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
 ELEV=; ELEV2=; TARGET=both; LEAD=12; STAMP=1; SHOW=0
 while (( $# )); do
@@ -82,9 +64,9 @@ ELEV=$ELEV ELEV2=${ELEV2:-} TARGET=$TARGET EPOCH=${EPOCH:-} LEAD=$LEAD \
 BASE=$BASE SAT1=$SAT1 SAT2=$SAT2 python3 - <<'PY'
 import math, os, re
 
-R, B, V = 6956752.314, 6356752.314, 7569.47
-SEP     = 18.3958
-DEG_S   = 0.062342
+R, B, V = 6956752.314, 6356752.314, 7569.47   # orbit radius, WGS84 polar radius, speed
+SEP     = 18.3958                             # satellite 2 trails satellite 1 by this central angle
+DEG_S   = 0.062342                            # orbital rate, deg/s
 
 def gamma(el_deg):
     el = math.radians(el_deg)
@@ -100,9 +82,10 @@ def rtt_ms(g_deg):
     return 2*d/299792458*1e3
 
 def write(path, g_deg):
+    """pos = r(0, -sin g, cos g), vel = v(0, cos g, sin g). Reproduces the shipped configs exactly."""
     g = math.radians(g_deg)
     vals = (-R*math.sin(g), R*math.cos(g), V*math.cos(g), V*math.sin(g))
-    z = lambda x: x + 0.0 if x else 0.0
+    z = lambda x: x + 0.0 if x else 0.0       # keep "-0.0" out of the yaml at zenith
     s = open(path).read()
     for k, v in zip(('pos_y','pos_z','vel_y','vel_z'),
                     (f'{z(vals[0]):.1f}', f'{z(vals[1]):.1f}', f'{z(vals[2]):.2f}', f'{z(vals[3]):.2f}')):

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Inter-satellite handover over the rfsimulator: two OCUDU gNBs, one LEO satellite each, one OAI nr-
+# uesoftmodem.
 set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -7,24 +9,32 @@ GNB=${GNB:-$HERE/build_ntn/apps/gnb/gnb}
 BASE=${BASE:-$HERE/configs/ntn/leo_rfsim_gnb.yml}
 CFG1=${CFG1:-$HERE/configs/ntn/leo_ho_sat1.yml}
 CFG2=${CFG2:-$HERE/configs/ntn/leo_ho_sat2.yml}
-OAI=${OAI:-$HERE/../OAI_RAN}
+OAI=${OAI:-$(dirname "$HERE")/OAI_RAN}
 UE=${UE:-$OAI/cmake_targets/ran_build/build/nr-uesoftmodem}
 UECFG=${UECFG:-$OAI/targets/PROJECTS/GENERIC-NR-5GC/CONF/ue.ntn.leo.rfsim.conf}
 
 EPOCH_LEAD=${EPOCH_LEAD:-12}
+# Seconds after the epoch at which to hand over. 252 s is the crossover, both satellites at 28.8 degrees - see
+# the pass table in configs/ntn/leo_ho_sat2.yml. Handing over much later means acquiring against satellite 1's
+# fast-moving horizon geometry, which is the failure in HANDOFF.md section 13.
 HO_AT=${HO_AT:-310}
+# When to bring satellite 2 up, also counted from the epoch.
 SAT2_AT=${SAT2_AT:-120}
 DUR=${DUR:-820}
 
 TIME_DRIFT=${TIME_DRIFT:--40}
 
+# SD-Core credentials, overriding the uicc0 block in ue.ntn.leo.rfsim.conf.
 if [[ ${CORE:-sdcore} == oai ]]; then
-    IMSI=${IMSI:-001010000000002}; SST=${SST:-1}; SD=${SD:-0xffffff}; DNN=${DNN:-oai}
+    IMSI=${IMSI:-001010000000002}; SST=${SST:-1}; SD=${SD:-1}; DNN=${DNN:-oai}
     UE_KEY=${UE_KEY:-fec86ba6eb707ed08905757b1bb44b8f}; UE_OPC=${UE_OPC:-C42449363BBAD02B66D16BC975D77CC1}
+    # The local core's data network gateway.
     PING_TARGET=${PING_TARGET:-10.0.0.1}
 else
     IMSI=${IMSI:-001010100000001}; SST=${SST:-1}; SD=${SD:-0x010203}; DNN=${DNN:-internet}
     UE_KEY=${UE_KEY:-5122250214c33e723a5dd523fc145fc0}; UE_OPC=${UE_OPC:-981d464c7c52eb6e5036234984ad0bcf}
+    # SD-Core hands out 192.168.64.x and does not route the local core's 10.0.0.1 - pinging it returns
+    # "Time to live exceeded" from 10.102.1.2. Use an address its data network actually reaches.
     PING_TARGET=${PING_TARGET:-8.8.8.8}
 fi
 BAND=${BAND:-256}
@@ -55,6 +65,8 @@ sudo pkill -9 -f '[n]r-uesoftmodem' || true
 sudo pkill -9 -f '[a]pps/gnb/gnb'   || true
 sleep 2
 
+# Root-owned logs from the previous run both block the gNB from recreating them and let the waits below match
+# a success line that is not from this run.
 sudo rm -f "$LOG1" "$LOG2" "$UE_LOG"
 rm -f "$OUT1" "$OUT2" "$FIFO1" /tmp/ue_leo_ho_ping.log
 
@@ -65,6 +77,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# ONE epoch for both satellites, stamped into the shared base config.
 if [[ ${KEEP_EPOCH:-0} == 1 ]]; then
     echo "== KEEP_EPOCH=1, using the epoch already in $BASE"
 else
@@ -74,12 +87,14 @@ fi
 EPOCH_UNIX=$(date -d "$(sed -n "s/^ *epoch_timestamp: '\([^']*\)'.*/\1/p" "$BASE") UTC" +%s)
 grep -m1 '^ *epoch_timestamp:' "$BASE"
 
+# T+n seconds relative to the epoch, so every wait below is stated in pass time rather than in sleeps.
 wait_until() {
     local target=$((EPOCH_UNIX + $1)) now
     now=$(date +%s)
     (( target > now )) && sleep $((target - now)) || true
 }
 
+# The UE is the rfsimulator SERVER here, so it must be listening before either gNB tries to connect.
 mkdir -p "$UE_RUNDIR"
 echo "== starting UE as the rfsimulator server (log: $UE_LOG)"
 cd "$UE_RUNDIR"
@@ -102,6 +117,8 @@ for _ in $(seq 30); do
 done
 ss -ltn 2>/dev/null | grep -q ':4043 ' || { echo "UE never listened on 4043:" >&2; sudo tail -30 "$UE_LOG" >&2; exit 1; }
 
+# The gNB takes console commands on stdin. A fifo held open at both ends gives the backgrounded process a stdin
+# that never reaches EOF, so "ho" can be sent later in the run.
 mkfifo "$FIFO1"
 exec 9<>"$FIFO1"
 
@@ -128,6 +145,7 @@ echo "== attached via satellite 1 (pci=$PCI1)"
 ip -4 addr show oaitun_ue1 | sed -n 's/.*inet \([0-9.]*\).*/   UE IP: \1/p'
 ping -I oaitun_ue1 -c 3 -W 5 "${PING_TARGET:-10.0.0.1}" || true
 
+# Continuous ping across the handover: the interruption shows up here as the gap in the sequence numbers.
 ping -I oaitun_ue1 -D -i 1 "${PING_TARGET:-10.0.0.1}" > /tmp/ue_leo_ho_ping.log 2>&1 &
 
 echo "== T+${SAT2_AT}s: starting gNB for satellite 2 (log: $LOG2)"
@@ -141,11 +159,13 @@ echo "   satellite 2 up"
 
 echo "== T+${HO_AT}s: triggering handover: target at 34 deg and rising"
 wait_until "$HO_AT"
+# The C-RNTI the UE is using on satellite 1. The "ho" command parses it as hex, without the 0x.
 RNTI=$(sudo grep -ao 'c-rnti=0x[0-9a-f]*' "$LOG1" | tail -1 | sed 's/.*0x//')
 [[ -n $RNTI ]] || { echo "could not read the UE C-RNTI from $LOG1" >&2; exit 1; }
 echo "   ho $PCI1 $RNTI $PCI2 $PLMN $TAC"
 echo "ho $PCI1 $RNTI $PCI2 $PLMN $TAC" >&9
 
+# Diagnostic switch, off by default.
 if [[ ${KILL_SRC:-0} == 1 ]]; then
     sleep 2
     echo "   KILL_SRC: silencing satellite 1 so the target is alone on the air"
@@ -162,6 +182,7 @@ if ho_ok; then
     echo "== HANDED OVER to satellite 2 (pci=$PCI2)"
     sudo grep -a -m4 -iE 'HandoverRequest|rrcReconfigurationComplete|Path Switch' "$LOG2" | sed 's/^/   /'
 else
+    # Not tail: the NTN manager logs six times a second, so a plain tail is all channel updates and no evidence.
     echo "== handover did NOT complete." >&2
     echo "-- source, handover signalling:" >&2
     sudo grep -aiE 'Handover|XNAP.*(Request|Acknowledge)|rrcReconfiguration' "$LOG1" | tail -6 >&2

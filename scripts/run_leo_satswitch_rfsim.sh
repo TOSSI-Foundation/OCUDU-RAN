@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Satellite switch with re-sync over the rfsimulator: ONE OCUDU gNB flying two satellites, one OAI nr-
+# uesoftmodem.
 set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -6,11 +8,14 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 GNB=${GNB:-$HERE/build_ntn/apps/gnb/gnb}
 BASE=${BASE:-$HERE/configs/ntn/leo_rfsim_gnb.yml}
 CFG=${CFG:-$HERE/configs/ntn/leo_satswitch.yml}
-OAI=${OAI:-$HERE/../OAI_RAN}
+OAI=${OAI:-$(dirname "$HERE")/OAI_RAN}
 UE=${UE:-$OAI/cmake_targets/ran_build/build/nr-uesoftmodem}
 UECFG=${UECFG:-$OAI/targets/PROJECTS/GENERIC-NR-5GC/CONF/ue.ntn.leo.rfsim.conf}
 
 EPOCH_LEAD=${EPOCH_LEAD:-12}
+# Seconds after the epoch at which satellite 1 stops serving and satellite 2 takes over. 252 s is the crossover,
+# where both satellites are at 28.8 degrees and therefore at the same range - so the link delay is continuous
+# across the switch and only its drift reverses. See the pass table in configs/ntn/leo_satswitch.yml.
 SWITCH_AT=${SWITCH_AT:-252}
 DUR=${DUR:-700}
 
@@ -40,22 +45,39 @@ sleep 2
 sudo rm -f "$GNB_LOG"
 rm -f "$GNB_STDOUT" "$PING_LOG"
 
+# The terminal as it is now, to put back on exit: sudoers has use_pty here, and a sudo'd process in the
+# background leaves the terminal without output newline translation (see scripts/run_leo_rfsim.sh).
+TTY_STATE=$(stty -g 2>/dev/null || true)
 cleanup() {
+    trap - EXIT INT TERM
     sudo pkill -9 -f '[n]r-uesoftmodem' 2>/dev/null || true
     sudo pkill -9 -f '[a]pps/gnb/gnb'   2>/dev/null || true
     sudo pkill -9 -f '[p]ing -I oaitun' 2>/dev/null || true
+    trap '' TTOU   # under `timeout` this is a background process group: setting the terminal would stop it
+    [[ -n $TTY_STATE ]] && stty "$TTY_STATE" 2>/dev/null
+    return 0
 }
-trap cleanup EXIT
+trap cleanup EXIT INT TERM
 
+# Three timestamps have to agree: the epoch both satellites are propagated from, and the two halves of the switch
+# instant. They are stamped together here so the switch always lands on the crossover regardless of when the run
+# starts. The epoch lives in the base config and the switch times in the overlay.
 echo "== stamping epoch ${EPOCH_LEAD}s ahead, switch at T+${SWITCH_AT}s"
 EPOCH_ISO=$(date -u -d "+${EPOCH_LEAD} seconds" '+%Y-%m-%dT%H:%M:%S')
 SWITCH_ISO=$(date -u -d "+$((EPOCH_LEAD + SWITCH_AT)) seconds" '+%Y-%m-%dT%H:%M:%S')
 EPOCH_UNIX=$(date -d "$EPOCH_ISO UTC" +%s)
 
 sed -i "s/epoch_timestamp: '[^']*'/epoch_timestamp: '$EPOCH_ISO'/" "$BASE"
+# Both satellites share one epoch, so the overlay's sat-switch epoch is stamped to the same value.
 sed -i "s/epoch_timestamp: '[^']*'/epoch_timestamp: '$EPOCH_ISO'/" "$CFG"
 sed -i "s/t_service: '[^']*'/t_service: '$SWITCH_ISO'/" "$CFG"
 sed -i "s/t_service_start: '[^']*'/t_service_start: '$SWITCH_ISO'/" "$CFG"
+# The LMF's OAM satellite information (TS 38.305 5.4) for THIS run: both satellites and the instant the cell
+# changes hands, so the LMF knows which one carried the TRP for each measurement. LMF_NTN_OAM="" skips it.
+LMF_NTN_OAM=${LMF_NTN_OAM-$HOME/oai-cn5g/conf/ntn/ntn_satellites.json}
+if [[ -n $LMF_NTN_OAM ]]; then
+    python3 "$HERE/scripts/lmf_ntn_oam.py" "$BASE" "$LMF_NTN_OAM" --switch-cfg "$CFG"
+fi
 echo "   epoch  $EPOCH_ISO"
 echo "   switch $SWITCH_ISO"
 
@@ -66,7 +88,9 @@ wait_until() {
 }
 
 echo "== starting gNB (log: $GNB_LOG)"
-sudo "$GNB" -c "$BASE" -c "$CFG" > "$GNB_STDOUT" 2>&1 &
+# setsid + stdin from /dev/null: neither process may own the terminal (sudoers has use_pty).
+setsid sudo "$GNB" -c "$BASE" -c "$CFG" ${EXTRA_CFG:+-c "$EXTRA_CFG"} < /dev/null > "$GNB_STDOUT" 2>&1 &
+disown
 
 echo "== waiting for NG setup"
 ng_up() { sudo grep -qaiE "NG Setup Procedure.*(finished successfully|succeeded)" "$GNB_LOG" 2>/dev/null; }
@@ -78,6 +102,8 @@ done
 ng_up || { echo "no NG setup after 60s:"; cat "$GNB_STDOUT"; sudo tail -20 "$GNB_LOG"; exit 1; }
 echo "   NG setup done"
 
+# Confirm the promotion was actually scheduled. If this line is absent the run is pointless: the switch is only
+# being advertised in SIB19 and the cell will fly satellite 1 straight past its horizon.
 if sudo grep -qa 'Sat-switch promotion scheduled' "$GNB_LOG"; then
     sudo grep -a -m1 'Sat-switch promotion scheduled' "$GNB_LOG" | sed 's/^/   /'
 else
@@ -92,13 +118,15 @@ done
 mkdir -p "$UE_RUNDIR"
 echo "== starting UE (log: $UE_LOG)"
 cd "$UE_RUNDIR"
-sudo "$UE" -O "$UECFG" \
+setsid sudo "$UE" -O "$UECFG" \
     --band "$BAND" -C "$DL_FREQ" --CO "$UL_OFFSET" -r "$PRB" --numerology 0 --ssb "$SSB" \
     --rfsim \
     --rfsimulator.[0].serveraddr 127.0.0.1 \
     --time-sync-I 0.1 \
     --ntn-initial-time-drift "$TIME_DRIFT" \
-    > "$UE_LOG" 2>&1 &
+    ${UE_EXTRA_ARGS:-} \
+    < /dev/null > "$UE_LOG" 2>&1 &
+disown
 
 echo "== waiting for the PDU session"
 for _ in $(seq 180); do
@@ -109,6 +137,8 @@ ip addr show oaitun_ue1 &>/dev/null || { echo "== NOT attached. UE log tail:" >&
 echo "== attached via satellite 1"
 ip -4 addr show oaitun_ue1 | sed -n 's/.*inet \([0-9.]*\).*/   UE IP: \1/p'
 
+# The whole result is in this ping. A satellite switch the UE survives shows up as an unbroken sequence across
+# t_service; one it does not shows up as the sequence stopping there.
 ping -I oaitun_ue1 -D -i 1 "${PING_TARGET:-10.0.0.1}" > "$PING_LOG" 2>&1 &
 
 echo "== running to the switch at T+${SWITCH_AT}s"
@@ -118,7 +148,7 @@ echo
 echo "== switch window"
 sudo grep -aiE 'Sat-switch|satellite .* -> |horizon' "$GNB_LOG" | tail -5 | sed 's/^/   /' || true
 echo "-- emulated channel either side of the switch (delay should be continuous, drift should reverse):"
-sudo grep -a 'Emulated NTN channel' "$GNB_LOG" | awk 'NR%40==0' | tail -8 | sed 's/.*\(rx_delay=[0-9]*us drift=[-0-9.]*\).*/   \1/'
+sudo grep -a 'Emulated NTN channel' "$GNB_LOG" | awk 'NR%40==0' | tail -8 | sed 's/.*\(rx_delay=[0-9.]*us drift=[-0-9.]*\).*/   \1/'
 
 echo
 echo "-- ping across the switch:"
