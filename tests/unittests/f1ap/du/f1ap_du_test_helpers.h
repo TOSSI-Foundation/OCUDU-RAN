@@ -65,6 +65,8 @@ public:
   std::optional<std::vector<du_ue_index_t>>       last_ues_to_reset;
   std::optional<du_positioning_info_request>      last_positioning_info_request;
   std::optional<du_positioning_meas_request>      last_positioning_meas_request;
+  /// Returned by the next request_positioning_measurement(); empty unless a test sets it.
+  du_positioning_meas_response next_positioning_meas_response;
 
   explicit dummy_f1ap_du_configurator(timer_factory& timers_) : timers(timers_), task_loop(128), ue_sched(this) {}
 
@@ -166,7 +168,7 @@ public:
   request_positioning_measurement(const du_positioning_meas_request& req) override
   {
     last_positioning_meas_request = req;
-    return launch_no_op_task(du_positioning_meas_response{});
+    return launch_no_op_task(next_positioning_meas_response);
   }
 
   /// \brief Retrieve task scheduler specific to a given UE.
@@ -174,13 +176,13 @@ public:
 
   void connect_time_provider(f1ap_du_time_provider& tp) { time_provider = &tp; }
 
-  f1ap_du_time_provider& get_time_provider() override
-  {
-    ocudu_assert(time_provider != nullptr, "F1AP time provider not set in test double");
-    return *time_provider;
-  }
+  /// Without a connected provider, one with no slot-to-time mapping yet, as a DU before its first slot.
+  f1ap_du_time_provider& get_time_provider() override { return time_provider != nullptr ? *time_provider : no_mapping; }
 
 private:
+  struct no_mapping_provider final : f1ap_du_time_provider {
+    std::optional<f1ap_du_slot_time_info> get_last_mapping(subcarrier_spacing) override { return std::nullopt; }
+  } no_mapping;
   f1ap_du_time_provider* time_provider = nullptr;
 };
 

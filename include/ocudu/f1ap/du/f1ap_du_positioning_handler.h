@@ -23,8 +23,12 @@ struct du_trp_info {
   std::optional<pci_t>               pci;
   std::optional<nr_cell_global_id_t> cgi;
   std::optional<arfcn_t>             arfcn;
+  /// SFN Initialisation Time, Relative Time 1900 (TS 38.473 9.3.1.183): when SFN 0 started.
+  std::optional<uint64_t>            sfn_init_time;
   /// Geographical coordinates of the TRP antenna, as per TS 38.473, Section 9.3.1.184.
   std::optional<geographical_coordinates_t> geo_coords;
+  /// DL-PRS configuration of the TRP, as per TS 38.473, Section 9.3.1.177.
+  std::optional<prs_cfg_t> prs_cfg;
 };
 
 struct du_trp_info_response {
@@ -78,7 +82,16 @@ struct pos_meas_result_ul_rsrp {
   uint8_t ul_rsrp;
 };
 
-using pos_meas_result_item = std::variant<pos_meas_result_ul_rtoa, pos_meas_result_ul_rsrp>;
+// gNB Rx-Tx time difference, TS 38.215 Section 5.2.3: the receive time of the UL subframe carrying the SRS
+// minus the transmit time of the DL subframe of the same index.
+struct pos_meas_result_gnb_rx_tx {
+  uint8_t granularity;
+  /// Reported value, TS 38.133. Same range and step as UL-RTOA at every granularity (TS 38.473, both k0..k5).
+  uint32_t gnb_rx_tx;
+};
+
+using pos_meas_result_item =
+    std::variant<pos_meas_result_ul_rtoa, pos_meas_result_ul_rsrp, pos_meas_result_gnb_rx_tx>;
 
 struct pos_meas_result {
   trp_id_t trp_id;

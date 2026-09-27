@@ -578,7 +578,7 @@ void f1ap_du_impl::handle_positioning_measurement_request(const positioning_meas
 void f1ap_du_impl::handle_trp_information_request(const trp_info_request_s& msg)
 {
   du_mng.schedule_async_task(launch_async<f1ap_du_trp_information_exchange_procedure>(
-      msg, du_mng.get_positioning_handler(), *tx_pdu_notifier));
+      msg, du_mng.get_positioning_handler(), du_mng.get_time_provider(), *tx_pdu_notifier));
 }
 
 void f1ap_du_impl::handle_positioning_information_request(const asn1::f1ap::positioning_info_request_s& msg)

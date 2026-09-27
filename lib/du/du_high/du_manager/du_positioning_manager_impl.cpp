@@ -48,6 +48,45 @@ du_positioning_manager_impl::request_positioning_measurement(const du_positionin
   return launch_async<positioning_measurement_procedure>(req, cell_mng, ue_mng, du_params, trps);
 }
 
+/// The cell's DL-PRS as the F1AP PRS Configuration (TS 38.473 Section 9.3.1.177): one resource set with one resource,
+/// the same values the scheduler transmits (TS 38.211 Section 7.4.1.7).
+static prs_cfg_t make_prs_cfg(const du_cell_config& cell_cfg)
+{
+  const prs_cell_config&   prs = *cell_cfg.ran.prs;
+  const bwp_configuration& bwp = cell_cfg.ran.dl_cfg_common.init_dl_bwp.generic_params;
+
+  prs_res_item_t res;
+  res.prs_res_id        = 0;
+  res.seq_id            = prs.n_id;
+  res.re_offset         = prs.comb_offset;
+  res.res_slot_offset   = prs.resource_slot_offset;
+  res.res_symbol_offset = prs.start_symbol;
+  // Sent omnidirectionally from the cell that also sends the SSB (TS 38.214 5.1.6.5 allows QCL with an SSB).
+  res.qcl_info = ssb_t{.pci_nr = cell_cfg.ran.pci, .ssb_idx = std::nullopt};
+
+  prs_resource_set_item_t set;
+  set.prs_res_set_id = 0;
+  set.scs            = bwp.scs;
+  // pRSbandwidth: value v stands for 20 + 4 v PRBs, i.e. 1 -> 24 ... 63 -> 272.
+  set.prs_bw              = (prs.crbs.length() - 20) / 4;
+  set.start_prb           = prs.crbs.start();
+  set.point_a             = cell_cfg.ran.dl_cfg_common.freq_info_dl.absolute_freq_point_a.value();
+  set.comb_size           = static_cast<uint8_t>(prs.comb_size);
+  set.cp_type             = bwp.cp;
+  set.res_set_periodicity = prs.period_slots;
+  set.res_set_slot_offset = prs.set_slot_offset;
+  // No repetition: factor 1, and the (mandatory in F1AP) time gap at its minimum.
+  set.res_repeat_factor = 1;
+  set.res_time_gap      = 1;
+  set.res_numof_symbols = static_cast<uint8_t>(prs.nof_symbols);
+  set.prs_res_tx_pwr    = prs.tx_power_dbm;
+  set.prs_res_list.push_back(res);
+
+  prs_cfg_t cfg;
+  cfg.prs_res_set_list.push_back(set);
+  return cfg;
+}
+
 void du_positioning_manager_impl::update_trp_info()
 {
   for (unsigned i = 0, e = cell_mng.nof_cells(); i != e; ++i) {
@@ -63,6 +102,11 @@ void du_positioning_manager_impl::update_trp_info()
       geo_coords.trp_position_definition_type = trp_position_direct_t{cell_cfg.trp_geo_coordinates.value()};
       trp.geo_coords                          = geo_coords;
     }
-    trps.insert(std::make_pair(trp.trp_id, trp));
+    if (cell_cfg.ran.prs.has_value()) {
+      trp.prs_cfg = make_prs_cfg(cell_cfg);
+    }
+    // insert_or_assign, not insert: this runs before every measurement, and a TRP already in the map would otherwise
+    // keep its first snapshot for good.
+    trps.insert_or_assign(trp.trp_id, trp);
   }
 }

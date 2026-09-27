@@ -786,6 +786,11 @@ asn1::f1ap::trp_info_s ocudu::trp_info_to_asn1(const odu::du_trp_info& trp)
     item.set_nr_arfcn() = trp.arfcn.value().value();
     asn1out.trp_info_type_resp_list.push_back(item);
   }
+  if (trp.sfn_init_time.has_value()) {
+    trp_info_type_resp_item_c item;
+    item.set_sfn_initisation_time().from_number(trp.sfn_init_time.value());
+    asn1out.trp_info_type_resp_list.push_back(item);
+  }
   if (trp.geo_coords.has_value()) {
     const auto& direct = std::get<trp_position_direct_t>(trp.geo_coords.value().trp_position_definition_type);
 
@@ -797,6 +802,47 @@ asn1::f1ap::trp_info_s ocudu::trp_info_to_asn1(const odu::du_trp_info& trp)
     } else {
       asn1_direct.accuracy.set_trph_aposition() =
           ha_access_point_position_to_asn1(std::get<ng_ran_high_accuracy_access_point_position_t>(direct.accuracy));
+    }
+    asn1out.trp_info_type_resp_list.push_back(item);
+  }
+  if (trp.prs_cfg.has_value()) {
+    // PRS Configuration, TS 38.473 Section 9.3.1.177.
+    trp_info_type_resp_item_c item;
+    prs_cfg_s&                asn1_prs = item.set_prs_cfg();
+    for (const prs_resource_set_item_t& set : trp.prs_cfg->prs_res_set_list) {
+      prs_res_set_item_s asn1_set;
+      asn1_set.prs_res_set_id = set.prs_res_set_id;
+      asn1::number_to_enum(asn1_set.subcarrier_spacing, scs_to_khz(set.scs));
+      asn1_set.pr_sbw    = set.prs_bw;
+      asn1_set.start_prb = set.start_prb;
+      asn1_set.point_a   = set.point_a;
+      asn1::number_to_enum(asn1_set.comb_size, set.comb_size);
+      asn1_set.cp_type = set.cp_type == cyclic_prefix::options::NORMAL ? prs_res_set_item_s::cp_type_opts::normal
+                                                              : prs_res_set_item_s::cp_type_opts::extended;
+      asn1::number_to_enum(asn1_set.res_set_periodicity, set.res_set_periodicity);
+      asn1_set.res_set_slot_offset = set.res_set_slot_offset;
+      asn1::number_to_enum(asn1_set.res_repeat_factor, set.res_repeat_factor);
+      asn1::number_to_enum(asn1_set.res_time_gap, set.res_time_gap);
+      asn1::number_to_enum(asn1_set.res_numof_symbols, set.res_numof_symbols);
+      asn1_set.prs_res_tx_pwr = set.prs_res_tx_pwr;
+      for (const prs_res_item_t& res : set.prs_res_list) {
+        prs_res_item_s asn1_res;
+        asn1_res.prs_res_id        = res.prs_res_id;
+        asn1_res.seq_id            = res.seq_id;
+        asn1_res.re_offset         = res.re_offset;
+        asn1_res.res_slot_offset   = res.res_slot_offset;
+        asn1_res.res_symbol_offset = res.res_symbol_offset;
+        if (res.qcl_info.has_value() && std::holds_alternative<ssb_t>(*res.qcl_info)) {
+          const ssb_t& ssb           = std::get<ssb_t>(*res.qcl_info);
+          asn1_res.qcl_info_present  = true;
+          auto& asn1_ssb             = asn1_res.qcl_info.set_qcl_source_ssb();
+          asn1_ssb.pci_nr            = ssb.pci_nr;
+          asn1_ssb.ssb_idx_present   = ssb.ssb_idx.has_value();
+          asn1_ssb.ssb_idx           = ssb.ssb_idx.value_or(0);
+        }
+        asn1_set.prs_res_list.push_back(asn1_res);
+      }
+      asn1_prs.prs_res_set_list.push_back(asn1_set);
     }
     asn1out.trp_info_type_resp_list.push_back(item);
   }

@@ -56,7 +56,8 @@ public:
     // mac_subframe_time_mapper always maps to the local system clock, so is_local_clock is hardcoded true.
     constexpr bool is_local_clock = true;
 
-    return f1ap_du_slot_time_info{m->sl_tx, pack_ref_time_r16(m->time_point, is_local_clock), is_local_clock};
+    return f1ap_du_slot_time_info{
+        m->sl_tx, pack_ref_time_r16(m->time_point, is_local_clock), is_local_clock, m->time_point};
   }
 
 private:

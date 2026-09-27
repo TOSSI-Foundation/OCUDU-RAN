@@ -6,6 +6,7 @@
 
 #include "ocudu/adt/byte_buffer.h"
 #include "ocudu/ran/slot_point.h"
+#include <chrono>
 #include <optional>
 
 namespace ocudu {
@@ -18,6 +19,8 @@ struct f1ap_du_slot_time_info {
   byte_buffer ref_time_r16;
   /// When true, ref_time_r16 is relative to a local (non-GPS) clock; GPS origin (6 Jan 1980) is assumed otherwise.
   bool is_local_clock = true;
+  /// System time of ref_slot, unpacked.
+  std::chrono::system_clock::time_point time_point;
 };
 
 /// \brief Abstract time source used by the F1AP DU reference time reporting procedure.

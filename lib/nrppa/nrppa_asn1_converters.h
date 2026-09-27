@@ -521,7 +521,7 @@ inline asn1::nrppa::prs_res_set_item_s prs_resource_set_item_to_asn1(const prs_r
   asn1::nrppa::prs_res_set_item_s asn1_prs_res_set_item;
 
   asn1_prs_res_set_item.prs_res_set_id = prs_res_set_item.prs_res_set_id;
-  asn1::string_to_enum(asn1_prs_res_set_item.subcarrier_spacing, to_string(prs_res_set_item.scs));
+  asn1::number_to_enum(asn1_prs_res_set_item.subcarrier_spacing, scs_to_khz(prs_res_set_item.scs));
   asn1_prs_res_set_item.pr_sbw    = prs_res_set_item.prs_bw;
   asn1_prs_res_set_item.start_prb = prs_res_set_item.start_prb;
   asn1_prs_res_set_item.point_a   = prs_res_set_item.point_a;
@@ -786,10 +786,10 @@ geographical_coordinates_to_asn1(const geographical_coordinates_t& geographical_
 
     // Fill accuracy.
     if (std::holds_alternative<ng_ran_access_point_position_t>(trp_position_direct.accuracy)) {
-      asn1_trp_position_direct.accuracy.trp_position() =
+      asn1_trp_position_direct.accuracy.set_trp_position() =
           ng_ran_access_point_position_to_asn1(std::get<ng_ran_access_point_position_t>(trp_position_direct.accuracy));
     } else {
-      asn1_trp_position_direct.accuracy.trph_aposition() = ng_ran_high_accuracy_access_point_position_to_asn1(
+      asn1_trp_position_direct.accuracy.set_trph_aposition() = ng_ran_high_accuracy_access_point_position_to_asn1(
           std::get<ng_ran_high_accuracy_access_point_position_t>(trp_position_direct.accuracy));
     }
   }
@@ -996,7 +996,8 @@ inline asn1::nrppa::trp_info_list_trp_resp_item_s_ trp_information_list_trp_resp
     }
 
     if (std::holds_alternative<prs_cfg_t>(trp_info_type_resp_item)) {
-      asn1::nrppa::prs_cfg_s asn1_prs_cfg = asn1_trp_info_type_resp_item.set_prs_cfg();
+      // A reference: a copy would take the resource sets pushed below and leave the message without them.
+      asn1::nrppa::prs_cfg_s& asn1_prs_cfg = asn1_trp_info_type_resp_item.set_prs_cfg();
 
       for (const auto& prs_resource_set_item : std::get<prs_cfg_t>(trp_info_type_resp_item).prs_res_set_list) {
         asn1_prs_cfg.prs_res_set_list.push_back(prs_resource_set_item_to_asn1(prs_resource_set_item));

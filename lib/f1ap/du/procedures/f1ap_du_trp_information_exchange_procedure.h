@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "ocudu/f1ap/du/f1ap_du_time_provider.h"
+
 #include "ocudu/asn1/f1ap/f1ap.h"
 #include "ocudu/asn1/f1ap/f1ap_pdu_contents.h"
 #include "ocudu/f1ap/du/f1ap_du_positioning_handler.h"
@@ -21,6 +23,7 @@ class f1ap_du_trp_information_exchange_procedure
 public:
   f1ap_du_trp_information_exchange_procedure(const asn1::f1ap::trp_info_request_s& msg_,
                                              f1ap_du_positioning_handler&          du_mng_,
+                                             f1ap_du_time_provider&                time_provider_,
                                              f1ap_message_notifier&                cu_notifier_);
 
   void operator()(coro_context<async_task<void>>& ctx);
@@ -32,6 +35,7 @@ private:
 
   const asn1::f1ap::trp_info_request_s msg;
   f1ap_du_positioning_handler&         du_mng;
+  f1ap_du_time_provider&       time_provider;
   f1ap_message_notifier&               cu_notifier;
   ocudulog::basic_logger&              logger;
 };

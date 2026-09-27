@@ -37,6 +37,35 @@ static odu::pos_meas_type asn1_pos_meas_type_to_du_pos_meas_type(pos_meas_type_o
   }
 }
 
+/// Sets a timing measurement at granularity factor k. UL-RTOA and gNB Rx-Tx use the same k0..k5 choice shape and
+/// ranges in TS 38.473, so one helper serves both.
+template <typename KChoice>
+static void set_timing_value(KChoice& choice, uint8_t k, uint32_t value)
+{
+  switch (k) {
+    case 0:
+      choice.set_k0() = value;
+      break;
+    case 1:
+      choice.set_k1() = value;
+      break;
+    case 2:
+      choice.set_k2() = value;
+      break;
+    case 3:
+      choice.set_k3() = value;
+      break;
+    case 4:
+      choice.set_k4() = value;
+      break;
+    case 5:
+      choice.set_k5() = value;
+      break;
+    default:
+      report_fatal_error("Invalid k value");
+  }
+}
+
 f1ap_du_positioning_measurement_procedure::f1ap_du_positioning_measurement_procedure(
     const positioning_meas_request_s& msg_,
     f1ap_du_positioning_handler&      du_mng_,
@@ -83,26 +112,29 @@ bool f1ap_du_positioning_measurement_procedure::validate_request() const
     return false;
   }
 
-  // At least 1 of the elements must be UL-RTOA or UL SRS-RSRP.
+  // At least 1 of the elements must be a supported type: UL-RTOA, gNB Rx-Tx or UL SRS-RSRP.
   if (not std::any_of(msg->pos_meas_quantities.begin(), msg->pos_meas_quantities.end(), [](const auto& quantity) {
         return quantity.pos_meas_type.value == pos_meas_type_opts::ul_rtoa or
+               quantity.pos_meas_type.value == pos_meas_type_opts::gnb_rx_tx or
                quantity.pos_meas_type.value == pos_meas_type_opts::ul_srs_rsrp;
       })) {
-    logger.warning("Positioning Measurement Req.: no UL-RTOA and UL SRS RSRP pos. measurement type found in the list");
+    logger.warning(
+        "Positioning Measurement Req.: no UL-RTOA, gNB Rx-Tx or UL SRS RSRP pos. measurement type found in the list");
     return false;
   }
 
   // Quantity type-specific checks.
   for (const auto& quant : msg->pos_meas_quantities) {
-    if (quant.pos_meas_type.value == pos_meas_type_opts::ul_rtoa) {
+    if (quant.pos_meas_type.value == pos_meas_type_opts::ul_rtoa or
+        quant.pos_meas_type.value == pos_meas_type_opts::gnb_rx_tx) {
       if (not quant.timing_report_granularity_factor_present) {
         logger.warning("Granularity factor not present");
       }
     } else if (quant.pos_meas_type.value == pos_meas_type_opts::ul_srs_rsrp) {
       // Placeholder for UL SRS RSRP measurement specifc type checks.
     } else {
-      logger.warning("Only UL-RTOA and UL SRS RSRP positioning measurement types are supported. Other measurement "
-                     "types will be ignored");
+      logger.warning("Only UL-RTOA, gNB Rx-Tx and UL SRS RSRP positioning measurement types are supported. Other "
+                     "measurement types will be ignored");
     }
   }
 
@@ -204,38 +236,17 @@ void f1ap_du_positioning_measurement_procedure::send_response() const
       pos_meas_result_item_s& asn1_meas_result = asn1_meas.pos_meas_result[j];
 
       // Measurement Result Value.
-      if (std::holds_alternative<pos_meas_result_ul_rtoa>(du_meas_result)) {
-        // UL-RTOA measurement result.
-        const auto& du_rtoa_result = std::get<pos_meas_result_ul_rtoa>(du_meas_result);
-        auto&       rtoa_item      = asn1_meas_result.measured_results_value.set_ul_rtoa().ul_rtoa_meas_item;
-        switch (du_rtoa_result.granularity) {
-          case 0:
-            rtoa_item.set_k0() = du_rtoa_result.ul_rtoa;
-            break;
-          case 1:
-            rtoa_item.set_k1() = du_rtoa_result.ul_rtoa;
-            break;
-          case 2:
-            rtoa_item.set_k2() = du_rtoa_result.ul_rtoa;
-            break;
-          case 3:
-            rtoa_item.set_k3() = du_rtoa_result.ul_rtoa;
-            break;
-          case 4:
-            rtoa_item.set_k4() = du_rtoa_result.ul_rtoa;
-            break;
-          case 5:
-            rtoa_item.set_k5() = du_rtoa_result.ul_rtoa;
-            break;
-          default:
-            report_fatal_error("Invalid k value");
-        }
+      if (const auto* rtoa = std::get_if<pos_meas_result_ul_rtoa>(&du_meas_result)) {
+        set_timing_value(asn1_meas_result.measured_results_value.set_ul_rtoa().ul_rtoa_meas_item,
+                         rtoa->granularity,
+                         rtoa->ul_rtoa);
+      } else if (const auto* rx_tx = std::get_if<pos_meas_result_gnb_rx_tx>(&du_meas_result)) {
+        set_timing_value(asn1_meas_result.measured_results_value.set_gnb_rx_tx_time_diff().rx_tx_time_diff,
+                         rx_tx->granularity,
+                         rx_tx->gnb_rx_tx);
       } else {
-        // TODO: extend this if block as other measurements report are added.
-        // UL-RSRP measurement result.
-        const auto& du_rsrp_result = std::get<pos_meas_result_ul_rsrp>(du_meas_result);
-        auto&       rtoa_item      = asn1_meas_result.measured_results_value.set_ul_srs_rsrp();
-        rtoa_item                  = du_rsrp_result.ul_rsrp;
+        asn1_meas_result.measured_results_value.set_ul_srs_rsrp() =
+            std::get<pos_meas_result_ul_rsrp>(du_meas_result).ul_rsrp;
       }
 
       // Slot and time stamp.

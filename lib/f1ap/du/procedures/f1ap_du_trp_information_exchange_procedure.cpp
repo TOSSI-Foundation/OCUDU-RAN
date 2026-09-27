@@ -19,8 +19,9 @@ using namespace asn1::f1ap;
 f1ap_du_trp_information_exchange_procedure::f1ap_du_trp_information_exchange_procedure(
     const trp_info_request_s&    msg_,
     f1ap_du_positioning_handler& du_mng_,
+    f1ap_du_time_provider&       time_provider_,
     f1ap_message_notifier&       cu_notifier_) :
-  msg(msg_), du_mng(du_mng_), cu_notifier(cu_notifier_), logger(ocudulog::fetch_basic_logger("DU-F1"))
+  msg(msg_), du_mng(du_mng_), time_provider(time_provider_), cu_notifier(cu_notifier_), logger(ocudulog::fetch_basic_logger("DU-F1"))
 {
 }
 
@@ -40,6 +41,23 @@ void f1ap_du_trp_information_exchange_procedure::operator()(coro_context<async_t
     logger.debug("TRP information exchange procedure failed: no TRPs found");
     send_failure();
     CORO_EARLY_RETURN();
+  }
+
+  // SFN Initialisation Time (TS 38.473 9.3.1.183): the system time of the start of SFN 0, from the latest slot to
+  // time mapping. It lets the location server turn the (SFN, slot) timestamps of measurements into absolute time,
+  // which single-satellite NTN Multi-RTT needs to know where the satellite was (TS 38.305 8.10).
+  if (auto m = time_provider.get_last_mapping(subcarrier_spacing::kHz15); m.has_value() and m->ref_slot.valid()) {
+    using namespace std::chrono;
+    const auto since_sfn0 = nanoseconds{(m->ref_slot.sfn() * 10 + m->ref_slot.subframe_index()) * 1'000'000LL +
+                                        m->ref_slot.subframe_slot_index() * 1'000'000LL /
+                                            m->ref_slot.nof_slots_per_subframe()};
+    const auto     sfn0     = duration_cast<nanoseconds>((m->time_point - since_sfn0).time_since_epoch());
+    constexpr auto from1900 = 2208988800ULL; // 1900-01-01 to 1970-01-01, s
+    const uint64_t secs     = static_cast<uint64_t>(duration_cast<seconds>(sfn0).count()) + from1900;
+    const uint64_t frac = (static_cast<uint64_t>((sfn0 - duration_cast<seconds>(sfn0)).count()) << 32) / 1'000'000'000ULL;
+    for (auto& trp : du_resp.trps) {
+      trp.sfn_init_time = (secs << 32) | frac;
+    }
   }
 
   // Send response back to CU-CP.

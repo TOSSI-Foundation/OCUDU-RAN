@@ -105,32 +105,40 @@ du_positioning_meas_response positioning_measurement_procedure::prepare_f1ap_res
                  "Currently we only support 1 measurement result (SRS indication) per TRP.");
     static constexpr size_t srs_ind_meas_idx = 0U;
 
-    // Check what reports have been requested.
-    const bool rtoa_report = std::any_of(
-        req.pos_meas_quants.begin(), req.pos_meas_quants.end(), [](const positioning_meas_quantity& quantity) {
-          return quantity.meas_type == pos_meas_type::ul_rtoa;
-        });
-    const bool rsrp_report = std::any_of(req.pos_meas_quants.begin(),
-                                         req.pos_meas_quants.end(),
-                                         [](const positioning_meas_quantity& quantity) {
-                                           return quantity.meas_type == pos_meas_type::ul_srs_rsrp;
-                                         }) and
-                             mac_resp.cell_results[trp_idx].ul_rtoa_meass[srs_ind_meas_idx].rsrp_dbfs.has_value();
+    // Check what reports have been requested. A quantity carries its own granularity factor; when it has none,
+    // fall back to the first quantity's, which is what every report used before per-quantity granularity.
+    const auto requested = [this](pos_meas_type type) -> const positioning_meas_quantity* {
+      const auto it =
+          std::find_if(req.pos_meas_quants.begin(), req.pos_meas_quants.end(), [type](const auto& quantity) {
+            return quantity.meas_type == type;
+          });
+      return it == req.pos_meas_quants.end() ? nullptr : &*it;
+    };
+    const auto granularity_of = [granularity](const positioning_meas_quantity& quantity) -> uint8_t {
+      return quantity.granularity_factor.has_value() ? quantity.granularity_factor.value() : granularity;
+    };
+    const auto& srs_meas = mac_resp.cell_results[trp_idx].ul_rtoa_meass[srs_ind_meas_idx];
 
-    const size_t report_size = (rtoa_report ? 1U : 0U) + (rsrp_report ? 1U : 0U);
-    meas_res.results.resize(report_size);
-    // TODO: Review this assumption once the F1AP we defined which elements of Positioning measurement request are
-    //       mandatory.
-    // NOTE: We assume the UL-RTOA report (if requested) comes first, followed by the UL-RSRP report (if requested).
-    if (rtoa_report) {
-      meas_res.results.front().emplace<pos_meas_result_ul_rtoa>(pos_meas_result_ul_rtoa{
-          .granularity = granularity,
-          .ul_rtoa = mac_resp.cell_results[trp_idx].ul_rtoa_meass[srs_ind_meas_idx].ul_rtoa.to_ul_rtoa(granularity)});
+    // NOTE: results are reported in the order UL-RTOA, gNB Rx-Tx, UL-RSRP, each only if requested.
+    if (const auto* quantity = requested(pos_meas_type::ul_rtoa)) {
+      const uint8_t k = granularity_of(*quantity);
+      meas_res.results.emplace_back(pos_meas_result_ul_rtoa{.granularity = k, .ul_rtoa = srs_meas.ul_rtoa.to_ul_rtoa(k)});
     }
-    if (rsrp_report) {
-      const auto rsrp_value = rsrp_dbfs_to_l3_rsrp_mapping(
-          mac_resp.cell_results[trp_idx].ul_rtoa_meass[srs_ind_meas_idx].rsrp_dbfs.value());
-      meas_res.results.back().emplace<pos_meas_result_ul_rsrp>(pos_meas_result_ul_rsrp{.ul_rsrp = rsrp_value});
+    if (const auto* quantity = requested(pos_meas_type::gnb_rx_tx)) {
+      // The PHY reports the SRS arrival relative to where the gNB expects the UL subframe, and a
+      // timing-aligned UE transmits N_TA,offset earlier than its DL reference as well as by N_TA (TS
+      // 38.211 Section 4.3.1), so an aligned UL subframe lands N_TA,offset before the DL subframe of
+      // the same index: gNB Rx-Tx = T_gNB-RX - T_gNB-TX = UL time alignment - N_TA,offset.
+      const auto    ta_offset = phy_time_unit::from_units_of_Tc(
+          static_cast<unsigned>(du_cells.get_cell_cfg(mac_req.cells[trp_idx].cell_index).ran.ta_offset));
+      const uint8_t k         = granularity_of(*quantity);
+      // TS 38.133 reports gNB Rx-Tx over the same +-985024 Tc range and steps as UL-RTOA, so the mapping is shared.
+      meas_res.results.emplace_back(
+          pos_meas_result_gnb_rx_tx{.granularity = k, .gnb_rx_tx = (srs_meas.ul_rtoa - ta_offset).to_ul_rtoa(k)});
+    }
+    if (requested(pos_meas_type::ul_srs_rsrp) != nullptr and srs_meas.rsrp_dbfs.has_value()) {
+      meas_res.results.emplace_back(
+          pos_meas_result_ul_rsrp{.ul_rsrp = rsrp_dbfs_to_l3_rsrp_mapping(srs_meas.rsrp_dbfs.value())});
     }
     meas_res.sl_rx = mac_resp.sl_rx;
 
