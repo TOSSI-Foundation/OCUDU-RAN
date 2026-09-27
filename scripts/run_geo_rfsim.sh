@@ -8,9 +8,19 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
 GNB=${GNB:-$HERE/build_ntn/apps/gnb/gnb}
 CFG=${CFG:-$HERE/configs/ntn/geo_rfsim_gnb.yml}
-OAI=${OAI:-$(dirname "$HERE")/OAI_RAN}
+UE_CONF=ue.ntn.geo.rfsim.slice.conf
+# The OAI UE tree: the sibling of this repo that actually carries the config this script needs, so a stale
+# clone under another name is skipped rather than picked. Set OAI to choose one yourself.
+OAI=${OAI:-}
+if [[ -z $OAI ]]; then
+    for d in OAI-RAN-rfsim OAI_RAN OAI-RAN openairinterface5g; do
+        cand=$(dirname "$HERE")/$d
+        [[ -f $cand/targets/PROJECTS/GENERIC-NR-5GC/CONF/$UE_CONF ]] && OAI=$cand && break
+    done
+fi
+OAI=${OAI:-$(dirname "$HERE")/OAI-RAN-rfsim}
 UE=${UE:-$OAI/cmake_targets/ran_build/build/nr-uesoftmodem}
-UECFG=${UECFG:-$OAI/targets/PROJECTS/GENERIC-NR-5GC/CONF/ue.ntn.geo.rfsim.conf}
+UECFG=${UECFG:-$OAI/targets/PROJECTS/GENERIC-NR-5GC/CONF/ue.ntn.geo.rfsim.slice.conf}
 
 # One way, in ms. Applied on each peer's receive path, so the round trip is twice this; it must stay consistent
 # with cell_specific_koffset in $CFG (240 slots at 15 kHz SCS covers a 240.7 ms round trip).

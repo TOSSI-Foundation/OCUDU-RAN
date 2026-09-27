@@ -8,7 +8,17 @@ GNB=${GNB:-$HERE/build_ntn/apps/gnb/gnb}
 BASE=${BASE:-$HERE/configs/ntn/leo_rfsim_gnb.yml}
 CFG1=${CFG1:-$HERE/configs/ntn/leo_dualsat_sat1.yml}
 CFG2=${CFG2:-$HERE/configs/ntn/leo_dualsat_sat2.yml}
-OAI=${OAI:-$(dirname "$HERE")/OAI_RAN}
+UE_CONF=ue.ntn.leo.rfsim.conf
+# The OAI UE tree: the sibling of this repo that actually carries the config this script needs, so a stale
+# clone under another name is skipped rather than picked. Set OAI to choose one yourself.
+OAI=${OAI:-}
+if [[ -z $OAI ]]; then
+    for d in OAI-RAN-rfsim OAI_RAN OAI-RAN openairinterface5g; do
+        cand=$(dirname "$HERE")/$d
+        [[ -f $cand/targets/PROJECTS/GENERIC-NR-5GC/CONF/$UE_CONF ]] && OAI=$cand && break
+    done
+fi
+OAI=${OAI:-$(dirname "$HERE")/OAI-RAN-rfsim}
 UE=${UE:-$OAI/cmake_targets/ran_build/build/nr-uesoftmodem}
 UECFG=${UECFG:-$OAI/targets/PROJECTS/GENERIC-NR-5GC/CONF/ue.ntn.leo.rfsim.conf}
 CORE=${CORE:-$HOME/oai-cn5g}
