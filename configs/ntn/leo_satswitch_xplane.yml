@@ -1,5 +1,6 @@
-# Intra-cell satellite switch (TS 38.331 satSwitchWithReSync-r18). Overlay on leo_rfsim_gnb.yml.
-#   gnb -c configs/ntn/leo_rfsim_gnb.yml -c configs/ntn/leo_satswitch.yml
+# TWO SATELLITES IN DIFFERENT ORBITAL PLANES, for positioning. OVERLAY on leo_rfsim_gnb.yml, like
+# leo_satswitch.yml, which this file is a copy of with ONE change: satellite 2 is satellite 1's state vector
+# ROTATED 90 DEGREES ABOUT THE EARTH'S AXIS - (x, y) -> (-y, x) on both position and velocity.
 
 cell_cfg:
   ntn:
@@ -11,22 +12,24 @@ cell_cfg:
     # When satellite 1 stops serving this area. Stamped by scripts/run_leo_satswitch_rfsim.sh to the crossover,
     # epoch + 252 s. derive_post_switch_config() requires this to be set, and schedules the promotion for exactly
     # this instant (ntn_configuration_manager_impl.cpp:232).
-    t_service: '2026-09-12T19:25:57'
+    t_service: '2026-09-22T09:03:01'
 
     sat_switch_with_resync:
+      # The SAME propagator as the serving satellite (the base config sets keplerian).
+      propagator_type: keplerian
       # Satellite 2: same 600 km circular polar orbit, same epoch, trailing satellite 1 by exactly 16
       # degrees of true anomaly.
-      epoch_timestamp: '2026-09-12T19:21:45'
+      epoch_timestamp: '2026-09-22T09:01:01'
       ephemeris_info_ecef:
-        pos_x: 0
-        pos_y: -2795108.8
-        pos_z: 6370539.2
-        vel_x: 0
-        vel_y: 6931.63
-        vel_z: 3041.29
+        pos_x: 2826323.2
+        pos_y: 0
+        pos_z: 6356752.3
+        vel_x: -6916.62
+        vel_y: 0
+        vel_z: 3075.25
 
       # Same instant as the serving cell's t_service: satellite 2 starts serving as satellite 1 stops.
-      t_service_start: '2026-09-12T19:25:57'
+      t_service_start: '2026-09-22T09:03:01'
 
       use_state_vector: true            # the OAI UE only decodes positionVelocity-r17
       ntn_ul_sync_validity_dur: 5

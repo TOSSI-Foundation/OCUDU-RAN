@@ -1,8 +1,11 @@
+# Inter-satellite handover, satellite 1 of 2. Overlay on configs/ntn/leo_rfsim_gnb.yml.
+#   gnb -c configs/ntn/leo_rfsim_gnb.yml -c configs/ntn/leo_ho_sat1.yml
 
 gnb_id: 411
 ran_node_name: gnb-sat1
 
 cu_cp:
+  # SD-Core, and it is REQUIRED for a handover to complete.
   amf:
     addr: 192.168.1.115
     bind_addr: 192.168.1.117
@@ -23,14 +26,15 @@ cu_cp:
               - 127.0.0.2
 
   mobility:
+    # Handover is triggered by hand with the gNB's "ho" console command, not from measurements.
     trigger_handover_from_measurements: false
     cells:
-      - nr_cell_id: 0x66C000
+      - nr_cell_id: 0x66C000            # this gNB's own cell: gnb_id 411 << 14
         periodic_report_cfg_id: 1
         ncells:
           - nr_cell_id: 0x670000
             report_configs: [2]
-      - nr_cell_id: 0x670000
+      - nr_cell_id: 0x670000            # satellite 2's cell, as a neighbour
         ncells:
           - nr_cell_id: 0x66C000
             report_configs: [2]
@@ -38,6 +42,8 @@ cu_cp:
         pci: 2
         plmn: "00101"
         tac: 1
+        # Same carrier as this cell: the two cells are intra-frequency and their samples sum in the one
+        # rfsimulator stream. Verified working that way on this host in the band 78 Xn handover run.
         ssb_arfcn: 436610
         band: 256
         ssb_scs: 15
@@ -63,9 +69,16 @@ cu_up:
       - bind_addr: 192.168.1.117
 
 ru_sdr:
+  # CLIENT, not server.
   device_args: serveraddr=127.0.0.1,serverport=4043,options=chanmod,realtime
 
+  # tx_gain_backoff is deliberately NOT set here: this cell keeps the base config's 12 dB, which is the value the
+  # attach was tuned on. Satellite 2 keeps it too - see leo_ho_sat2.yml for the measurements ruling out any power
+  # separation between the two cells.
+
 cell_cfg:
+  # SD-Core is provisioned for sst 1 / sd 0x010203 (66051), not the base config's sd 1.
+  # This, the tai_slice_support_list above and the UE's --uicc0.nssai_sd must all agree.
   slicing:
     - sst: 1
       sd: 66051
@@ -73,6 +86,7 @@ cell_cfg:
   pci: 1
 
   ntn:
+    # THE FIRST SATELLITE, restated here rather than inherited from the base config.
     propagator_type: keplerian
     cell_specific_koffset: 40
     ntn_ul_sync_validity_dur: 30

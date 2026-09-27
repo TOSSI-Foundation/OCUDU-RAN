@@ -1,0 +1,43 @@
+# NRPPa/LPP positioning overlay for the LEO link.
+#   gnb -c configs/ntn/leo_rfsim_gnb.yml -c configs/ntn/leo_nrppa.yml
+
+gnb_id: 411
+gnb_id_bit_length: 30
+
+cell_cfg:
+  # The DU measures UL-RTOA on the UE's ordinary periodic SRS, so SRS has to be on. 160 ms is the terrestrial
+  # LiteON value; the cell here is FDD (band 256), so there is no TDD period to be a multiple of.
+  srs:
+    type_enabled: periodic
+    period_ms: 160
+
+  # TRP antenna position, reported in the F1AP/NRPPa TRP Information Response.
+  geo_coordinates:
+    high_accuracy:
+      latitude: 90.0
+      longitude: 0.0
+      altitude: 0
+
+  # DL-PRS (TS 38.211 7.4.1.7), the downlink half of Multi-RTT: the UE Rx-Tx time difference is measured on
+  # it (TS 38.215 5.1.30).
+  prs:
+    period_slots: 160
+    set_slot_offset: 5
+    resource_slot_offset: 0
+    n_id: 1
+    comb_size: 4
+    comb_offset: 0
+    nof_symbols: 4
+    start_symbol: 4
+    start_prb: 0
+    nof_prbs: 48
+    tx_power_dbm: 0
+
+log:
+  # Own file, and scripts/run_leo_rfsim.sh must be given the SAME path in GNB_LOG: that variable only tells the
+  # script where to look for the NG-setup line, it does not reach the gNB. Point them at different files and the
+  # run aborts with "no NG setup after 60s" while the gNB is in fact up.
+  filename: /tmp/gnb_leo_nrppa.log
+  # The NRPPa exchange runs CU-CP -> F1AP -> DU, so those three are what shows whether the procedure completed.
+  nrppa_level: debug
+  f1ap_level: debug

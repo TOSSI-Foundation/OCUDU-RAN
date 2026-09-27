@@ -1,0 +1,55 @@
+# Two satellites serving one UE AT THE SAME TIME, satellite 1 of 2. OVERLAY on configs/ntn/leo_rfsim_gnb.yml:
+# gnb -c configs/ntn/leo_rfsim_gnb.yml -c configs/ntn/leo_dualsat_sat1.yml Run it with
+# scripts/run_leo_dualsat_rfsim.sh, which starts both gNBs against the local OAI core and its LMF.
+
+gnb_id: 411
+# 30 bits, not the base 22: the OAI AMF's NGAP decoder only handles a 4-byte gNB ID and mis-keys 3-byte ones,
+# so LMF-targeted NRPPa never arrives. Must match lmf.gnb_id_bits_count in oai-cn5g/conf/config.yaml.
+gnb_id_bit_length: 30
+ran_node_name: gnb-dualsat-1
+
+ru_sdr:
+  # CLIENT, not server: rfsimulator is one server with many clients, so for the UE to see both cells at once
+  # the UE is the server and both gNBs connect to it (the inversion scripts/run_leo_ho_rfsim.sh already
+  # uses).
+  device_args: serveraddr=127.0.0.1,serverport=4043,options=chanmod,realtime,ntn_dl_share=0.5
+
+cell_cfg:
+  pci: 1
+
+  # The DU measures UL-RTOA and gNB Rx-Tx on the UE's ordinary periodic SRS.
+  srs:
+    type_enabled: periodic
+    period_ms: 160
+
+  geo_coordinates:
+    high_accuracy:
+      latitude: 90.0
+      longitude: 0.0
+      altitude: 0
+
+  # DL-PRS, the downlink half of Multi-RTT.
+  prs:
+    period_slots: 160
+    set_slot_offset: 5
+    resource_slot_offset: 0
+    n_id: 1
+    comb_size: 4
+    comb_offset: 0
+    nof_symbols: 4
+    start_symbol: 4
+    start_prb: 0
+    nof_prbs: 48
+    tx_power_dbm: 0
+
+  # The ephemeris is NOT restated: naming cell_cfg.ntn would make this file authoritative for the whole block,
+  # and satellite 1 is exactly the base config's satellite. The run script stamps the epoch into the base file,
+  # so both gNBs read one clock.
+
+log:
+  filename: /tmp/gnb_dualsat_sat1.log
+  nrppa_level: debug
+  f1ap_level: debug
+
+pcap:
+  ngap_filename: /tmp/ntn_dualsat_sat1_ngap.pcap

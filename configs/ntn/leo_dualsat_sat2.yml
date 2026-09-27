@@ -1,0 +1,87 @@
+# Two satellites serving one UE at the same time, satellite 2 of 2. OVERLAY on configs/ntn/leo_rfsim_gnb.yml:
+# gnb -c configs/ntn/leo_rfsim_gnb.yml -c configs/ntn/leo_dualsat_sat2.yml See
+# configs/ntn/leo_dualsat_sat1.yml for what the pair is for and why there are two gNB processes.
+
+gnb_id: 412
+gnb_id_bit_length: 30
+ran_node_name: gnb-dualsat-2
+
+cu_cp:
+  amf:
+    addr: 192.168.70.132
+    port: 38412
+    # A SECOND address on the core bridge: two gNB processes on one host cannot both bind GTP-U's port
+    # 2152 to 192.168.70.129, and the port is hardcoded (o_cu_up_builder.cpp: n3_udp_cfg.bind_port =
+    # GTPU_PORT).
+    bind_addr: 192.168.70.141
+    supported_tracking_areas:
+      - tac: 1
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+                sd: 1
+
+cu_up:
+  ngu:
+    socket:
+      - bind_addr: 192.168.70.141
+
+ru_sdr:
+  device_args: serveraddr=127.0.0.1,serverport=4043,options=chanmod,realtime,ntn_dl_share=0.5
+
+cell_cfg:
+  pci: 2
+
+  srs:
+    type_enabled: periodic
+    period_ms: 160
+
+  geo_coordinates:
+    high_accuracy:
+      latitude: 90.0
+      longitude: 0.0
+      altitude: 0
+
+  # Same positioning frequency layer as satellite 1, a different comb offset and sequence - see the note in
+  # leo_dualsat_sat1.yml. comb_offset 2 of comb 4 puts this cell's PRS on the subcarriers satellite 1 leaves
+  # empty in each symbol, so the two do not have to be separated by their sequences alone.
+  prs:
+    period_slots: 160
+    set_slot_offset: 5
+    resource_slot_offset: 0
+    n_id: 2
+    comb_size: 4
+    comb_offset: 2
+    nof_symbols: 4
+    start_symbol: 4
+    start_prb: 0
+    nof_prbs: 48
+    tx_power_dbm: 0
+
+  ntn:
+    # THE SECOND SATELLITE: satellite 1's orbit LED BY 0.25 s and then rotated 90 degrees about the
+    # Earth's axis.
+    propagator_type: keplerian
+    cell_specific_koffset: 40
+    ntn_ul_sync_validity_dur: 30
+    emulate_doppler: false
+    use_state_vector: true
+    reference_location:
+      latitude: 90.0
+      longitude: 0.0
+    ephemeris_info_ecef:
+      pos_x: 2825631.5
+      pos_y: 20.6
+      pos_z: 6357059.8
+      vel_x: -6916.95
+      vel_y: 0.05
+      vel_z: 3074.50
+
+log:
+  filename: /tmp/gnb_dualsat_sat2.log
+  nrppa_level: debug
+  f1ap_level: debug
+
+pcap:
+  ngap_filename: /tmp/ntn_dualsat_sat2_ngap.pcap

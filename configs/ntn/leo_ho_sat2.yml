@@ -1,8 +1,15 @@
+# Inter-satellite handover, satellite 2 of 2. OVERLAY on configs/ntn/leo_rfsim_gnb.yml:
+#
+#   gnb -c configs/ntn/leo_rfsim_gnb.yml -c configs/ntn/leo_ho_sat2.yml
+#
+# See configs/ntn/leo_ho_sat1.yml for how the overlay works and why there are two gNB processes.
 
 gnb_id: 412
 ran_node_name: gnb-sat2
 
 cu_cp:
+  # Local OAI core, matching leo_ho_sat1.yml - see the note there on SD-Core, which is up and does path switch
+  # properly but has not got this UE provisioned.
   amf:
     addr: 192.168.1.115
     bind_addr: 192.168.1.120
@@ -25,12 +32,12 @@ cu_cp:
   mobility:
     trigger_handover_from_measurements: false
     cells:
-      - nr_cell_id: 0x670000
+      - nr_cell_id: 0x670000            # this gNB's own cell: gnb_id 412 << 14
         periodic_report_cfg_id: 1
         ncells:
           - nr_cell_id: 0x66C000
             report_configs: [2]
-      - nr_cell_id: 0x66C000
+      - nr_cell_id: 0x66C000            # satellite 1's cell, as a neighbour
         ncells:
           - nr_cell_id: 0x670000
             report_configs: [2]
@@ -63,9 +70,15 @@ cu_up:
       - bind_addr: 192.168.1.120
 
 ru_sdr:
+  # "realtime", matching satellite 1 - see the note there for the measurement showing it cannot be dropped.
   device_args: serveraddr=127.0.0.1,serverport=4043,options=chanmod,realtime
 
+  # tx_gain_backoff is deliberately NOT overridden: this cell keeps the base config's 12 dB, same as
+  # satellite 1.
+
 cell_cfg:
+  # SD-Core is provisioned for sst 1 / sd 0x010203 (66051), not the base config's sd 1.
+  # This, the tai_slice_support_list above and the UE's --uicc0.nssai_sd must all agree.
   slicing:
     - sst: 1
       sd: 66051
@@ -73,13 +86,14 @@ cell_cfg:
   pci: 2
 
   ntn:
+    # THE SECOND SATELLITE.
     ephemeris_info_ecef:
       pos_x: 0
-      pos_y: -3058969.4
-      pos_z: 6248128.4
+      pos_y: 0.0
+      pos_z: 6956752.3
       vel_x: 0
-      vel_y: 6798.43
-      vel_z: 3328.39
+      vel_y: 7569.47
+      vel_z: 0.00
 
 log:
   filename: /tmp/gnb_leo_sat2.log

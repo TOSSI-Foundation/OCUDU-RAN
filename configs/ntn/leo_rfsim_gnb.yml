@@ -1,3 +1,5 @@
+# Transparent LEO NTN, OCUDU gNB over the rfsimulator, against an OAI nr-uesoftmodem. 600 km circular
+# equatorial orbit, cell reference point on the equator at lon 0.
 
 cu_cp:
   amf:
@@ -10,8 +12,9 @@ cu_cp:
           - plmn: "00101"
             tai_slice_support_list:
               - sst: 1
+                sd: 1
   inactivity_timer: 7200
-  request_pdu_session_timeout: 120
+  request_pdu_session_timeout: 120    # NAS registration over a 480 ms RTT exceeds the 10 s default
   rrc:
     rrc_procedure_guard_time_ms: 12800
 
@@ -26,10 +29,14 @@ ru_sdr:
   srate: 15.36
   tx_gain: 0
   rx_gain: 0
+  # Transmit headroom, which rfsimulator needs set explicitly - configs/gnb_rfsim.yaml uses 30 dB for its 40
+  # MHz / 30 kHz / 106 PRB cell.
   amplitude_control:
     tx_gain_backoff: 12
 
 cell_cfg:
+  # 10 MHz / 52 PRB, not 5 MHz / 25 PRB: at 25 PRB the SR PUCCH resource lands on PRB 24, the top of the BWP, and
+  # is never decoded. The UE then exhausts sr_TransMax, releases PUCCH, and InitialContextSetup times out.
   dl_arfcn: 437000
   band: 256
   channel_bandwidth_MHz: 10
@@ -40,12 +47,14 @@ cell_cfg:
   nof_antennas_ul: 1
   slicing:
     - sst: 1
+      sd: 1
 
   sib:
     t300: 2000
     t301: 2000
     t311: 3000
     t319: 2000
+    # Handover only.
     t304: 10000
     si_window_length: 40
     si_sched_info:
@@ -53,7 +62,8 @@ cell_cfg:
         sib_mapping: 2
       - si_period: 16
         sib_mapping: 19
-        si_window_position: 2
+        si_window_position: 2         # required: OAI derives the SIB19 epoch from it
+                                      # si_period 16, as at GEO.
     sib2:
       q_hyst: 3
       thresh_serving_low_p: 0
@@ -73,26 +83,27 @@ cell_cfg:
     nof_cell_csi_res: 7
 
   csi:
+    # Needs the OAI UE patched in openair1/PHY/NR_UE_TRANSPORT/csi_rx.c.
     csi_rs_period: 80
 
   mac_cell_group:
     sr_cfg:
-      sr_prohibit_timer: 128
+      sr_prohibit_timer: 128          # OCUDU has no sr-ProhibitTimer-v1700; 128 ms is the Rel-15 maximum
       sr_trans_max: 64
 
   pdsch:
-    harq_retx_timeout: 500
+    harq_retx_timeout: 500            # a DL HARQ is held k1 + k_offset (~245 ms); the default 100 expires
     nof_harqs: 16
     max_nof_harq_retxs: 0
-    harq_feedback_disabled: true
+    harq_feedback_disabled: true      # Rel-17 NTN, matches OAI's disable_harq = 1
 
   pusch:
-    harq_retx_timeout: 500
+    harq_retx_timeout: 500            # a UL HARQ is held k2 + k_offset (~246 ms); the default 100 expires
     max_nof_harq_retxs: 0
-    harq_mode_b: true
+    harq_mode_b: true                 # Rel-17 NTN: reuse UL HARQ processes before the RTT elapses
 
   prach:
-    prach_config_index: 44
+    prach_config_index: 44            # format 1, subframe 1: 684 us CP, and fits OAI's one-frame txData
     max_msg3_harq_retx: 0
 
   ta:
@@ -102,15 +113,24 @@ cell_cfg:
     ta_target: 0
 
   ntn:
-    epoch_timestamp: '2026-09-12T19:35:56'
+    epoch_timestamp: '2026-09-23T11:11:38'  # refreshed by scripts/run_leo_rfsim.sh before every run
     propagator_type: keplerian
+    # Covers the round trip over the pass: 4.0 ms at zenith, growing as the satellite recedes. 40 slots at
+    # 15 kHz SCS, matching OAI's own LEO reference configuration.
     cell_specific_koffset: 40
+    # 5 s, not the GEO 240 s: at LEO the ephemeris goes stale in seconds, so the UE must re-read SIB19 often.
     ntn_ul_sync_validity_dur: 30
+    # Rotate the carrier by the service-link Doppler on both legs.
     emulate_doppler: false
-    use_state_vector: true
+    use_state_vector: true            # the OAI UE only decodes positionVelocity-r17
+    # Reproduces OAI's hardcoded rfsimulator LEO geometry (apply_channelmod.c, random_channel.c:1641) so
+    # the channel the UE applies on its downlink and the ephemeris this gNB broadcasts describe one
+    # satellite.
     reference_location:
       latitude: 90.0
       longitude: 0.0
+    # 600 km circular polar orbit, positioned at the RISING HORIZON at the epoch, so a run covers a whole
+    # pass: 0 deg -> zenith (T+384 s) -> 0 deg (T+769 s), where the horizon check mutes the link.
     ephemeris_info_ecef:
       pos_x: 0
       pos_y: -2826323.2
@@ -119,15 +139,16 @@ cell_cfg:
       vel_y: 6916.62
       vel_z: 3075.25
 
+# Declaring an SRB replaces the whole entry, so sn and the poll-* fields must be restated.
 srbs:
   - srb_id: 1
     mac:
       triggered_ul_grant:
-        delay: 16
+        delay: 16                     # without this the UE waits on an SR, and one round trip is ~480 ms
     rlc:
       tx:
         sn: 12
-        t-poll-retransmit: 1000
+        t-poll-retransmit: 1000       # longer than a full RTT, else maxRetxThreshold burns down to RLF
         max-retx-threshold: 32
         poll-pdu: -1
         poll-byte: -1
