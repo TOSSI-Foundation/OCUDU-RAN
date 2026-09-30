@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "ocudu/ofh/ethernet/ethernet_mac_address.h"
 #include "ocudu/ofh/ethernet/ethernet_receiver_metrics_collector.h"
 #include "ocudu/ofh/ethernet/ethernet_transmitter_metrics_collector.h"
 #include "ocudu/ofh/ofh_sector_metrics_collector.h"
@@ -18,6 +19,8 @@ class metrics_collector_impl : public metrics_collector
 {
   bool                           is_enabled = false;
   const unsigned                 sector_id;
+  const ether::mac_address       du_mac_address;
+  const ether::mac_address       ru_mac_address;
   receiver_metrics_collector*    rx_metrics_collector;
   transmitter_metrics_collector* tx_metrics_collector;
 
@@ -27,7 +30,9 @@ class metrics_collector_impl : public metrics_collector
 public:
   metrics_collector_impl(receiver_metrics_collector*    rx_metrics_collector_,
                          transmitter_metrics_collector* tx_metrics_collector_,
-                         unsigned                       sector_id_);
+                         unsigned                       sector_id_,
+                         const ether::mac_address&      du_mac_address_,
+                         const ether::mac_address&      ru_mac_address_);
 
   // See interface for documentation.
   void collect_metrics(sector_metrics& metric) override;

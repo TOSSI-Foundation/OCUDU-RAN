@@ -215,7 +215,10 @@ std::unique_ptr<sector> ocudu::ofh::create_ofh_sector(const sector_configuration
                                         prach_cp_repo,
                                         ul_grid_symbol_notified_repo);
 
-  return std::make_unique<sector_impl>(sector_impl_config{sector_cfg.sector_id, sector_cfg.are_metrics_enabled},
+  return std::make_unique<sector_impl>(sector_impl_config{sector_cfg.sector_id,
+                                                          sector_cfg.are_metrics_enabled,
+                                                          sector_cfg.mac_src_address,
+                                                          sector_cfg.mac_dst_address},
                                        sector_impl_dependencies{std::move(receiver),
                                                                 std::move(transmitter),
                                                                 std::move(ul_data_repo),

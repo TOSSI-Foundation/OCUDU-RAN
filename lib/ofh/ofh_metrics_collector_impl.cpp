@@ -10,8 +10,12 @@ using namespace ofh;
 
 metrics_collector_impl::metrics_collector_impl(receiver_metrics_collector*    rx_metrics_collector_,
                                                transmitter_metrics_collector* tx_metrics_collector_,
-                                               unsigned                       sector_id_) :
+                                               unsigned                       sector_id_,
+                                               const ether::mac_address&      du_mac_address_,
+                                               const ether::mac_address&      ru_mac_address_) :
   sector_id(sector_id_),
+  du_mac_address(du_mac_address_),
+  ru_mac_address(ru_mac_address_),
   rx_metrics_collector(rx_metrics_collector_),
   tx_metrics_collector(tx_metrics_collector_),
   last_timestamp(std::chrono::high_resolution_clock::now())
@@ -26,7 +30,9 @@ void metrics_collector_impl::collect_metrics(sector_metrics& metric)
   }
 
   auto tp_now      = std::chrono::high_resolution_clock::now();
-  metric.sector_id = sector_id;
+  metric.sector_id      = sector_id;
+  metric.du_mac_address = du_mac_address;
+  metric.ru_mac_address = ru_mac_address;
 
   // Collect receiver metrics.
   rx_metrics_collector->collect_metrics(metric.rx_metrics);

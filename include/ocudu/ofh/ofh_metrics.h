@@ -4,6 +4,7 @@
 #pragma once
 
 #include "ocudu/adt/static_vector.h"
+#include "ocudu/ofh/ethernet/ethernet_mac_address.h"
 #include "ocudu/ofh/receiver/ofh_receiver_metrics.h"
 #include "ocudu/ofh/timing/ofh_timing_metrics.h"
 #include "ocudu/ofh/transmitter/ofh_transmitter_metrics.h"
@@ -23,6 +24,10 @@ struct sector_metrics {
   transmitter_metrics tx_metrics;
   /// Metrics period.
   std::chrono::milliseconds metrics_period_ms;
+  /// Source MAC address of the sector fronthaul, the Distributed Unit MAC address.
+  ether::mac_address du_mac_address;
+  /// Destination MAC address of the sector fronthaul, the Radio Unit MAC address.
+  ether::mac_address ru_mac_address;
 };
 
 /// Open Fronthaul metrics.

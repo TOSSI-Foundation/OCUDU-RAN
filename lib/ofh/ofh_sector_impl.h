@@ -19,8 +19,10 @@ namespace ofh {
 
 /// Sector implementation configuration.
 struct sector_impl_config {
-  unsigned sector_id;
-  bool     are_metrics_enabled = false;
+  unsigned           sector_id;
+  bool               are_metrics_enabled = false;
+  ether::mac_address du_mac_address      = {};
+  ether::mac_address ru_mac_address      = {};
 };
 
 /// Sector implementation dependencies.
@@ -46,7 +48,9 @@ public:
                           std::move(dependencies.ul_prach_repo)),
     ofh_metrics_collector(ofh_receiver->get_metrics_collector(),
                           ofh_transmitter->get_metrics_collector(),
-                          config.sector_id)
+                          config.sector_id,
+                          config.du_mac_address,
+                          config.ru_mac_address)
   {
     ocudu_assert(ofh_receiver, "Invalid Open Fronthaul receiver");
     ocudu_assert(ofh_transmitter, "Invalid Open Fronthaul transmitter");

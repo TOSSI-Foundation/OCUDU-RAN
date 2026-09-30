@@ -174,12 +174,20 @@ static nlohmann::json generate_downlink(const ofh::transmitter_metrics& metrics,
   return json;
 }
 
+static std::string to_string(const ether::mac_address& mac)
+{
+  return fmt::format(
+      "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
+
 static nlohmann::json
 generate_ofh_cell(const ofh::sector_metrics& metrics, pci_t pci, std::chrono::nanoseconds symbol_duration)
 {
   nlohmann::json json;
 
-  json["pci"] = pci;
+  json["pci"]         = pci;
+  json["du_mac_addr"] = to_string(metrics.du_mac_address);
+  json["ru_mac_addr"] = to_string(metrics.ru_mac_address);
   json["ul"]  = generate_uplink(metrics.rx_metrics, metrics.metrics_period_ms.count(), symbol_duration);
   json["dl"]  = generate_downlink(metrics.tx_metrics, metrics.metrics_period_ms.count());
 
